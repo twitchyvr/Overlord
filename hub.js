@@ -846,11 +846,8 @@ class Hub extends EventEmitter {
             socket.on('update_agent', (agentData, cb) => {
                 const agentMgr = this.getService('agentManager');
                 if (!agentMgr) { if (cb) cb({ success: false, error: 'Agent manager unavailable' }); return; }
+                // updateAgent() handles upsert (inserts default agents on first customisation)
                 const result = agentMgr.updateAgent(agentData.id, agentData);
-                // If tools were included, also update tool permissions
-                if (result.success && agentData.tools !== undefined) {
-                    agentMgr.updateAgent(agentData.id, { tools: agentData.tools });
-                }
                 if (cb) cb(result);
                 this.broadcastTeamFromDB();
             });

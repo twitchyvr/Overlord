@@ -735,7 +735,13 @@
         .sys-pill .value { color: var(--electric); font-family: monospace; }
         .sys-pill .sparkline { display: inline-block; vertical-align: middle; }
         .sys-pill .sparkline polyline { fill: none; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
-        #sys-info-pills { display: flex; gap: 8px; align-items: center; }
+        #sys-info-pills {
+            display: flex; gap: 8px; align-items: center;
+            overflow-x: auto; max-width: calc(100vw - 340px); /* scrolls rather than overflow-clips */
+            scrollbar-width: thin; scrollbar-color: rgba(88,166,255,0.25) transparent;
+        }
+        #sys-info-pills::-webkit-scrollbar { height: 3px; }
+        #sys-info-pills::-webkit-scrollbar-thumb { background: rgba(88,166,255,0.25); border-radius: 2px; }
         #sys-info-pills.hidden { display: none; }
         
         /* Working Directory Display */
@@ -2979,10 +2985,11 @@
                 <span class="rtt-val" id="rtt-val">–</span>
                 <svg id="rtt-sparkline" class="sparkline" width="60" height="14" viewBox="0 0 60 14" style="opacity:0.7"></svg>
             </span>
+            <span id="status-bar-clock" title="Local date and time" style="font-family:monospace;font-size:10px;color:var(--electric);flex-shrink:0;white-space:nowrap;cursor:default;"></span>
             <button class="sys-toggle-btn" onclick="toggleSysInfo()" title="System stats">SYS</button>
             <div id="sys-info-pills" class="hidden">
                 <span class="sys-pill" title="Server process ID — useful for debugging if you need to kill/restart the process manually"><span class="label">PID</span><span class="value" id="proc-pid">-</span></span>
-                <span class="sys-pill" title="Server timezone — affects timestamps and scheduled reminders"><span class="label">TIMEZONE</span><span class="value" id="ctx-timezone">-</span></span>
+                <span class="sys-pill" title="Local time — updates every minute"><span class="label">LOCAL</span><span class="value" id="ctx-localtime">-</span></span>
                 <span class="sys-pill" title="Context compactions — how many times the conversation history has been AI-summarized to free up space"><span class="label">COMPACTIONS</span><span class="value" id="ctx-compact">-</span></span>
                 <span class="sys-pill" title="Last AI request duration — how long the most recent model call took end-to-end"><span class="label">LAST REQ</span><span class="value" id="ctx-duration">-</span></span>
                 <span class="sys-pill" title="Session uptime — how long this chat session has been running"><span class="label">SESSION</span><span class="value" id="ctx-chat">-</span></span>
@@ -4177,7 +4184,7 @@
                         </div>
                         <!-- Action buttons -->
                         <div style="display:flex;gap:8px;margin-top:4px;flex-wrap:wrap;">
-                            <button onclick="agentMgrSave()" style="flex:1;padding:7px;background:var(--accent-green);border:none;border-radius:4px;cursor:pointer;color:#000;font-size:12px;font-weight:600;">Save</button>
+                            <button id="am-save-btn" onclick="agentMgrSave()" disabled style="flex:1;padding:7px;background:var(--accent-green);border:none;border-radius:4px;cursor:pointer;color:#000;font-size:12px;font-weight:600;opacity:0.5;transition:opacity .15s;">Save</button>
                             <button onclick="amToggleAiPanel()" id="am-aifill-toggle" style="padding:7px 10px;background:var(--bg-secondary);border:1px solid rgba(88,166,255,0.35);border-radius:4px;cursor:pointer;color:var(--accent-primary);font-size:12px;font-weight:600;">✨ AI Fill</button>
                             <button onclick="agentMgrCancelEdit()" style="padding:7px 14px;background:var(--bg-tertiary);border:1px solid var(--border-color);border-radius:4px;cursor:pointer;color:var(--text-primary);font-size:12px;">Cancel</button>
                             <button id="am-delete-btn" onclick="agentMgrDelete()" style="padding:7px;background:none;border:1px solid var(--accent-red);border-radius:4px;cursor:pointer;color:var(--accent-red);font-size:12px;display:none;">Delete</button>
@@ -4558,6 +4565,32 @@
         function toggleSysInfo() {
             document.getElementById('sys-info-pills').classList.toggle('hidden');
         }
+
+        // ── Live local-time clock ─────────────────────────────────────────────
+        function _updateLocalClock() {
+            const now  = new Date();
+            const days = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+            const mons = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+            const h    = now.getHours(), m = now.getMinutes();
+            const h12  = h % 12 || 12;
+            const ampm = h >= 12 ? 'PM' : 'AM';
+            const pad  = n => String(n).padStart(2, '0');
+            // Extract short timezone abbreviation (e.g. "CST", "EST")
+            const tzStr  = now.toLocaleTimeString('en-US', { timeZoneName: 'short' });
+            const tzAbbr = tzStr.split(' ').pop();
+            const label  = `${days[now.getDay()]}, ${mons[now.getMonth()]} ${now.getDate()}, ${h12}:${pad(m)} ${ampm} (${tzAbbr})`;
+            const mainEl = document.getElementById('status-bar-clock');
+            if (mainEl) mainEl.textContent = label;
+            const sysEl  = document.getElementById('ctx-localtime');
+            if (sysEl)  sysEl.textContent  = label;
+        }
+        _updateLocalClock();
+        // Refresh at the top of every minute for accuracy
+        (function _scheduleClockTick() {
+            const now = new Date();
+            const msToNextMinute = (60 - now.getSeconds()) * 1000 - now.getMilliseconds();
+            setTimeout(() => { _updateLocalClock(); setInterval(_updateLocalClock, 60000); }, msToNextMinute);
+        })();
 
         function showWorkingDirPicker() {
             // Open the folder browser modal instead of a plain prompt
@@ -7239,7 +7272,7 @@
             const percent = Math.min(info.percentUsed || 0, 100);
             // Status bar pill
             _setEl('ctx-usage', Math.round(percent) + '%');
-            _setEl('ctx-timezone', info.timezone || '-');
+            // ctx-timezone removed — local time is managed by _updateLocalClock()
             _setEl('ctx-compact', (info.compactionCount || 0) + 'x');
             _setEl('ctx-duration', info.lastRequestDurationFormatted || '-');
             _setEl('ctx-chat', info.chatDurationFormatted || '-');
@@ -8273,6 +8306,7 @@
             socket.emit('get_agent', agentId, (agent) => {
                 if (!agent) return;
                 amClearPreview();
+                _amMarkClean(); // reset dirty state when loading a fresh agent
                 _amCurrentAgentId = agent.id || agentId;
                 document.getElementById('am-agent-empty').style.display = 'none';
                 document.getElementById('am-agent-editor').style.display = 'block';
@@ -8293,6 +8327,7 @@
 
         function agentMgrNewAgent() {
             amClearPreview();
+            _amMarkDirty(); // new agent starts dirty (unsaved)
             _amCurrentAgentId = null;
             document.getElementById('am-agent-empty').style.display = 'none';
             document.getElementById('am-agent-editor').style.display = 'block';
@@ -8349,38 +8384,78 @@
             return [...document.querySelectorAll('.am-tool-chk:checked')].map(el => el.value);
         }
 
+        // ── Agent editor dirty-state tracking ────────────────────────────────
+        let _amDirty = false;
+        function _amMarkDirty() {
+            if (_amDirty) return;
+            _amDirty = true;
+            const btn = document.getElementById('am-save-btn');
+            if (btn) { btn.disabled = false; btn.style.opacity = ''; }
+        }
+        function _amMarkClean() {
+            _amDirty = false;
+            const btn = document.getElementById('am-save-btn');
+            if (btn) { btn.disabled = true; btn.style.opacity = '0.5'; }
+        }
+        // Attach dirty listeners once when DOMContentLoaded
+        ['am-name','am-role','am-description','am-instructions','am-security-role','am-group'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.addEventListener('input', _amMarkDirty);
+            if (el) el.addEventListener('change', _amMarkDirty);
+        });
+        // Tool checkboxes are dynamically rendered — delegate via event bubbling
+        const amToolPermsEl = document.getElementById('am-tool-perms');
+        if (amToolPermsEl) amToolPermsEl.addEventListener('change', _amMarkDirty);
+
         function agentMgrSave() {
             const name = document.getElementById('am-name').value.trim();
-            if (!name) { alert('Agent name is required'); return; }
+            if (!name) { showToast('Agent name is required', 'error', 3000); return; }
+            const saveBtn = document.getElementById('am-save-btn');
+            if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = 'Saving…'; }
+
             const agentData = {
                 name,
-                role: document.getElementById('am-role').value.trim(),
-                description: document.getElementById('am-description').value.trim(),
+                role:         document.getElementById('am-role').value.trim(),
+                description:  document.getElementById('am-description').value.trim(),
                 instructions: document.getElementById('am-instructions').value.trim(),
                 securityRole: document.getElementById('am-security-role').value,
-                tools: getAmSelectedTools()
+                group:        document.getElementById('am-group').value || '',
+                tools:        getAmSelectedTools()
             };
+
+            const onSuccess = (agentIdToReload) => {
+                log('Agent saved: ' + name, 'success');
+                showToast('✓ Agent saved', 'success', 2500);
+                amClearPreview();
+                _amMarkClean();
+                if (saveBtn) saveBtn.textContent = 'Save';
+                loadAmAgentList();
+                // Stay on this agent — reload its data to reflect persisted state
+                const reloadId = agentIdToReload || _amCurrentAgentId;
+                if (reloadId) agentMgrSelectAgent(reloadId);
+            };
+
             if (_amCurrentAgentId) {
                 agentData.id = _amCurrentAgentId;
                 socket.emit('update_agent', agentData, (result) => {
                     if (result && result.success !== false) {
-                        log('Agent updated: ' + name, 'success');
-                        amClearPreview();
-                        agentMgrCancelEdit();
-                        loadAmAgentList();
+                        // If the agent was newly inserted (was a default), its new DB id is in result.id
+                        if (result.id) _amCurrentAgentId = result.id;
+                        onSuccess(_amCurrentAgentId);
                     } else {
-                        alert('Failed to update agent: ' + (result && result.error || 'unknown error'));
+                        if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = 'Save'; }
+                        showToast('Save failed: ' + (result && result.error || 'unknown error'), 'error', 4000);
                     }
                 });
             } else {
                 socket.emit('add_agent', agentData, (result) => {
                     if (result && result.success !== false) {
-                        log('Agent created: ' + name, 'success');
-                        amClearPreview();
-                        agentMgrCancelEdit();
-                        loadAmAgentList();
+                        const newId = result.agent && result.agent.id;
+                        if (newId) _amCurrentAgentId = newId;
+                        onSuccess(newId);
                     } else {
-                        alert('Failed to create agent: ' + (result && result.error || 'unknown error'));
+                        if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = 'Save'; }
+                        showToast('Create failed: ' + (result && result.error || 'unknown error'), 'error', 4000);
                     }
                 });
             }

@@ -797,32 +797,75 @@ function createAgent(agentData) {
 
 function updateAgent(agentId, updates) {
     try {
-        if (db) {
-            const fields = [];
-            const values = [];
-            
-            if (updates.name !== undefined) { fields.push('name = ?'); values.push(updates.name); }
-            if (updates.role !== undefined) { fields.push('role = ?'); values.push(updates.role); }
-            if (updates.description !== undefined) { fields.push('description = ?'); values.push(updates.description); }
-            if (updates.instructions !== undefined) { fields.push('instructions = ?'); values.push(updates.instructions); }
-            if (updates.group !== undefined) { fields.push('group_id = ?'); values.push(updates.group); }
-            if (updates.languages !== undefined) { fields.push('languages = ?'); values.push(JSON.stringify(updates.languages)); }
-            if (updates.tools !== undefined) { fields.push('tools = ?'); values.push(JSON.stringify(updates.tools)); }
-            if (updates.toolPolicy !== undefined) { fields.push('tool_policy = ?'); values.push(updates.toolPolicy); }
-            if (updates.autoAddTools !== undefined) { fields.push('auto_add_tools = ?'); values.push(updates.autoAddTools ? 1 : 0); }
-            if (updates.securityRole !== undefined) { fields.push('security_role = ?'); values.push(updates.securityRole); }
-            if (updates.capabilities !== undefined) { fields.push('capabilities = ?'); values.push(JSON.stringify(updates.capabilities)); }
-            if (updates.status !== undefined) { fields.push('status = ?'); values.push(updates.status); }
-            
-            if (fields.length > 0) {
-                fields.push('updated_at = ?');
-                values.push(new Date().toISOString());
-                values.push(agentId);
-                
-                db.run('UPDATE agents SET ' + fields.join(', ') + ' WHERE id = ?', values);
-            }
+        if (!db) return { success: true }; // No DB — graceful no-op
+
+        // ── Upsert: check if agent exists in DB (default agents may not be stored yet)
+        const existingResult = db.query(
+            'SELECT id FROM agents WHERE id = ? OR name = ? LIMIT 1',
+            [agentId, agentId]
+        );
+
+        if (!existingResult.success || existingResult.results.length === 0) {
+            // Agent not in DB — this is a default agent being customised for the first time.
+            // Merge its DEFAULT_AGENTS definition with the incoming updates and INSERT it.
+            const defName    = (updates.name || agentId || '').toString();
+            const defAgent   = DEFAULT_AGENTS[defName] || DEFAULT_AGENTS[agentId] || {};
+            const merged     = { ...defAgent, ...updates };
+            const newId      = generateId();
+            const now        = new Date().toISOString();
+            const safeName   = defName.toLowerCase().replace(/[^a-z0-9-]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
+            db.run(`
+                INSERT INTO agents
+                    (id, name, role, description, instructions, group_id, languages, tools, tool_policy,
+                     auto_add_tools, security_role, capabilities, metadata, status, scope,
+                     thinking_enabled, thinking_budget, created_at, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            `, [
+                newId, safeName,
+                merged.role        || '',
+                merged.description || '',
+                merged.instructions || '',
+                merged.group       || null,
+                JSON.stringify(merged.languages   || []),
+                JSON.stringify(merged.tools       || []),
+                merged.toolPolicy  || 'allowlist',
+                merged.autoAddTools !== false ? 1 : 0,
+                merged.securityRole || 'developer',
+                JSON.stringify(merged.capabilities || []),
+                JSON.stringify(merged.metadata    || {}),
+                'active', 'global',
+                merged.thinkingEnabled ? 1 : 0,
+                parseInt(merged.thinkingBudget, 10) || 0,
+                now, now
+            ]);
+            return { success: true, id: newId, created: true };
         }
-        
+
+        // ── Agent exists — UPDATE using the real DB id (passed-in agentId may be a name)
+        const actualId = existingResult.results[0].id;
+        const fields = [];
+        const values = [];
+
+        if (updates.name         !== undefined) { fields.push('name = ?');          values.push(updates.name); }
+        if (updates.role         !== undefined) { fields.push('role = ?');          values.push(updates.role); }
+        if (updates.description  !== undefined) { fields.push('description = ?');   values.push(updates.description); }
+        if (updates.instructions !== undefined) { fields.push('instructions = ?');  values.push(updates.instructions); }
+        if (updates.group        !== undefined) { fields.push('group_id = ?');      values.push(updates.group); }
+        if (updates.languages    !== undefined) { fields.push('languages = ?');     values.push(JSON.stringify(updates.languages)); }
+        if (updates.tools        !== undefined) { fields.push('tools = ?');         values.push(JSON.stringify(updates.tools)); }
+        if (updates.toolPolicy   !== undefined) { fields.push('tool_policy = ?');   values.push(updates.toolPolicy); }
+        if (updates.autoAddTools !== undefined) { fields.push('auto_add_tools = ?'); values.push(updates.autoAddTools ? 1 : 0); }
+        if (updates.securityRole !== undefined) { fields.push('security_role = ?'); values.push(updates.securityRole); }
+        if (updates.capabilities !== undefined) { fields.push('capabilities = ?'); values.push(JSON.stringify(updates.capabilities)); }
+        if (updates.status       !== undefined) { fields.push('status = ?');        values.push(updates.status); }
+
+        if (fields.length > 0) {
+            fields.push('updated_at = ?');
+            values.push(new Date().toISOString());
+            values.push(actualId); // use actual DB id — not the passed-in name string
+            db.run('UPDATE agents SET ' + fields.join(', ') + ' WHERE id = ?', values);
+        }
+
         return { success: true };
     } catch (e) {
         return { success: false, error: e.message };

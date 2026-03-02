@@ -4,7 +4,7 @@
     {
       "name": "overlord-web",
       "runtimeExecutable": "/Users/mattrogers/.nvm/versions/node/v20.19.2/bin/node",
-      "runtimeArgs": ["server.js"],
+      "runtimeArgs": ["launcher.js"],
       "port": 3031
     }
   ]

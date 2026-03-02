@@ -2,10 +2,10 @@
   "name": "overlord-web",
   "version": "1.2.0",
   "description": "OVERLORD Web - Modular AI Coding Assistant Platform",
-  "main": "server.js",
+  "main": "launcher.js",
   "scripts": {
-    "start": "node server.js",
-    "dev": "node server.js",
+    "start": "node launcher.js",
+    "dev": "node launcher.js",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",

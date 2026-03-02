@@ -608,6 +608,44 @@ You are in TASK-ENFORCED mode. The following rules are absolute and override any
 5. At the end of your work, ALL tasks must be in a terminal state: completed, blocked, or skipped. None may remain pending.
 ` : '';
 
+    // Strict Completion Mode (default: ON — prevents agents simplifying/skipping/removing work)
+    const strictCompletionSection = (config?.strictCompletion !== false) ? `
+## ⛔ STRICT COMPLETION MODE — ACTIVE
+
+This mode is ABSOLUTE and NON-NEGOTIABLE. Read carefully.
+
+### What you are PROHIBITED from doing:
+- Removing, deleting, or commenting out tests to make a suite pass
+- Modifying test assertions to match broken code (fix the code, not the test)
+- Skipping, omitting, or abbreviating any feature or requirement that was explicitly requested
+- Marking a task or milestone complete when work remains incomplete
+- Silently dropping any user request because it seems difficult or time-consuming
+
+### What you MUST do instead when work is incomplete or blocked:
+1. **Create a task** for every incomplete piece of work — use \`create_task\`
+2. **For non-trivial work**: create a milestone first with \`create_milestone\`, then immediately assign the task with \`assign_task_to_milestone\`. A milestone with zero tasks is a violation.
+3. **For truly simple one-liners**: a task alone is acceptable (no milestone required)
+4. **Broken tests**: fix the source code that the test is testing — do not touch the test file unless the spec itself is wrong and the user explicitly asked to change the spec
+
+### The milestone/task contract:
+- Milestone created → must have ≥1 task assigned before you move on
+- Task created for complex work → must be assigned to a milestone
+- Task created for trivial work → document why no milestone is needed in the task description
+
+### When in doubt:
+Create the task. Never silently skip.
+` : '';
+
+    // Response Quality guardrails (injected when individual toggles are enabled)
+    const responseQualityParts = [];
+    if (config?.noTruncate) responseQualityParts.push('- **Never truncate output**: Always produce complete, full-fidelity responses. Never abbreviate code, cut off lists, or use "..." as a shortcut. If a file is long, write it in full.');
+    if (config?.alwaysSecurity) responseQualityParts.push('- **Always add security measures**: Every feature involving auth, data storage, user input, or network calls must include appropriate security (input validation, sanitization, least-privilege, secure defaults). Non-negotiable.');
+    if (config?.neverStripFeatures) responseQualityParts.push('- **Never strip features**: Implement everything the user requested. Do not simplify scope, drop edge cases, or defer features without explicit user approval. If something is hard, work through it.');
+    const responseQualitySection = responseQualityParts.length > 0 ? `
+## Response Quality Guardrails (ACTIVE)
+${responseQualityParts.join('\n')}
+` : '';
+
     // Also update effectiveMemory section
     const effectiveMemorySection = effectiveMemory ? `
 
@@ -665,7 +703,7 @@ Document your decisions using session_note. Keep the user informed at every step
     return `${personaHeader}
 ${contextInfo}${projectBanner}${cookbookSection}${refDocsSection}${skillsSection}${effectiveMemorySection}${sessionNotesSection}${timelineSection}${milestoneSection}${projectSection}${instructionsSection}
 ${autoQASection}
-${codeQualitySection}${taskEnforcementSection}
+${codeQualitySection}${taskEnforcementSection}${strictCompletionSection}${responseQualitySection}
 ## MINIMAX BEST PRACTICES
 - Be CLEAR and SPECIFIC with instructions: [ACTION] + [CONTEXT] + [EXPECTED OUTPUT FORMAT]
 - Explain your INTENT - tell me "why" you need something

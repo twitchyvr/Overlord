@@ -3350,18 +3350,19 @@
 
                     <div class="settings-section">
                         <div class="settings-section-title">Response Quality</div>
+                        <div class="settings-section-desc">Guardrails injected into every system prompt. These persist across restarts.</div>
                         <label class="toggle-wrap">
-                            <input type="checkbox" id="settings-no-truncate">
+                            <input type="checkbox" id="settings-no-truncate" onchange="updateBehaviorSetting('noTruncate', this.checked)">
                             <span class="toggle-track"></span>
                             <span class="toggle-label">Never truncate output or reduce fidelity</span>
                         </label>
                         <label class="toggle-wrap">
-                            <input type="checkbox" id="settings-always-security">
+                            <input type="checkbox" id="settings-always-security" onchange="updateBehaviorSetting('alwaysSecurity', this.checked)">
                             <span class="toggle-track"></span>
                             <span class="toggle-label">Always add security measures (unforgiving)</span>
                         </label>
                         <label class="toggle-wrap">
-                            <input type="checkbox" id="settings-full-features">
+                            <input type="checkbox" id="settings-full-features" onchange="updateBehaviorSetting('neverStripFeatures', this.checked)">
                             <span class="toggle-track"></span>
                             <span class="toggle-label">Never strip features — implement everything requested</span>
                         </label>
@@ -3518,6 +3519,16 @@
                             <input type="checkbox" id="settings-task-enforcement" onchange="updateBehaviorSetting('taskEnforcement', this.checked)">
                             <span class="toggle-track"></span>
                             <span class="toggle-label">Force AI to use task system before coding</span>
+                        </label>
+                    </div>
+
+                    <div class="settings-section">
+                        <div class="settings-section-title">Strict Completion Mode</div>
+                        <div class="settings-section-desc">When ON, agents are prohibited from removing tests, skipping requirements, or abbreviating implementations. Incomplete work must be captured as tasks (and milestones for non-trivial items) — never silently dropped. A milestone must always have at least one assigned task.</div>
+                        <label class="toggle-wrap">
+                            <input type="checkbox" id="settings-strict-completion" onchange="updateBehaviorSetting('strictCompletion', this.checked)">
+                            <span class="toggle-track"></span>
+                            <span class="toggle-label"><strong>Strict Completion</strong> — No simplifications, no skipping, no phantom completions</span>
                         </label>
                     </div>
 
@@ -9735,6 +9746,16 @@
             // Task Enforcement
             const taskEnfEl = document.getElementById('settings-task-enforcement');
             if (taskEnfEl) taskEnfEl.checked = data.taskEnforcement === true;
+            // Response Quality
+            const noTruncateEl = document.getElementById('settings-no-truncate');
+            if (noTruncateEl) noTruncateEl.checked = data.noTruncate === true;
+            const alwaysSecEl = document.getElementById('settings-always-security');
+            if (alwaysSecEl) alwaysSecEl.checked = data.alwaysSecurity === true;
+            const fullFeatEl = document.getElementById('settings-full-features');
+            if (fullFeatEl) fullFeatEl.checked = data.neverStripFeatures === true;
+            // Strict Completion Mode
+            const strictCompEl = document.getElementById('settings-strict-completion');
+            if (strictCompEl) strictCompEl.checked = data.strictCompletion !== false;
             // Queue drain mode
             const drainMode = data.queueDrainMode || 'consolidated';
             window._queueDrainMode = drainMode;
@@ -9767,6 +9788,27 @@
             }
             if (data.autoModelSwitch !== undefined || data.pmModel !== undefined) {
                 _applyModelSwitchSettings(data);
+            }
+            // Sync boolean toggles that may change from another tab or AI set_config
+            if (data.taskEnforcement !== undefined) {
+                const el = document.getElementById('settings-task-enforcement');
+                if (el) el.checked = Boolean(data.taskEnforcement);
+            }
+            if (data.noTruncate !== undefined) {
+                const el = document.getElementById('settings-no-truncate');
+                if (el) el.checked = Boolean(data.noTruncate);
+            }
+            if (data.alwaysSecurity !== undefined) {
+                const el = document.getElementById('settings-always-security');
+                if (el) el.checked = Boolean(data.alwaysSecurity);
+            }
+            if (data.neverStripFeatures !== undefined) {
+                const el = document.getElementById('settings-full-features');
+                if (el) el.checked = Boolean(data.neverStripFeatures);
+            }
+            if (data.strictCompletion !== undefined) {
+                const el = document.getElementById('settings-strict-completion');
+                if (el) el.checked = data.strictCompletion !== false;
             }
         });
 

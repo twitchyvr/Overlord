@@ -5643,6 +5643,10 @@
                     try { contentEl.innerHTML = escapeHtmlPreserveLinks(marked.parse(newContent)); }
                     catch (e) { contentEl.innerHTML = escapeHtml(newContent); }
                 }
+                // Smooth scroll after stream completes (rAF lets DOM repaint first)
+                requestAnimationFrame(() => {
+                    elements.messages.scrollTo({ top: elements.messages.scrollHeight, behavior: 'smooth' });
+                });
                 if (msg.role === 'assistant' && !document.hasFocus()) {
                     notifyUser('OVERLORD', newContent.replace(/[#*`>\-]/g, '').trim().substring(0, 80) || 'AI response ready');
                 }
@@ -6524,9 +6528,9 @@
             }
             div.setAttribute('data-stream-complete', '1');
             elements.messages.appendChild(div);
-            elements.messages.scrollTop = elements.messages.scrollHeight;
+            elements.messages.scrollTo({ top: elements.messages.scrollHeight, behavior: 'smooth' });
         }
-        
+
         // ==================== PROJECT DASHBOARD ====================
         // Replaces the old roadmap panel with milestone dashboard + PM chat
 
@@ -7100,7 +7104,7 @@
             toolDiv.innerHTML = '<div class="tool-header"><span class="tool-time">' + time + '</span><span class="tool-name">' + icon + ' ' + escapeHtml(data.tool) + '</span></div><div class="tool-output">' + escapeHtml(output) + '</div>';
 
             elements.tools.appendChild(toolDiv);
-            elements.tools.scrollTop = elements.tools.scrollHeight;
+            elements.tools.scrollTo({ top: elements.tools.scrollHeight, behavior: 'smooth' });
             while (elements.tools.children.length > 30) elements.tools.removeChild(elements.tools.firstChild);
 
             // Update tools badge

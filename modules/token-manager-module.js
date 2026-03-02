@@ -358,7 +358,11 @@ function stripScreenshots(history, keepLast = 1) {
     if (screenshotIndices.length === 0) return history; // nothing to strip
 
     // Indices to preserve (the last keepLast screenshots are kept as-is)
-    const keepSet = new Set(screenshotIndices.slice(-Math.max(0, keepLast)));
+    // keepLast=0 means strip ALL screenshots (keepSet should be empty)
+    const keepCount = Math.max(0, keepLast);
+    const keepSet = keepCount > 0 
+        ? new Set(screenshotIndices.slice(-keepCount)) 
+        : new Set();
     let stripped = 0;
 
     const result = history.map((msg, i) => {
@@ -409,7 +413,9 @@ function hasStrippableScreenshots(history, keepLast = 1) {
             ) { count++; break; }
         }
     }
-    return count > keepLast;
+    // keepLast=0 means strip all, so any screenshot can be stripped
+    // keepLast>=1 means keep that many, so strippable if count > keepLast
+    return keepLast === 0 ? count > 0 : count > keepLast;
 }
 
 // Get conversation stats
@@ -572,4 +578,18 @@ async function init(h) {
     hub.log('🔢 Token Manager loaded (max: ' + CONFIG.MAX_CONTEXT_TOKENS + ' tokens)', 'success');
 }
 
-module.exports = { init, estimateTokens, truncateHistory, sanitizeHistory, stripScreenshots, hasStrippableScreenshots, getStats, validateHistory, CONFIG };
+module.exports = { 
+    init, 
+    estimateTokens, 
+    truncateHistory, 
+    sanitizeHistory, 
+    stripScreenshots, 
+    hasStrippableScreenshots, 
+    getStats, 
+    validateHistory, 
+    CONFIG,
+    // Also export internal functions needed by tests
+    calculateHistoryTokens,
+    needsTruncation,
+    estimateMessageTokens
+};

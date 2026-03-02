@@ -1,6 +1,6 @@
 // ==================== OVERLORD WEB SERVER ====================
 // Modular architecture with plugin system
-// Access at: http://localhost:3031
+// Access at: https://localhost:3031 (or http:// if no certs found)
 //
 // Normally started via launcher.js (node launcher.js / npm start).
 // Can also be run directly: node server.js (dotenv loaded as fallback).
@@ -13,9 +13,27 @@ const { Server } = require('socket.io');
 const path = require('path');
 const fs = require('fs');
 
-// Create app and server
+// Create app — use HTTPS if certs exist in .overlord/certs/, HTTP otherwise
 const app = express();
-const server = http.createServer(app);
+const certsDir = path.join(__dirname, '.overlord', 'certs');
+const certFile = path.join(certsDir, 'localhost.pem');
+const keyFile  = path.join(certsDir, 'localhost-key.pem');
+
+let server;
+let isHttps = false;
+if (fs.existsSync(certFile) && fs.existsSync(keyFile)) {
+    try {
+        const https = require('https');
+        server  = https.createServer({ cert: fs.readFileSync(certFile), key: fs.readFileSync(keyFile) }, app);
+        isHttps = true;
+        console.log('[Server] HTTPS mode enabled (certs from .overlord/certs/)');
+    } catch (e) {
+        console.warn('[Server] Failed to load HTTPS certs, falling back to HTTP:', e.message);
+        server = http.createServer(app);
+    }
+} else {
+    server = http.createServer(app);
+}
 const io = new Server(server, {
     pingTimeout: 60000,
     pingInterval: 25000,
@@ -206,7 +224,8 @@ async function start() {
         console.log('╔═══════════════════════════════════════════════════════════╗');
         console.log('║  OVERLORD WEB v2.0 - AI Coding Assistant                 ║');
         console.log('╠═══════════════════════════════════════════════════════════╣');
-        console.log(`║  🌐 Open: http://localhost:${PORT}                          ║`);
+        const proto = isHttps ? 'https' : 'http';
+        console.log(`║  🌐 Open: ${proto}://localhost:${PORT}${isHttps ? '                         ' : '                          '}║`);
         console.log(`║  📁 Dir: ${BASE_DIR.substring(0, 46).padEnd(46)}║`);
         console.log(`║  🔑 API Key: ${apiKeyStatus.padEnd(43)}║`);
         console.log(`║  🧠 Model: ${(config.model || 'MiniMax-M2.5-highspeed').padEnd(45)}║`);

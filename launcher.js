@@ -194,7 +194,49 @@ async function checkPrerequisites() {
     return results;
 }
 
-// ── 7. Open browser (OS-agnostic) ─────────────────────────────────
+// ── 7. Ensure HTTPS certs for localhost ───────────────────────────
+const CERTS_DIR = path.join(ROOT, '.overlord', 'certs');
+const CERT_FILE = path.join(CERTS_DIR, 'localhost.pem');
+const KEY_FILE  = path.join(CERTS_DIR, 'localhost-key.pem');
+
+async function ensureCerts() {
+    if (fs.existsSync(CERT_FILE) && fs.existsSync(KEY_FILE)) return true;
+
+    fs.mkdirSync(CERTS_DIR, { recursive: true });
+    console.log('🔒  Generating HTTPS certificate for localhost…\n');
+
+    // Try mkcert first — produces a browser-trusted cert with no warnings
+    try {
+        execFileSync('mkcert', ['--version'], { stdio: 'pipe', timeout: 3000 });
+        try { execFileSync('mkcert', ['-install'], { stdio: 'pipe', timeout: 10000 }); } catch (_) {}
+        execFileSync('mkcert', ['-cert-file', CERT_FILE, '-key-file', KEY_FILE, 'localhost', '127.0.0.1'], {
+            stdio: 'inherit', timeout: 15000
+        });
+        console.log('\n   ✅ mkcert: trusted cert generated — no browser warning\n');
+        return true;
+    } catch (_) {}
+
+    // Fallback: openssl self-signed (always available on macOS/Linux)
+    try {
+        execFileSync('openssl', ['version'], { stdio: 'pipe', timeout: 3000 });
+        execFileSync('openssl', [
+            'req', '-x509', '-newkey', 'rsa:2048',
+            '-keyout', KEY_FILE, '-out', CERT_FILE,
+            '-days', '3650', '-nodes',
+            '-subj', '/CN=localhost',
+        ], { stdio: 'pipe', timeout: 15000 });
+        console.log('   ✅ openssl: self-signed cert generated\n');
+        console.log('   ⚠️  First visit: click "Advanced" → "Proceed to localhost (unsafe)"\n');
+        console.log('   💡 Install mkcert for a trusted cert: brew install mkcert\n');
+        return true;
+    } catch (_) {}
+
+    console.log('   ⚠️  Could not generate HTTPS cert (mkcert and openssl not found).\n');
+    console.log('   💡 Install mkcert: https://github.com/FiloSottile/mkcert\n');
+    return false;
+}
+
+// ── 8. Open browser (OS-agnostic) ─────────────────────────────────
 function openBrowser(url) {
     try {
         const p = process.platform;
@@ -212,7 +254,7 @@ function openBrowser(url) {
     }
 }
 
-// ── 8. Poll until TCP port accepts connections ─────────────────────
+// ── 9. Poll until TCP port accepts connections ─────────────────────
 function waitForPort(port, timeoutMs = 20000) {
     return new Promise(resolve => {
         const deadline = Date.now() + timeoutMs;
@@ -227,7 +269,7 @@ function waitForPort(port, timeoutMs = 20000) {
     });
 }
 
-// ── Helpers ───────────────────────────────────────────────────────
+// ── Helpers ──────────────────────────────────────────────────────
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
 // ── Main ──────────────────────────────────────────────────────────
@@ -241,8 +283,10 @@ async function main() {
 
     await stopExisting();
     await checkPrerequisites();
+    await ensureCerts();
 
-    const PORT = parseInt(process.env.PORT || '3031', 10);
+    const PORT  = parseInt(process.env.PORT || '3031', 10);
+    const proto = (fs.existsSync(CERT_FILE) && fs.existsSync(KEY_FILE)) ? 'https' : 'http';
 
     // Spawn server.js with the SAME Node binary that ran this script.
     // process.execPath resolves correctly on every OS/nvm/fnm setup.
@@ -268,7 +312,7 @@ async function main() {
     });
 
     // Wait for the server port, then open the browser automatically
-    waitForPort(PORT).then(ok => { if (ok) openBrowser(`http://localhost:${PORT}`); });
+    waitForPort(PORT).then(ok => { if (ok) openBrowser(`${proto}://localhost:${PORT}`); });
 }
 
 main().catch(e => {

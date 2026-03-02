@@ -4,7 +4,7 @@
   "description": "OVERLORD Web — AI orchestration platform with multi-agent coding assistant",
   "main": "launcher.js",
   "bin": {
-    "overlord": "./launcher.js"
+    "overlord": "launcher.js"
   },
   "files": [
     "launcher.js",

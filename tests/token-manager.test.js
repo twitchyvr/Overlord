@@ -344,11 +344,60 @@ describe('Token Manager Module', () => {
 });
 
 
-// Additional tests for coverage - stripScreenshots
+
+// Additional tests for exported functions
+
+describe('calculateHistoryTokens', () => {
+    
+    test('calculates tokens for simple messages', () => {
+        const history = [
+            { role: 'user', content: 'Hello' },
+            { role: 'assistant', content: 'Hi there' }
+        ];
+        
+        const tokens = tm.calculateHistoryTokens(history);
+        expect(tokens).toBeGreaterThan(0);
+    });
+    
+    test('returns 0 for empty history', () => {
+        expect(tm.calculateHistoryTokens([])).toBe(0);
+        expect(tm.calculateHistoryTokens(null)).toBe(0);
+    });
+    
+    test('handles messages without content', () => {
+        const history = [
+            { role: 'user' }
+        ];
+        
+        const tokens = tm.calculateHistoryTokens(history);
+        expect(tokens).toBeGreaterThanOrEqual(0);
+    });
+    
+});
+
+describe('needsTruncation', () => {
+    
+    test('returns true when over limit', () => {
+        // Create a history with many tokens to exceed MAX_HISTORY_TOKENS
+        const longContent = 'a'.repeat(500000); // ~125000 tokens (exceeds 83800 limit)
+        const history = [{ role: 'user', content: longContent }];
+        
+        expect(tm.needsTruncation(history)).toBe(true);
+    });
+    
+    test('returns false when under limit', () => {
+        const history = [
+            { role: 'user', content: 'Hello' }
+        ];
+        
+        expect(tm.needsTruncation(history)).toBe(false);
+    });
+    
+});
 
 describe('stripScreenshots', () => {
     
-    test('handles empty history', () => {
+    test('handles empty and null input', () => {
         expect(tm.stripScreenshots([])).toEqual([]);
         expect(tm.stripScreenshots(null)).toBe(null);
     });
@@ -362,6 +411,83 @@ describe('stripScreenshots', () => {
         const result = tm.stripScreenshots(history);
         expect(result.length).toBe(2);
         expect(result[1].content).toBe('Regular response');
+    });
+    
+    test('strips screenshot base64 data and keeps placeholder', () => {
+        const history = [
+            { role: 'user', content: [{ type: 'tool_result', tool_use_id: 'img1', content: '{"base64":"abc123","success":true,"sizeKB":100}' }] }
+        ];
+        
+        // Use keepLast=0 to force stripping
+        const result = tm.stripScreenshots(history, 0);
+        expect(result[0].content[0].content).toContain('[stripped');
+    });
+    
+    test('keeps most recent screenshot when keepLast=1', () => {
+        const history = [
+            { role: 'user', content: [{ type: 'tool_result', tool_use_id: 'img1', content: '{"base64":"old","success":true}' }] },
+            { role: 'user', content: [{ type: 'tool_result', tool_use_id: 'img2', content: '{"base64":"new","success":true}' }] }
+        ];
+        
+        const result = tm.stripScreenshots(history, 1);
+        // Last one should still have base64
+        expect(result[1].content[0].content).toContain('"base64":"new"');
+        // First should be stripped
+        expect(result[0].content[0].content).toContain('[stripped');
+    });
+    
+    test('strips all screenshots when keepLast=0', () => {
+        const history = [
+            { role: 'user', content: [{ type: 'tool_result', tool_use_id: 'img1', content: '{"base64":"old","success":true}' }] },
+            { role: 'user', content: [{ type: 'tool_result', tool_use_id: 'img2', content: '{"base64":"new","success":true}' }] }
+        ];
+        
+        const result = tm.stripScreenshots(history, 0);
+        // All should be stripped
+        expect(result[0].content[0].content).toContain('[stripped');
+        expect(result[1].content[0].content).toContain('[stripped');
+    });
+    
+});
+
+describe('hasStrippableScreenshots', () => {
+    
+    test('returns true when multiple screenshots present', () => {
+        const history = [
+            { role: 'user', content: [{ type: 'tool_result', tool_use_id: 'img1', content: '{"base64":"abc","success":true}' }] },
+            { role: 'user', content: [{ type: 'tool_result', tool_use_id: 'img2', content: '{"base64":"def","success":true}' }] }
+        ];
+        
+        expect(tm.hasStrippableScreenshots(history)).toBe(true);
+    });
+    
+    test('returns false when only one screenshot with default keepLast=1', () => {
+        const history = [
+            { role: 'user', content: [{ type: 'tool_result', tool_use_id: 'img1', content: '{"base64":"abc","success":true}' }] }
+        ];
+        
+        expect(tm.hasStrippableScreenshots(history)).toBe(false);
+    });
+    
+    test('returns true when one screenshot and keepLast=0', () => {
+        const history = [
+            { role: 'user', content: [{ type: 'tool_result', tool_use_id: 'img1', content: '{"base64":"abc","success":true}' }] }
+        ];
+        
+        expect(tm.hasStrippableScreenshots(history, 0)).toBe(true);
+    });
+    
+    test('returns false when no screenshots', () => {
+        const history = [
+            { role: 'user', content: 'Hello world' }
+        ];
+        
+        expect(tm.hasStrippableScreenshots(history)).toBe(false);
+    });
+    
+    test('handles empty history', () => {
+        expect(tm.hasStrippableScreenshots([])).toBe(false);
+        expect(tm.hasStrippableScreenshots(null)).toBe(false);
     });
     
 });

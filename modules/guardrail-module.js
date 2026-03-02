@@ -124,7 +124,8 @@ const DANGEROUS_PATTERNS = [
     /curl.*\|\s*sh/i,
     /;\s*rm\s+/i,
     /&&\s*rm\s+/i,
-    /\|\s*rm\s+/i,
+    // Fixed: removed extra backslash escape that was causing pattern to not match
+    /|\s*rm\s+/i,
     /\>\s*\/dev\//i,
     /sed\s+-i.*\/etc\//i,
     /patch\s+-p0.*\/etc\//i,

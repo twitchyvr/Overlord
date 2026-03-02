@@ -113,6 +113,7 @@ const moduleFiles = [
     './modules/minimax-files-module',
     './modules/project-module',
     './modules/conversation-module',
+    './modules/tasks-engine',       // dedicated task socket handlers + service API
     './modules/git-module',
     './modules/orchestration-module'
 ];

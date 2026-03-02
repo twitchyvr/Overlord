@@ -4347,13 +4347,31 @@
 
             recognition.onerror = function(event) {
                 console.error('Speech recognition error:', event.error);
-                // Don't play error sound for "no-speech" - that's normal when user stops talking
-                if (event.error !== 'no-speech') {
-                    playErrorSound();
-                }
                 isRecording = false;
                 elements.btnVoice?.classList.remove('recording');
                 elements.btnVoice?.setAttribute('title', 'Voice input (click to start, click again to stop)');
+
+                if (event.error === 'no-speech') {
+                    // Normal — user stopped talking without saying anything
+                    return;
+                }
+
+                // Show user-friendly toast for actionable errors
+                const errorMessages = {
+                    'network': '🎤 Voice: Chrome speech recognition requires an active internet connection and HTTPS. Try opening the app at https:// or use Chrome\'s --allow-insecure-localhost flag.',
+                    'not-allowed': '🎤 Voice: Microphone access denied. Click the 🔒 icon in Chrome\'s address bar and allow microphone access, then reload.',
+                    'audio-capture': '🎤 Voice: No microphone found. Check that a microphone is connected and not in use by another app.',
+                    'service-not-allowed': '🎤 Voice: Speech service not allowed on this page. Open over HTTPS to enable voice input.',
+                    'aborted': null,  // user-initiated, no message needed
+                };
+                const msg = errorMessages[event.error];
+                if (msg === undefined) {
+                    // Unknown error
+                    playErrorSound();
+                    showToast('Voice error: ' + event.error, 'error');
+                } else if (msg !== null) {
+                    showToast(msg, 'warning', 6000);
+                }
             };
 
             // Click handler for voice button

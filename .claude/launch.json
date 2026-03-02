@@ -3,7 +3,7 @@
   "configurations": [
     {
       "name": "overlord-web",
-      "runtimeExecutable": "node",
+      "runtimeExecutable": "/Users/mattrogers/.nvm/versions/node/v20.19.2/bin/node",
       "runtimeArgs": ["server.js"],
       "port": 3031
     }

@@ -427,9 +427,9 @@ async function executeUnderstandImage(imagePath, prompt, apiKey) {
     if (client) {
         try {
             console.log('[MCP] Trying MCP subprocess for understand_image...');
-            // The MCP understand_image tool expects image_url parameter
+            // The MCP server (minimax-coding-plan-mcp) expects `image_source`, not `image_url`
             const args = {
-                image_url: imagePath,
+                image_source: imagePath,
                 prompt: prompt || 'Describe this image in detail. What do you see?'
             };
             const result = await client.callTool('understand_image', args);

@@ -700,6 +700,54 @@ ${codeQualitySection}${taskEnforcementSection}
 ## AVAILABLE AGENTS (use with delegate_to_agent tool):
 ${agentList}
 
+## AGENT MANAGEMENT — USE BUILT-IN TOOLS, NOT FILE/DB OPERATIONS
+When managing agents or projects, use these built-in tools DIRECTLY. NEVER look at database files, shell commands, or config files.
+
+### Agent CRUD
+- **list_agents([group])** — list all agents; optional filter by group name
+- **get_agent_info(name)** — full details: role, capabilities, system prompt, group
+- **add_agent(name, role, description, capabilities, group)** — create a new agent
+  - \`name\`: kebab-case slug, e.g. \`"security-auditor"\`
+  - \`role\`: display title, e.g. \`"Security Auditor"\`
+  - \`description\`: expertise and responsibilities
+  - \`capabilities\`: array, e.g. \`["OWASP", "pen-testing", "code-review"]\`
+  - \`group\`: e.g. \`"engineering"\`, \`"qa"\`, \`"devops"\`
+- **update_agent(name, [...fields])** — change role, description, capabilities, group, systemPrompt, languages
+- **remove_agent(name)** — delete an agent (use list_agents to confirm name first)
+
+### Agent Group Management
+- **list_agent_groups()** — list all groups with agent counts
+- **create_agent_group(name, description, color)** — create a new department/group
+- **update_agent_group(group_id, name, description, color)** — rename or update a group
+- **delete_agent_group(group_id)** — remove a group (agents remain, just ungrouped)
+- **add_agent_to_group(agent_name, group_id)** — assign an agent to a group
+- **remove_agent_from_group(agent_name)** — unassign agent from its group
+
+### Project Management
+- **list_projects()** — list all projects, shows active project
+- **get_project(project_id)** — full details about one project
+- **create_project(name, description, workingDir)** — create a new project workspace
+- **update_project(project_id, name, description, workingDir)** — modify a project
+- **delete_project(project_id)** — permanently delete a project
+- **switch_project(project_id)** — make a project active (changes context, working dir, tasks)
+
+### Example — user says "add a security agent":
+\`\`\`
+add_agent({
+  name: "security-auditor",
+  role: "Security Auditor",
+  description: "Reviews code for OWASP vulnerabilities, auth flaws, and injection risks.",
+  capabilities: ["security-review", "OWASP", "pen-testing", "auth-design"],
+  group: "engineering"
+})
+\`\`\`
+After add_agent succeeds, the agent immediately appears in the Team panel and is available for delegation.
+
+### Example — user says "update the code-implementer's description":
+\`\`\`
+update_agent({ name: "code-implementer", description: "Writes, edits, and refactors code. Expert in JS, Python, and Rust." })
+\`\`\`
+
 Platform: ${platformName} (${process.platform})
 Be concise and professional.`;
 }

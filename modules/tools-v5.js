@@ -13,7 +13,7 @@
 //   Files:    read_file, read_file_lines, write_file, patch_file, append_file, list_dir
 //   AI/MCP:   web_search, understand_image
 //   System:   system_info, get_working_dir, set_working_dir, set_thinking_level
-//   Agents:   list_agents, get_agent_info, assign_task
+//   Agents:   (managed via orchestration-module dynamic tools)
 //   QA:       qa_run_tests, qa_check_lint, qa_check_types, qa_check_coverage, qa_audit_deps
 //   GitHub:   github (multi-action: get_repo, list_issues, create_issue, etc.)
 
@@ -255,40 +255,6 @@ const TOOL_DEFS = [
                 level: { type: 'number', description: 'Thinking level from 1 (minimal) to 5 (maximum)' }
             },
             required: ['level']
-        }
-    },
-
-    // --- Agent Management ---
-    {
-        name: 'list_agents',
-        description: 'List all available team agents with their roles, descriptions, capabilities, and current status (IDLE/WORKING).',
-        input_schema: {
-            type: 'object',
-            properties: {},
-            required: []
-        }
-    },
-    {
-        name: 'get_agent_info',
-        description: 'Get detailed information about a specific team agent including role, description, capabilities, and status.',
-        input_schema: {
-            type: 'object',
-            properties: {
-                agent_name: { type: 'string', description: 'Name of the agent (e.g., "git-keeper", "testing-engineer")' }
-            },
-            required: ['agent_name']
-        }
-    },
-    {
-        name: 'assign_task',
-        description: 'Assign a task to a specific team agent for execution. The agent will execute the task using its specialized capabilities. Use git-keeper for git operations, testing-engineer for QA, code-implementer for file creation.',
-        input_schema: {
-            type: 'object',
-            properties: {
-                agent_name: { type: 'string', description: 'Name of the agent to assign the task to' },
-                task: { type: 'string', description: 'Description of the task to execute' }
-            },
-            required: ['agent_name', 'task']
         }
     },
 
@@ -672,11 +638,6 @@ async function execute(tool, inputOverride) {
             case 'get_working_dir':   result = getWorkingDir(); break;
             case 'set_working_dir':   result = setWorkingDir(input.path); break;
             case 'set_thinking_level': result = setThinkingLevel(input.level); break;
-
-            // Agents
-            case 'list_agents':    result = listAgents(); break;
-            case 'get_agent_info': result = getAgentInfo(input.agent_name); break;
-            case 'assign_task':    result = await assignTaskTool(input.agent_name, input.task); break;
 
             // QA
             case 'qa_run_tests':     result = await runTests(input.type || 'all'); break;
@@ -1208,37 +1169,6 @@ async function handleGithub(input) {
     }
 
     return await runBash(cmd);
-}
-
-// ==================== AGENT TOOLS ====================
-
-function listAgents() {
-    const agentSystem = HUB?.getService('agentSystem');
-    if (!agentSystem) {
-        return { success: false, content: 'Agent system not available' };
-    }
-    return { success: true, content: agentSystem.formatAgentList() };
-}
-
-function getAgentInfo(name) {
-    const agentSystem = HUB?.getService('agentSystem');
-    if (!agentSystem) {
-        return { success: false, content: 'Agent system not available' };
-    }
-    return { success: true, content: agentSystem.formatAgentInfo(name) };
-}
-
-async function assignTaskTool(agentName, task) {
-    const agentSystem = HUB?.getService('agentSystem');
-    if (!agentSystem) {
-        return { success: false, content: 'Agent system not available' };
-    }
-    try {
-        const result = await agentSystem.assignTask(agentName, task);
-        return { success: true, content: result };
-    } catch (e) {
-        return { success: false, content: 'Agent error: ' + e.message };
-    }
 }
 
 // ==================== CONFIG TOOLS ====================

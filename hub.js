@@ -440,14 +440,19 @@ class Hub extends EventEmitter {
 
             // ── Chat mode ────────────────────────────────────────────────────
             socket.on('set_mode', (mode) => {
-                const valid = ['auto', 'plan', 'ask', 'pm'];
+                const valid = ['auto', 'plan', 'ask', 'pm', 'bypass'];
                 if (!valid.includes(mode)) return;
                 const config = this.getService('config');
                 if (config) config.chatMode = mode;
-                this.log('Chat mode → ' + mode, 'info');
+                this.log('Chat mode → ' + mode + (mode === 'bypass' ? ' ⚠️  ALL APPROVALS DISABLED' : ''), 'info');
                 this.broadcastAll('mode_changed', { mode });
                 // Cancel any pending plan when switching away from plan mode
                 if (mode !== 'plan') this.emit('plan_cancelled');
+                // ── Live bypass: if switching TO bypass while approvals are pending,
+                // auto-approve them so in-flight agents immediately stop waiting.
+                if (mode === 'bypass') {
+                    this.emit('bypass_active');
+                }
             });
 
             // ── User input response (for ask_user tool) ──────────────────────
@@ -1192,51 +1197,85 @@ class Hub extends EventEmitter {
                     hint.prompt       ? 'user note: "' + hint.prompt + '"'        : ''
                 ].filter(Boolean).join('\n');
 
-                const systemOverride = `You are an agent configuration assistant for an AI orchestration platform called OVERLORD.
-Respond with ONLY a valid JSON object — no markdown, no explanation, no code fences.
-Security roles available: ${SECURITY_ROLES.join(', ')}
-Tools available: ${ALL_TOOLS.join(', ')}
-Rules: name must be lowercase-slug; role is 2-5 words; description is 1-2 sentences; instructions are 2-4 specific sentences for the system prompt; securityRole must be one of the available values; tools must be an array of available tool names suited to the role.
-${lockedDesc}
-Only include unlocked fields in your JSON output.`;
+                const EXAMPLE_JSON = JSON.stringify({
+                    name: 'agent-name-slug',
+                    role: 'Short Role Title',
+                    description: 'One or two sentences describing the agent.',
+                    instructions: 'Specific instructions for the system prompt. Be concise and directive.',
+                    securityRole: 'developer',
+                    tools: ['bash', 'read_file', 'write_file']
+                }, null, 2);
 
-                const userMsg = `Improve or fill this agent configuration. Use existing values as context — make them better, more specific, and complete.\n\n${ctx || '(no context — create a useful general-purpose developer agent)'}
+                const systemOverride = [
+                    'You are an agent configuration assistant for an AI orchestration platform called OVERLORD.',
+                    'OUTPUT FORMAT: You MUST respond with ONLY a single raw JSON object. No markdown. No code fences. No prose. No explanation before or after.',
+                    'The VERY FIRST character of your response must be `{` and the VERY LAST character must be `}`.',
+                    `Example of the exact output format required:\n${EXAMPLE_JSON}`,
+                    `Security roles available: ${SECURITY_ROLES.join(', ')}`,
+                    `Tools available: ${ALL_TOOLS.join(', ')}`,
+                    'Field rules: name=lowercase-slug, role=2-5 words, description=1-2 sentences, instructions=2-4 specific directive sentences, securityRole=one of the available values, tools=array of available tool names.',
+                    lockedDesc,
+                    'Only include unlocked fields in your JSON output.'
+                ].join('\n');
 
-Return JSON with keys (omit locked fields): name, role, description, instructions, securityRole, tools`;
+                const userMsg = [
+                    'Improve or fill this agent configuration. Use the existing values as context — enhance them to be specific, professional, and complete.',
+                    ctx ? `Existing values:\n${ctx}` : '(No existing values — generate a useful general-purpose developer agent.)',
+                    hint.prompt ? `Additional instructions from user: "${hint.prompt}"` : '',
+                    'Return ONLY the raw JSON object with these keys (omit locked fields): name, role, description, instructions, securityRole, tools'
+                ].filter(Boolean).join('\n\n');
 
-                let fullText = '';
-                try {
-                    await new Promise((resolve, reject) => {
-                        ai.chatStream(
-                            [{ role: 'user', content: userMsg }],
-                            (event) => {
-                                if (event.type === 'content_block_delta' && event.delta && event.delta.type === 'text_delta') {
-                                    fullText += event.delta.text || '';
-                                }
-                            },
-                            resolve,
-                            reject,
-                            systemOverride
-                        );
-                    });
-                } catch (err) {
-                    this.log('[AI Fill] stream error: ' + err.message, 'error');
-                    return ack({ error: 'AI request failed: ' + err.message });
+                // Helper to extract and parse JSON from potentially-noisy LLM output
+                function extractJSON(text) {
+                    let s = text.trim();
+                    // Strip markdown code fences
+                    const fenceMatch = s.match(/```(?:json)?\s*([\s\S]*?)```/);
+                    if (fenceMatch) s = fenceMatch[1].trim();
+                    // Find outermost { ... }
+                    const first = s.indexOf('{');
+                    const last  = s.lastIndexOf('}');
+                    if (first !== -1 && last > first) s = s.slice(first, last + 1);
+                    return JSON.parse(s); // throws if invalid
                 }
 
-                // Strip code fences if model wrapped despite instructions
-                let jsonStr = fullText.trim();
-                const fence = jsonStr.match(/```(?:json)?\s*([\s\S]*?)```/);
-                if (fence) jsonStr = fence[1].trim();
-                const fb = jsonStr.indexOf('{'), lb = jsonStr.lastIndexOf('}');
-                if (fb !== -1 && lb > fb) jsonStr = jsonStr.slice(fb, lb + 1);
+                // Attempt with up to 3 retries so transient JSON failures are recovered automatically
+                let parsed = null;
+                const MAX_ATTEMPTS = 3;
+                for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+                    let fullText = '';
+                    try {
+                        await new Promise((resolve, reject) => {
+                            ai.chatStream(
+                                [{ role: 'user', content: userMsg }],
+                                (event) => {
+                                    if (event.type === 'content_block_delta' && event.delta && event.delta.type === 'text_delta') {
+                                        fullText += event.delta.text || '';
+                                    }
+                                },
+                                resolve,
+                                reject,
+                                systemOverride
+                            );
+                        });
+                    } catch (err) {
+                        this.log(`[AI Fill] stream error (attempt ${attempt}): ` + err.message, 'error');
+                        if (attempt === MAX_ATTEMPTS) return ack({ error: 'AI request failed: ' + err.message });
+                        continue;
+                    }
 
-                let parsed;
-                try { parsed = JSON.parse(jsonStr); }
-                catch (e) {
-                    this.log('[AI Fill] JSON parse failed: ' + jsonStr.slice(0, 120), 'error');
-                    return ack({ error: 'AI returned invalid JSON — please try again.' });
+                    try {
+                        parsed = extractJSON(fullText);
+                        break; // success
+                    } catch (e) {
+                        this.log(`[AI Fill] JSON parse failed (attempt ${attempt}): ` + fullText.slice(0, 160), 'error');
+                        if (attempt === MAX_ATTEMPTS) {
+                            return ack({ error: 'AI returned invalid JSON after ' + MAX_ATTEMPTS + ' attempts. Please try again.' });
+                        }
+                        // Brief pause before retry
+                        await new Promise(r => setTimeout(r, 500));
+                    }
                 }
+                if (!parsed) return ack({ error: 'AI Fill: could not parse a valid response.' });
 
                 // Sanitize result
                 const out = {};

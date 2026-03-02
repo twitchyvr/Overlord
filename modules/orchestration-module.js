@@ -24,6 +24,10 @@ let pendingPlanResolvers = null;   // { resolve, timer }
 let pendingPlanTaskIds = [];
 let pendingPlanRawText = ''; // Raw AI response text for variant switching
 
+// Plan execution bypass: when a plan is approved, skip individual tool approvals
+// for the duration of the execution cycle so the user isn't re-prompted per tool.
+let planExecutionActive = false;
+
 // Safeguards against infinite loops / token waste
 // These are runtime defaults; actual values are overridden by config on init.
 let MAX_CYCLES = 10; // max recursive AI→tool→AI cycles per user message
@@ -118,6 +122,18 @@ async function init(h) {
     hub.on('plan_cancelled', handlePlanCancelled);
     hub.on('plan_revision',  handlePlanRevision);
     hub.on('switch_plan_variant', handleSwitchPlanVariant);
+    // ── Live bypass: auto-approve all blocking approvals immediately when mode switches
+    hub.on('bypass_active', () => {
+        if (pendingApprovalResolvers.size > 0) {
+            hub.log(`⚡ [BYPASS] Auto-approving ${pendingApprovalResolvers.size} pending approval(s) — mode changed to bypass`, 'warning');
+            pendingApprovalResolvers.forEach(({ resolve, timer }, toolId) => {
+                clearTimeout(timer);
+                hub.broadcast('approval_resolved', { toolId, approved: true });
+                resolve(true);
+            });
+            pendingApprovalResolvers.clear();
+        }
+    });
 
     hub.registerService('orchestration', {
         isProcessing: () => isProcessing,
@@ -1863,7 +1879,14 @@ async function handleUserMessage(text, socket) {
                         hub.addMessage('assistant', `✅ **Plan Approved** — executing ${planResult.tasks.length} task${planResult.tasks.length !== 1 ? 's' : ''}…\n\n${planMd}`);
                         conv.addUserMessage('[PLAN APPROVED] Execute each step in sequence using tools. Begin immediately.');
                         isProcessing = true;
-                        await runAICycle();
+                        // Skip individual tool approval prompts during plan execution —
+                        // the user already approved at the plan level.
+                        planExecutionActive = true;
+                        try {
+                            await runAICycle();
+                        } finally {
+                            planExecutionActive = false;
+                        }
                         return;
                     } else if (decision.action === 'cancelled') {
                         deletePendingPlanTasks(pendingPlanTaskIds);
@@ -2004,7 +2027,14 @@ async function executeToolsWithApproval(toolCalls) {
         const activeCfg = hub.getService('config');
         let outputContent = '';
 
-        if (activeCfg?.chatMode === 'ask') {
+        // ── BYPASS mode: skip ALL approval gates, execute immediately ──
+        if (activeCfg?.chatMode === 'bypass' || planExecutionActive) {
+            if (activeCfg?.chatMode === 'bypass') {
+                hub.log(`⚡ [BYPASS] Auto-approving ${tool.name} (bypass mode active)`, 'warning');
+            }
+            const bypassOutput = await tools.execute(tool);
+            outputContent = (typeof bypassOutput === 'object' && bypassOutput.content) ? bypassOutput.content : String(bypassOutput);
+        } else if (activeCfg?.chatMode === 'ask') {
             hub.broadcast('approval_request', {
                 toolName: tool.name, toolId: tool.id, input: tool.input,
                 tier: 3, confidence: 1.0,
@@ -2855,13 +2885,19 @@ function buildAgentSystemPrompt(session) {
     const toolList = tools ? tools.getDefinitions().map(t => `- ${t.name}: ${t.description || ''}`).join('\n') : '';
 
     const parts = [
-        `You are ${def.name || session.name}, a specialized AI agent.`,
+        `You are ${def.name || session.name}, a specialized AI subagent operating under Orchestrator control.`,
         def.role ? `Role: ${def.role}` : '',
         def.description ? `Description: ${def.description}` : '',
         def.instructions ? `\nInstructions:\n${def.instructions}` : '',
         `\nWorking directory: ${workDir}`,
         toolList ? `\nAvailable tools:\n${toolList}` : '',
-        '\nFocus on your assigned tasks. Be concise and effective. Coordinate with the orchestrator through your conversation history.'
+        '\n## MANDATORY AGENT CONDUCT RULES (non-negotiable)',
+        '1. You are a SUBAGENT. The orchestrator is your commanding authority. Follow delegated tasks exactly.',
+        '2. Do NOT call `delegate_to_agent`. You cannot spawn other agents. Only the orchestrator delegates.',
+        '3. Do NOT use `message_agent` more than once per task cycle to avoid runaway agent chains.',
+        '4. SCOPE LOCK: Complete ONLY what is in the task description. Never refactor, add features, or install packages beyond what was asked.',
+        '5. When done, report your result clearly. Do not loop or continue working after task completion.',
+        '6. If you identify improvements outside scope, mention them in your response — do NOT implement them.',
     ];
 
     // Inject per-task scope constraints when dispatched via delegate_to_agent
@@ -2870,17 +2906,11 @@ function buildAgentSystemPrompt(session) {
         const scopeDir = scope.workingDir || workDir;
         const maxCycles = scope.maxCycles || 8;
         parts.push([
-            '\n## TASK SCOPE — CRITICAL CONSTRAINTS',
-            `You are working on task: "${scope.title}"`,
+            '\n## ASSIGNED TASK SCOPE',
+            `Task: "${scope.title}"`,
             `Working directory: ${scopeDir}`,
-            'Scope limit: Complete ONLY what the task description says. Do NOT:',
-            '- Refactor unrelated code or files',
-            '- Add features not in the task description',
-            '- Install new packages or dependencies',
-            '- Create files outside the working directory',
-            '- Call message_agent more than once per task',
-            'If you identify improvements beyond scope, add a note to your response but do NOT implement them.',
-            `Max tool cycles for this task: ${maxCycles}`
+            `Max tool cycles: ${maxCycles}`,
+            'Complete this task and nothing else.'
         ].join('\n'));
     }
 
@@ -3151,8 +3181,41 @@ async function runAgentAICycle(session) {
 }
 
 async function executeAgentTools(session, toolCalls, agentSystem, tools) {
+    const activeCfg = hub.getService('config');
+    const bypassApprovals = activeCfg?.chatMode === 'bypass' || planExecutionActive;
+
+    // Build permitted tool set from agent definition (empty = no restriction)
+    const agentDef = session.def || {};
+    const permittedTools = Array.isArray(agentDef.tools) && agentDef.tools.length > 0
+        ? new Set(agentDef.tools) : null;
+
     for (const tool of toolCalls) {
         const toolStartTime = Date.now();
+
+        // ── GUARDRAIL: block recursive delegate_to_agent from subagents ──────
+        // Only the top-level orchestrator (chain depth 0) may delegate.
+        // Subagents must use message_agent to communicate, not spawn more agents.
+        if (tool.name === 'delegate_to_agent') {
+            hub.log(`⛔ [GUARDRAIL] ${session.name} attempted delegate_to_agent — blocked. Only the orchestrator may delegate.`, 'warning');
+            session.history.push({
+                role: 'tool',
+                content: [{ type: 'tool_result', tool_use_id: tool.id,
+                    content: '⛔ GUARDRAIL: delegate_to_agent is reserved for the orchestrator. You are a subagent — use message_agent to report results instead.' }]
+            });
+            continue;
+        }
+
+        // ── GUARDRAIL: enforce permitted tool list from agent definition ──────
+        if (permittedTools && !permittedTools.has(tool.name)) {
+            hub.log(`⛔ [GUARDRAIL] ${session.name} attempted ${tool.name} — not in agent's permitted tools`, 'warning');
+            session.history.push({
+                role: 'tool',
+                content: [{ type: 'tool_result', tool_use_id: tool.id,
+                    content: `⛔ GUARDRAIL: Tool "${tool.name}" is not in your permitted tool list. Stick to your authorized tools: ${[...permittedTools].join(', ')}` }]
+            });
+            continue;
+        }
+
         broadcastActivity('tool_start', {
             tool: tool.name,
             inputSummary: JSON.stringify(tool.input || {}).substring(0, 120),
@@ -3163,7 +3226,14 @@ async function executeAgentTools(session, toolCalls, agentSystem, tools) {
         let outputContent = '';
         let recommendation = null;
 
-        if (agentSystem && agentSystem.classifyApprovalTier) {
+        // ── BYPASS / plan-execution: skip approval entirely ──────────────────
+        if (bypassApprovals) {
+            if (activeCfg?.chatMode === 'bypass') {
+                hub.log(`⚡ [BYPASS] Auto-approving ${tool.name} for ${session.name}`, 'warning');
+            }
+            const output = await tools.execute(tool);
+            outputContent = (typeof output === 'object' && output.content) ? output.content : String(output);
+        } else if (agentSystem && agentSystem.classifyApprovalTier) {
             recommendation = agentSystem.classifyApprovalTier(tool.name, tool.input);
             const approvalResult = agentSystem.shouldProceed(recommendation);
 

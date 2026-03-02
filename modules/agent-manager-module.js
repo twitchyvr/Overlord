@@ -1019,7 +1019,9 @@ function getDefaultGroups() {
 function addAgentToGroup(agentId, groupId) {
     try {
         if (db) {
-            db.run('UPDATE agents SET group_id = ? WHERE id = ?', [groupId, agentId]);
+            // Match by id OR name — default agents may not have a UUID,
+            // so the client sends the agent name as the identifier.
+            db.run('UPDATE agents SET group_id = ? WHERE id = ? OR name = ?', [groupId, agentId, agentId]);
         }
         return { success: true };
     } catch (e) {
@@ -1030,7 +1032,8 @@ function addAgentToGroup(agentId, groupId) {
 function removeAgentFromGroup(agentId) {
     try {
         if (db) {
-            db.run('UPDATE agents SET group_id = NULL WHERE id = ?', [agentId]);
+            // Match by id OR name for the same reason as addAgentToGroup
+            db.run('UPDATE agents SET group_id = NULL WHERE id = ? OR name = ?', [agentId, agentId]);
         }
         return { success: true };
     } catch (e) {

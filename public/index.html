@@ -394,9 +394,10 @@
         .log-entry.info { border-left-color: var(--electric); }
 
         /* ── Mode selector electric states ── */
-        .chat-mode-btn.active-auto { color: var(--neon-green) !important; background: rgba(0,255,136,0.06) !important; box-shadow: 0 0 8px rgba(0,255,136,0.18); }
-        .chat-mode-btn.active-plan { color: var(--electric) !important; background: var(--charged) !important; box-shadow: var(--glow-cyan-sm); }
-        .chat-mode-btn.active-ask  { color: var(--plasma)   !important; background: var(--charged-purple) !important; box-shadow: 0 0 8px rgba(168,85,247,0.18); }
+        .chat-mode-btn.active-auto   { color: var(--neon-green) !important; background: rgba(0,255,136,0.06) !important; box-shadow: 0 0 8px rgba(0,255,136,0.18); }
+        .chat-mode-btn.active-plan   { color: var(--electric) !important; background: var(--charged) !important; box-shadow: var(--glow-cyan-sm); }
+        .chat-mode-btn.active-ask    { color: var(--plasma)   !important; background: var(--charged-purple) !important; box-shadow: 0 0 8px rgba(168,85,247,0.18); }
+        .chat-mode-btn.active-bypass { color:#ef4444 !important; background:rgba(239,68,68,0.15) !important; box-shadow:0 0 10px rgba(239,68,68,0.4) !important; animation:bypass-pulse 2s ease-in-out infinite; }
 
         /* ── Message materialize animation ── */
         .message { animation: materialize 0.22s ease-out both; }
@@ -1235,10 +1236,16 @@
         .chat-mode-btn { padding:3px 10px;font-size:10px;font-weight:700;letter-spacing:.05em;background:transparent;color:var(--text-secondary);border:none;border-right:1px solid var(--border);cursor:pointer;transition:background .12s,color .12s; }
         .chat-mode-btn:last-child { border-right:none; }
         .chat-mode-btn:hover { background:var(--bg-hover);color:var(--text-primary); }
-        .chat-mode-btn.active-auto { background:var(--bg-tertiary);color:var(--accent-green); }
-        .chat-mode-btn.active-plan { background:var(--bg-tertiary);color:var(--accent-cyan); }
-        .chat-mode-btn.active-ask  { background:var(--bg-tertiary);color:var(--accent-yellow); }
-        .chat-mode-btn.active-pm   { background:var(--bg-tertiary);color:var(--plasma); }
+        .chat-mode-btn.active-auto   { background:var(--bg-tertiary);color:var(--accent-green); }
+        .chat-mode-btn.active-plan   { background:var(--bg-tertiary);color:var(--accent-cyan); }
+        .chat-mode-btn.active-ask    { background:var(--bg-tertiary);color:var(--accent-yellow); }
+        .chat-mode-btn.active-pm     { background:var(--bg-tertiary);color:var(--plasma); }
+        /* BYPASS mode — red to signal "dangerous" state */
+        .chat-mode-btn.mode-btn-bypass { color:#f87171; }
+        .chat-mode-btn.mode-btn-bypass:hover { background:rgba(239,68,68,0.12);color:#ef4444; }
+        .chat-mode-btn.active-bypass { background:rgba(239,68,68,0.2) !important;color:#ef4444 !important;
+            box-shadow:0 0 8px rgba(239,68,68,0.35);animation:bypass-pulse 2s ease-in-out infinite; }
+        @keyframes bypass-pulse { 0%,100%{box-shadow:0 0 6px rgba(239,68,68,0.3)} 50%{box-shadow:0 0 14px rgba(239,68,68,0.65)} }
 
         /* Input context bar — thin info strip above the toolbar */
         #input-context-bar {
@@ -2953,6 +2960,12 @@
     </div>
 </div>
 <body>
+    <!-- BYPASS MODE WARNING — hidden unless bypass mode is active -->
+    <div id="bypass-warning-banner" style="display:none;position:fixed;top:0;left:0;right:0;z-index:99999;background:#7c1d1d;color:#fca5a5;font-size:11px;font-weight:700;letter-spacing:0.06em;text-align:center;padding:5px 12px;border-bottom:2px solid #ef4444;user-select:none;">
+        ⚠&nbsp; BYPASS MODE ACTIVE — ALL APPROVAL GATES ARE DISABLED. AI AGENTS EXECUTE WITHOUT CONFIRMATION.&nbsp;
+        <button onclick="setChatMode('auto')" style="background:#ef4444;border:none;border-radius:3px;color:#fff;font-size:10px;font-weight:700;padding:1px 8px;cursor:pointer;margin-left:8px;">EXIT BYPASS</button>
+    </div>
+
     <div class="app">
         <div class="status-bar">
             <span class="logo" id="overlord-logo">OVERLORD</span>
@@ -3056,12 +3069,13 @@
                                 <span class="toggle-slider"></span>
                             </label>
                         </div>
-                        <!-- Mode selector: AUTO | PLAN | PM | PERMS -->
-                        <div class="chat-mode-selector" title="AUTO: AI acts freely | PLAN: AI plans first | PM: Project Manager mode | PERMS: approve every tool">
-                            <button class="chat-mode-btn active-auto" id="mode-btn-auto" onclick="setChatMode('auto')">AUTO</button>
-                            <button class="chat-mode-btn" id="mode-btn-plan" onclick="setChatMode('plan')">PLAN</button>
-                            <button class="chat-mode-btn" id="mode-btn-pm"   onclick="setChatMode('pm')">PM</button>
-                            <button class="chat-mode-btn" id="mode-btn-ask"  onclick="setChatMode('ask')">PERMS</button>
+                        <!-- Mode selector: AUTO | PLAN | PM | PERMS | BYPASS -->
+                        <div class="chat-mode-selector" title="AUTO: AI acts freely | PLAN: AI plans first | PM: Project Manager mode | PERMS: approve every tool | BYPASS: skip all approvals (dangerous)">
+                            <button class="chat-mode-btn active-auto" id="mode-btn-auto"   onclick="setChatMode('auto')">AUTO</button>
+                            <button class="chat-mode-btn" id="mode-btn-plan"               onclick="setChatMode('plan')">PLAN</button>
+                            <button class="chat-mode-btn" id="mode-btn-pm"                 onclick="setChatMode('pm')">PM</button>
+                            <button class="chat-mode-btn" id="mode-btn-ask"                onclick="setChatMode('ask')">PERMS</button>
+                            <button class="chat-mode-btn mode-btn-bypass" id="mode-btn-bypass" onclick="setChatMode('bypass')" title="BYPASS — skip ALL approval gates. A persistent warning is shown while active.">BYPASS</button>
                         </div>
                     </div>
                     <div id="plan-approval-bar">
@@ -4143,8 +4157,16 @@
                         </div>
                         <!-- AI Fill panel (collapsible) -->
                         <div id="am-ai-panel">
-                            <div style="font-size:10px;color:var(--accent-primary);font-weight:700;letter-spacing:0.05em;margin-bottom:6px;">✨ AI FILL</div>
-                            <textarea id="am-ai-hint" rows="2" placeholder="Describe what you want (optional — AI reads existing values to improve them)…" style="width:100%;padding:6px 8px;background:var(--bg-secondary);border:1px solid var(--border-color);border-radius:4px;color:var(--text-primary);font-size:12px;resize:vertical;box-sizing:border-box;"></textarea>
+                            <div style="display:flex;align-items:baseline;gap:6px;margin-bottom:4px;">
+                                <div style="font-size:10px;color:var(--accent-primary);font-weight:700;letter-spacing:0.05em;">✨ AI FILL</div>
+                                <span style="font-size:10px;color:var(--text-muted);">— existing fields are used automatically</span>
+                            </div>
+                            <textarea id="am-ai-hint" rows="2"
+                                placeholder="Optional: add context or refinement instructions (e.g. 'focus on security' or 'make this agent a Python specialist')…"
+                                style="width:100%;padding:6px 8px;background:var(--bg-secondary);border:1px solid var(--border-color);border-radius:4px;color:var(--text-primary);font-size:12px;resize:vertical;box-sizing:border-box;margin-bottom:6px;"></textarea>
+                            <div style="font-size:10px;color:var(--text-muted);margin-bottom:6px;line-height:1.5;">
+                                Whatever is already filled in above will be sent as context. Leave this box empty to let AI improve existing values, or type here to guide or refine specific fields.
+                            </div>
                             <button class="am-generate-btn" id="am-generate-btn" onclick="amGeneratePreview()">✨ Generate Preview</button>
                         </div>
                         <!-- Preview summary bar -->
@@ -5985,12 +6007,9 @@
 
         // ==================== APPROVAL UI ====================
         let _approvalToolId = null;
-        let _approvalTimerInterval = null;
-        let _approvalDeadline = null;
 
         socket.on('approval_request', (data) => {
             _approvalToolId = data.toolId;
-            _approvalDeadline = Date.now() + 300000; // 5 minutes
 
             // Populate fields
             document.getElementById('approval-tool-name').textContent = data.toolName || data.toolId || '?';
@@ -5998,19 +6017,12 @@
             document.getElementById('approval-tier').textContent = tierLabels[data.tier] || ('Tier ' + (data.tier || '?'));
             document.getElementById('approval-reasoning').textContent = data.reasoning || data.confidence || '';
             document.getElementById('approval-input').textContent = data.inputSummary || JSON.stringify(data.input || {}).substring(0, 400);
+            // No countdown — waits indefinitely for the user
+            const timerEl = document.getElementById('approval-timer');
+            if (timerEl) timerEl.textContent = '';
 
             // Show modal
             document.getElementById('approval-modal').style.display = 'block';
-
-            // Countdown timer
-            clearInterval(_approvalTimerInterval);
-            _approvalTimerInterval = setInterval(() => {
-                const remaining = Math.max(0, Math.ceil((_approvalDeadline - Date.now()) / 1000));
-                const m = Math.floor(remaining / 60);
-                const s = remaining % 60;
-                document.getElementById('approval-timer').textContent = `Auto-deny in ${m}:${String(s).padStart(2,'0')}`;
-                if (remaining === 0) clearInterval(_approvalTimerInterval);
-            }, 1000);
 
             // Notify user (OS notification + ding + title flash)
             notifyUser('⚠ Approval Required', (data.toolName || data.toolId) + ' — click to respond');
@@ -6039,9 +6051,7 @@
 
         function hideApprovalModal() {
             document.getElementById('approval-modal').style.display = 'none';
-            clearInterval(_approvalTimerInterval);
             _approvalToolId = null;
-            _approvalDeadline = null;
             document.title = 'Overlord';
         }
 
@@ -7580,7 +7590,7 @@
         let currentChatMode = localStorage.getItem('overlord_chat_mode') || 'auto';
 
         function setChatMode(mode) {
-            if (!['auto', 'plan', 'ask', 'pm'].includes(mode)) return;
+            if (!['auto', 'plan', 'ask', 'pm', 'bypass'].includes(mode)) return;
             const prevMode = currentChatMode;
             currentChatMode = mode;
             localStorage.setItem('overlord_chat_mode', mode);
@@ -7591,6 +7601,12 @@
             if (mode === 'plan' || mode === 'pm') {
                 const lr = document.getElementById('long-running-mode');
                 if (lr && !lr.checked) { lr.checked = true; setLongRunning(true); }
+            }
+            // Show/hide bypass warning banner
+            const banner = document.getElementById('bypass-warning-banner');
+            if (banner) banner.style.display = (mode === 'bypass') ? 'block' : 'none';
+            if (mode === 'bypass') {
+                log('⚠️ BYPASS MODE: all approval gates disabled — AI will execute without confirmation', 'warning');
             }
             // Auto-model-switch toast: show which model is now active if setting is on
             _notifyModelSwitch(prevMode, mode);
@@ -7617,10 +7633,18 @@
         }
 
         function updateModeUI(mode) {
-            ['auto', 'plan', 'pm', 'ask'].forEach(m => {
+            ['auto', 'plan', 'pm', 'ask', 'bypass'].forEach(m => {
                 const b = document.getElementById('mode-btn-' + m);
-                if (b) b.className = 'chat-mode-btn' + (mode === m ? ' active-' + m : '');
+                if (!b) return;
+                if (m === 'bypass') {
+                    b.className = 'chat-mode-btn mode-btn-bypass' + (mode === m ? ' active-bypass' : '');
+                } else {
+                    b.className = 'chat-mode-btn' + (mode === m ? ' active-' + m : '');
+                }
             });
+            // Sync bypass warning banner on any UI refresh (e.g. page reload)
+            const banner = document.getElementById('bypass-warning-banner');
+            if (banner) banner.style.display = (mode === 'bypass') ? 'block' : 'none';
         }
 
         // Restore mode on load and sync server
@@ -7632,6 +7656,12 @@
                 currentChatMode = d.mode;
                 localStorage.setItem('overlord_chat_mode', d.mode);
                 updateModeUI(d.mode);
+            }
+            // Live bypass: immediately dismiss any open approval modal —
+            // the server will auto-approve the pending tool
+            if (d && d.mode === 'bypass' && _approvalToolId) {
+                hideApprovalModal();
+                log('⚡ BYPASS active — pending approval auto-approved', 'warning');
             }
         });
 
@@ -8105,7 +8135,8 @@
             if (el) el.style.display = 'none';
         }
 
-        function showAgents() { agentManager(); }
+        function agentManager() { openAgentManager(); }  // toolbar alias
+        function showAgents()   { openAgentManager(); }
         
         function showSettings() {
             document.getElementById('settings-modal').classList.add('open');
@@ -8254,6 +8285,9 @@
                 document.getElementById('am-delete-btn').style.display = agent.isDefault ? 'none' : '';
                 renderAmToolPerms(agent.tools || []);
                 loadAmAgentList();
+                // Store the group so renderAmGroups() can pre-select it once options are loaded
+                _amPendingGroupValue = agent.group || '';
+                loadAmGroups();
             });
         }
 
@@ -8372,13 +8406,19 @@
             });
         }
 
-        let _amAllAgents = []; // cached agent list for group membership UI
+        let _amAllAgents = [];         // cached agent list for group membership UI
+        let _amPendingGroupValue = null; // group to pre-select after renderAmGroups() runs
 
         function renderAmGroups(groups) {
             // Populate group dropdown in agent editor
             const sel = document.getElementById('am-group');
             if (sel) {
                 sel.innerHTML = '<option value="">None</option>' + groups.map(g => `<option value="${g.id}">${g.name}</option>`).join('');
+                // Restore selection that was pending from agentMgrSelectAgent()
+                if (_amPendingGroupValue !== null) {
+                    sel.value = _amPendingGroupValue;
+                    _amPendingGroupValue = null;
+                }
             }
             const el = document.getElementById('am-groups-list');
             if (!el) return;

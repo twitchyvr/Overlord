@@ -33,6 +33,9 @@ function loadEnv() {
             if (eq < 1) continue;
             const key = line.slice(0, eq).trim();
             let val   = line.slice(eq + 1).trim();
+            // QUAL-005: Minimal parser - handles basic KEY=VALUE and "KEY=VALUE" only
+            // Does not support: comments (#), multiline values, variable expansion,
+            // escaped characters, or advanced dotenv features
             if (/^["'].*["']$/.test(val)) val = val.slice(1, -1);
             if (!(key in process.env)) process.env[key] = val;
         }

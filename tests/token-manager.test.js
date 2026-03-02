@@ -342,3 +342,26 @@ describe('Token Manager Module', () => {
     });
     
 });
+
+
+// Additional tests for coverage - stripScreenshots
+
+describe('stripScreenshots', () => {
+    
+    test('handles empty history', () => {
+        expect(tm.stripScreenshots([])).toEqual([]);
+        expect(tm.stripScreenshots(null)).toBe(null);
+    });
+    
+    test('preserves messages without array content', () => {
+        const history = [
+            { role: 'user', content: 'Hello' },
+            { role: 'assistant', content: 'Regular response' }
+        ];
+        
+        const result = tm.stripScreenshots(history);
+        expect(result.length).toBe(2);
+        expect(result[1].content).toBe('Regular response');
+    });
+    
+});

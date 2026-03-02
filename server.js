@@ -37,7 +37,10 @@ const upload = multer({ dest: uploadDir });
 
 // Exif-parser for EXIF data extraction
 let exifParser;
-try { exifParser = require('exif-parser'); console.log('[Upload] EXIF parser loaded'); } catch (e) { console.log('[Upload] EXIF parsing not available'); }
+try { exifParser = require('exif-parser'); console.log('[Upload] EXIF parser loaded'); } catch (e) { 
+    // QUAL-004: Log missing EXIF functionality with warning level
+    console.warn('[Upload] EXIF parsing not available - image metadata extraction disabled'); 
+}
 
 // Hub (central event bus)
 const hub = require('./hub');

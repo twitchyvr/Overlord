@@ -3027,7 +3027,7 @@
                     <div class="input-toolbar">
                         <!-- Primary toolbar buttons -->
                         <button class="toolbar-btn" onclick="showHelp()" title="/help — show commands">?</button>
-                        <button class="toolbar-btn" onclick="showAgents()" title="Agents — manage AI team">👥</button>
+                        <button class="toolbar-btn" onclick="agentManager()" title="Agent Manager — view and edit the AI team">👥</button>
                         <button class="toolbar-btn" onclick="openKanban()" title="Kanban board">📋</button>
                         <button class="toolbar-btn" onclick="openProjectManager()" id="btn-project-manager" title="Projects — switch projects &amp; manage context">📁</button>
                         <button class="toolbar-btn" onclick="openMilestoneManager()" title="Milestones — manage sprint milestones">🚀</button>
@@ -4217,6 +4217,68 @@
             workingDir: document.getElementById('working-dir-path')
         };
         
+        // ── UIEngine: central panel event router ──────────────────────────────
+        // Panels register what socket events they depend on. UIEngine.dispatch()
+        // fires all registered render functions when data arrives, preventing
+        // orphaned views (e.g. kanban overlay not refreshing when tasks change).
+        const UIEngine = {
+            _panels: new Map(),  // id → { deps: string[], render: fn }
+            _state:  new Map(),  // eventName → latestData
+
+            register(id, deps, render) {
+                this._panels.set(id, { deps: Array.isArray(deps) ? deps : [deps], render });
+            },
+
+            dispatch(event, data) {
+                this._state.set(event, data);
+                this._panels.forEach(panel => {
+                    if (panel.deps.includes(event)) {
+                        try { panel.render(data); } catch(e) { console.warn('[UIEngine] panel error in "' + event + '":', e); }
+                    }
+                });
+            },
+
+            getState(event) { return this._state.get(event); },
+
+            refresh(id) {
+                const p = this._panels.get(id);
+                if (p) try { p.render(); } catch(e) {}
+            },
+
+            refreshForEvent(event) {
+                this._panels.forEach(p => {
+                    if (p.deps.includes(event)) try { p.render(this._state.get(event)); } catch(e) {}
+                });
+            }
+        };
+
+        // ── Panel registrations ────────────────────────────────────────────
+        // These run once at startup. Any panel that depends on a socket event
+        // registers here so it's always kept in sync automatically.
+        UIEngine.register('tasks-panel', 'tasks_update', () => {
+            renderTasks();
+            if (typeof renderBurndown === 'function') renderBurndown();
+            if (typeof renderDashboard === 'function') renderDashboard();
+            if (typeof updateActivePlanIndicator === 'function') updateActivePlanIndicator(tasks);
+        });
+
+        // Kanban overlay: refresh whenever tasks OR milestones/roadmap changes.
+        // No-op when overlay is closed — zero cost.
+        UIEngine.register('kanban-overlay', ['tasks_update', 'roadmap_update'], () => {
+            const overlay = document.getElementById('kanban-overlay');
+            if (overlay && overlay.classList.contains('open')) renderKanban();
+        });
+
+        UIEngine.register('team-panel', 'team_update', () => {
+            updateTeam(window._teamAgents || []);
+            if (typeof updateBcAgentSelects === 'function') updateBcAgentSelects();
+        });
+
+        UIEngine.register('roadmap-panel', 'roadmap_update', () => {
+            if (typeof updateRoadmap === 'function') updateRoadmap(window._roadmapItems || []);
+            if (typeof renderDashboard === 'function') renderDashboard();
+        });
+
         let isProcessing = false;
         let allConversations = [];
         let pendingImagePath = null;
@@ -5204,10 +5266,11 @@
                         const isDone    = t.completed || t.status === 'completed';
                         const isRunning = t.id === runningTaskId;
 
-                        // Milestone lookup
+                        // Milestone lookup via window._roadmapItems
                         let msChip = '';
-                        if (t.milestoneId && typeof allMilestones !== 'undefined') {
-                            const ms = allMilestones.find(m => m.id === t.milestoneId);
+                        if (t.milestoneId) {
+                            const _milestones = (window._roadmapItems || []).filter(r => r.type === 'milestone');
+                            const ms = _milestones.find(m => m.id === t.milestoneId);
                             if (ms) msChip = `<span class="kb-chip milestone" style="border-color:${ms.color}33;color:${ms.color};">🚀 ${escapeHtml(ms.text)}</span>`;
                         }
 
@@ -5714,41 +5777,30 @@
         
         socket.on('roadmap_update', (items) => {
             window._roadmapItems = items || [];
-            updateRoadmap(items);
+            UIEngine.dispatch('roadmap_update', items);
             renderBurndown();
             // Refresh milestone manager if open
             if (typeof _msList !== 'undefined' && document.getElementById('ms-overlay') && document.getElementById('ms-overlay').classList.contains('open')) {
                 _msList = (items || []).filter(r => r.type === 'milestone');
                 renderMilestoneList();
             }
-            // Refresh dashboard
-            if (typeof renderDashboard === 'function') renderDashboard();
         });
         socket.on('team_update', (agents) => {
             window._teamAgents = agents;
-            updateTeam(agents);
-            updateBcAgentSelects(); // Keep backchannel agent dropdowns in sync
+            UIEngine.dispatch('team_update', agents);
         });
         socket.on('tasks_update', (taskList) => {
             tasks = taskList || [];
-            renderTasks();
-            renderBurndown();
-            if (typeof renderDashboard === 'function') renderDashboard();
-            updateActivePlanIndicator(tasks);
+            UIEngine.dispatch('tasks_update', taskList);
             // Recovery guard: if plan_pending tasks exist but the approval bar was missed
             // (e.g. plan_ready fired before client joined the conversation room), show it now.
             const _pendingPlanCount = tasks.filter(t => t.status === 'plan_pending').length;
             const _planBar = document.getElementById('plan-approval-bar');
             if (_pendingPlanCount > 0 && _planBar && !_planBar.classList.contains('visible')) {
                 showPlanBar(_pendingPlanCount);
-                // Also restore the "awaiting" status text so user knows something needs action
                 if (elements.status) { elements.status.textContent = 'Awaiting plan approval…'; elements.status.className = 'status thinking'; }
             } else if (_pendingPlanCount === 0 && _planBar && _planBar.classList.contains('visible')) {
                 hidePlanBar();
-            }
-            if (document.getElementById('kanban-overlay').classList.contains('open')) {
-                const mf = document.getElementById('kanban-milestone-filter');
-                renderKanban(mf ? mf.value || null : null);
             }
         });
         socket.on('tool_result', (data) => addToolResult(data));
@@ -8033,11 +8085,16 @@
         elements.input.onkeydown = function(e) { if (e.key === 'Enter' && e.ctrlKey) { e.preventDefault(); send(); }};        
         elements.btnCancel.onclick = function() { socket.emit('cancel'); };
         
-        function showHelp() { 
-            addMessage('assistant', '# Help\n\nCommands:\n- /help - Show this message\n- /agents - Show team agents\n- Paste or upload images\n- Ctrl+Enter to send\n- Click working directory to change it'); 
+        function showHelp() {
+            const el = document.getElementById('help-overlay');
+            if (el) el.style.display = 'flex';
         }
-        
-        function showAgents() { socket.emit('user_input', '/agents'); }
+        function closeHelp() {
+            const el = document.getElementById('help-overlay');
+            if (el) el.style.display = 'none';
+        }
+
+        function showAgents() { agentManager(); }
         
         function showSettings() {
             document.getElementById('settings-modal').classList.add('open');
@@ -9914,7 +9971,12 @@
         // Keyboard shortcuts (Radix Dialog pattern — Esc closes topmost dialog)
         document.addEventListener('keydown', function(e) {
             if (e.key === 'Escape') {
-                // Close dialogs in order: Agent Manager, Settings, image preview, task modal
+                // Close dialogs in order: Help, Agent Manager, Settings, image preview, task modal
+                const helpOverlay = document.getElementById('help-overlay');
+                if (helpOverlay && helpOverlay.style.display !== 'none') {
+                    closeHelp();
+                    return;
+                }
                 const amModal = document.getElementById('agent-manager-modal');
                 if (amModal && amModal.style.display !== 'none') {
                     closeAgentManager();
@@ -11585,6 +11647,54 @@
             <button class="sheet-btn-orchestrate" id="sheet-btn-orchestrate" onclick="orchestrateTask(document.getElementById('sheet-task-id').value)" title="Hand this task to the AI orchestrator — it will plan, implement, and mark it done">⚡ Start Task</button>
             <button class="sheet-btn-save" onclick="saveTaskSheet()">Save</button>
             <button class="sheet-btn-delete" onclick="deleteTaskFromSheet()">Delete</button>
+        </div>
+    </div>
+
+    <!-- Help / Keyboard Shortcuts Overlay -->
+    <div id="help-overlay" onclick="if(event.target===this)closeHelp()"
+         style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.65);z-index:10000;
+                align-items:center;justify-content:center;">
+        <div style="background:var(--bg-primary);border:1px solid var(--border-default);border-radius:10px;
+                    padding:20px 24px;max-width:520px;width:90%;max-height:80vh;overflow-y:auto;
+                    box-shadow:0 16px 48px rgba(0,0,0,0.5);">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+                <span style="font-size:13px;font-weight:600;color:var(--text-primary);">⌨️ Keyboard Shortcuts &amp; Commands</span>
+                <button onclick="closeHelp()" style="background:none;border:none;cursor:pointer;
+                        color:var(--text-muted);font-size:16px;line-height:1;padding:2px 6px;">✕</button>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:16px;font-size:12px;">
+                <div>
+                    <div class="help-section-title">Keyboard</div>
+                    <div class="help-row"><kbd>Ctrl/⌘ + Enter</kbd><span>Send message</span></div>
+                    <div class="help-row"><kbd>Shift + Enter</kbd><span>New line in input</span></div>
+                    <div class="help-row"><kbd>Esc</kbd><span>Cancel stream / close overlay</span></div>
+                    <div class="help-row"><kbd>↑ / ↓</kbd><span>Browse message history</span></div>
+                </div>
+                <div>
+                    <div class="help-section-title">Modes</div>
+                    <div class="help-row"><kbd>AUTO</kbd><span>Full agent loop — AI uses all tools freely</span></div>
+                    <div class="help-row"><kbd>PLAN</kbd><span>AI plans first, waits for your approval</span></div>
+                    <div class="help-row"><kbd>PM</kbd><span>Project Manager — strategy only, no code writing</span></div>
+                    <div class="help-row"><kbd>PERMS</kbd><span>Restrict which tools the AI can use</span></div>
+                </div>
+                <div>
+                    <div class="help-section-title">Slash Commands</div>
+                    <div class="help-row"><kbd>/new</kbd><span>Start a fresh conversation</span></div>
+                    <div class="help-row"><kbd>/compact</kbd><span>Summarize and compress context</span></div>
+                    <div class="help-row"><kbd>/agents</kbd><span>List agents and current status</span></div>
+                    <div class="help-row"><kbd>/tasks</kbd><span>Show the current task list</span></div>
+                    <div class="help-row"><kbd>/memory</kbd><span>Show project memory</span></div>
+                </div>
+                <div>
+                    <div class="help-section-title">Toolbar</div>
+                    <div class="help-row"><span class="help-icon">👥</span><span>Agent Manager — view and edit the AI team</span></div>
+                    <div class="help-row"><span class="help-icon">📋</span><span>Kanban board — drag tasks between statuses</span></div>
+                    <div class="help-row"><span class="help-icon">📁</span><span>Project Manager — switch or create projects</span></div>
+                    <div class="help-row"><span class="help-icon">🚀</span><span>Milestones — manage sprint milestones</span></div>
+                    <div class="help-row"><span class="help-icon">📷</span><span>Attach image — paste or upload</span></div>
+                    <div class="help-row"><span class="help-icon">⋯</span><span>More tools — telemetry, socket inspector, settings</span></div>
+                </div>
+            </div>
         </div>
     </div>
 

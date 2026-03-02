@@ -50,7 +50,7 @@ class Hub extends EventEmitter {
         this.config = config;
 
         // Determine port from environment or default
-        this.processState.port = parseInt(process.env.PORT) || 3031;
+        this.processState.port = parseInt(process.env.PORT, 10) || 3031;
 
         console.log('\n🧠 OVERLORD HUB v1.2 - Initializing...\n');
 
@@ -64,11 +64,6 @@ class Hub extends EventEmitter {
     // Register a loaded module (called by server.js)
     registerModule(name, module) {
         this.modules.set(name, module);
-    }
-
-    // Get process state for context
-    getProcessState() {
-        return { ...this.processState };
     }
 
     // Build the full context_info payload (used by socket handler + proactive broadcast)
@@ -517,27 +512,27 @@ class Hub extends EventEmitter {
                     if (data.autoQATests !== undefined) config.autoQATests = Boolean(data.autoQATests);
                     // Compaction settings
                     if (data.autoCompact !== undefined) config.autoCompact = Boolean(data.autoCompact);
-                    if (data.compactKeepRecent !== undefined) config.compactKeepRecent = Math.max(5, Math.min(50, parseInt(data.compactKeepRecent) || 20));
+                    if (data.compactKeepRecent !== undefined) config.compactKeepRecent = Math.max(5, Math.min(50, parseInt(data.compactKeepRecent, 10) || 20));
                     // Behavior limits
                     if (data.maxAICycles !== undefined) {
-                        const _c = parseInt(data.maxAICycles);
+                        const _c = parseInt(data.maxAICycles, 10);
                         // 0 = unlimited sentinel; otherwise clamp to >= 1 with no upper cap
                         config.maxAICycles = isNaN(_c) ? 250 : (_c === 0 ? 0 : Math.max(1, _c));
                     }
-                    if (data.maxQAAttempts !== undefined) config.maxQAAttempts = Math.max(1, Math.min(10, parseInt(data.maxQAAttempts) || 3));
-                    if (data.approvalTimeoutMs !== undefined) config.approvalTimeoutMs = Math.max(10000, parseInt(data.approvalTimeoutMs) || 300000);
-                    if (data.requestTimeoutMs !== undefined) config.requestTimeoutMs = Math.max(10000, parseInt(data.requestTimeoutMs) || 90000);
-                    if (data.sessionNotesLines !== undefined) config.sessionNotesLines = Math.max(1, Math.min(200, parseInt(data.sessionNotesLines) || 50));
-                    if (data.timelineLines !== undefined) config.timelineLines = Math.max(1, Math.min(100, parseInt(data.timelineLines) || 20));
-                    if (data.rateLimitTokens !== undefined) config.rateLimitTokens = Math.max(1, Math.min(100, parseInt(data.rateLimitTokens) || 20));
+                    if (data.maxQAAttempts !== undefined) config.maxQAAttempts = Math.max(1, Math.min(10, parseInt(data.maxQAAttempts, 10) || 3));
+                    if (data.approvalTimeoutMs !== undefined) config.approvalTimeoutMs = Math.max(10000, parseInt(data.approvalTimeoutMs, 10) || 300000);
+                    if (data.requestTimeoutMs !== undefined) config.requestTimeoutMs = Math.max(10000, parseInt(data.requestTimeoutMs, 10) || 90000);
+                    if (data.sessionNotesLines !== undefined) config.sessionNotesLines = Math.max(1, Math.min(200, parseInt(data.sessionNotesLines, 10) || 50));
+                    if (data.timelineLines !== undefined) config.timelineLines = Math.max(1, Math.min(100, parseInt(data.timelineLines, 10) || 20));
+                    if (data.rateLimitTokens !== undefined) config.rateLimitTokens = Math.max(1, Math.min(100, parseInt(data.rateLimitTokens, 10) || 20));
                     if (data.rateLimitRefillRate !== undefined) config.rateLimitRefillRate = Math.max(0.5, Math.min(20, parseFloat(data.rateLimitRefillRate) || 4));
-                    if (data.messageQueueSize !== undefined) config.messageQueueSize = Math.max(0, Math.min(20, parseInt(data.messageQueueSize) || 3));
+                    if (data.messageQueueSize !== undefined) config.messageQueueSize = Math.max(0, Math.min(20, parseInt(data.messageQueueSize, 10) || 3));
                     if (data.chatMode !== undefined && ['auto', 'plan', 'ask', 'pm'].includes(data.chatMode)) config.chatMode = data.chatMode;
                     // Per-mode model switching
                     if (data.autoModelSwitch !== undefined) config.autoModelSwitch = Boolean(data.autoModelSwitch);
                     if (data.pmModel !== undefined) config.pmModel = String(data.pmModel).trim().substring(0, 100);
                     if (data.maxParallelAgents !== undefined) {
-                        const n = parseInt(data.maxParallelAgents);
+                        const n = parseInt(data.maxParallelAgents, 10);
                         config.maxParallelAgents = isNaN(n) ? 3 : Math.max(1, Math.min(8, n));
                     }
                     if (data.autoCreateIssues !== undefined) config.autoCreateIssues = Boolean(data.autoCreateIssues);
@@ -546,7 +541,7 @@ class Hub extends EventEmitter {
                     if (data.queueDrainMode !== undefined && ['consolidated', 'sequential'].includes(data.queueDrainMode)) config.queueDrainMode = data.queueDrainMode;
                     // Thinking mode
                     if (data.thinkingEnabled !== undefined) config.thinkingEnabled = Boolean(data.thinkingEnabled);
-                    if (data.thinkingBudget !== undefined) { const tb = parseInt(data.thinkingBudget); if (!isNaN(tb) && tb >= 512) config.thinkingBudget = tb; }
+                    if (data.thinkingBudget !== undefined) { const tb = parseInt(data.thinkingBudget, 10); if (!isNaN(tb) && tb >= 512) config.thinkingBudget = tb; }
                     // Plan length
                     if (data.planLength !== undefined && ['short','regular','long','unlimited'].includes(data.planLength)) config.planLength = data.planLength;
                     // GitOps auto-commit settings
@@ -554,7 +549,7 @@ class Hub extends EventEmitter {
                     if (data.gitOpsTrigger !== undefined && ['every','task','milestone','count','manual'].includes(data.gitOpsTrigger)) config.gitOpsTrigger = data.gitOpsTrigger;
                     if (data.gitOpsCommitStyle !== undefined && ['comprehensive','conventional','brief'].includes(data.gitOpsCommitStyle)) config.gitOpsCommitStyle = data.gitOpsCommitStyle;
                     if (data.gitOpsPush !== undefined && ['always','never','ask'].includes(data.gitOpsPush)) config.gitOpsPush = data.gitOpsPush;
-                    if (data.gitOpsMinChanges !== undefined) { const n = parseInt(data.gitOpsMinChanges); if (!isNaN(n) && n >= 1) config.gitOpsMinChanges = n; }
+                    if (data.gitOpsMinChanges !== undefined) { const n = parseInt(data.gitOpsMinChanges, 10); if (!isNaN(n) && n >= 1) config.gitOpsMinChanges = n; }
                     // Also propagate behavior limits to orchestration module
                     const orch = this.getService('orchestration');
                     if (orch && orch._updateLimits) orch._updateLimits(config);
@@ -765,35 +760,13 @@ class Hub extends EventEmitter {
                 }
             });
 
-            // Tasks management
-            socket.on('task_added', (task) => {
-                const conv = this.getService('conversation');
-                if (conv && conv.addTask) {
-                    conv.addTask(task);
-                }
-            });
-
-            socket.on('task_toggled', (data) => {
-                const conv = this.getService('conversation');
-                if (conv && conv.toggleTask) {
-                    conv.toggleTask(data.id);
-                }
-            });
-
-            socket.on('task_deleted', (taskId) => {
-                const conv = this.getService('conversation');
-                if (conv && conv.deleteTask) {
-                    conv.deleteTask(taskId);
-                }
-            });
-
-            // Update existing task
-            socket.on('task_updated', (task) => {
-                const conv = this.getService('conversation');
-                if (conv && conv.updateTask) {
-                    conv.updateTask(task.id, task);
-                }
-            });
+            // ── Task events → TasksEngine (modules/tasks-engine.js) ───────────────
+            // Bridge socket events to the tasks engine via hub EventEmitter.
+            // All task logic (CRUD, broadcast) now lives in tasks-engine.js.
+            socket.on('task_added',   (data)      => this.emit('socket:task_added',   { socket, data }));
+            socket.on('task_toggled', (data)      => this.emit('socket:task_toggled', { socket, data }));
+            socket.on('task_deleted', (data)      => this.emit('socket:task_deleted', { socket, data }));
+            socket.on('task_updated', (data)      => this.emit('socket:task_updated', { socket, data }));
 
             // Agent management (add/remove agents dynamically)
             socket.on('add_agent', (agentData, cb) => {
@@ -1039,42 +1012,9 @@ class Hub extends EventEmitter {
                 if (typeof cb === 'function') cb({ success: true, milestone: ms });
             });
 
-            socket.on('assign_task_to_milestone', ({ taskId, milestoneId }, cb) => {
-                const conv = this.getService('conversation');
-                if (!conv) { if (typeof cb === 'function') cb({ error: 'Conversation service unavailable' }); return; }
-                conv.updateTask(taskId, { milestoneId: milestoneId || null });
-                if (typeof cb === 'function') cb({ success: true });
-            });
-
-            // ── Focus task: mark in_progress + launch parent milestone ───────────
-            // Called when user clicks "▶ Start Task" from the task sheet.
-            socket.on('focus_task', ({ taskId }, cb) => {
-                const conv = this.getService('conversation');
-                if (!conv) { if (typeof cb === 'function') cb({ error: 'Conversation service unavailable' }); return; }
-                const task = (conv.getTasks ? conv.getTasks() : []).find(t => t.id === taskId);
-                if (!task) { if (typeof cb === 'function') cb({ error: 'Task not found: ' + taskId }); return; }
-
-                // Mark in_progress
-                conv.updateTask(taskId, { status: 'in_progress' });
-
-                // Launch parent milestone if not already active
-                if (task.milestoneId && conv.launchMilestone) {
-                    const ms = (conv.getMilestones ? conv.getMilestones() : []).find(m => m.id === task.milestoneId);
-                    if (ms && ms.status !== 'active' && ms.status !== 'completed') {
-                        conv.launchMilestone(task.milestoneId);
-                        this.broadcast('agent_activity', {
-                            type: 'milestone_launched',
-                            data: { name: ms.text, branch: ms.branch }
-                        });
-                    }
-                }
-
-                // Broadcast updated tasks to all clients
-                const allTasks = conv.getTasks ? conv.getTasks() : [];
-                this.broadcastAll('tasks_update', allTasks);
-                this.log(`[focus_task] Task "${task.title}" → in_progress`, 'info');
-                if (typeof cb === 'function') cb({ success: true, task });
-            });
+            // Bridge to tasks-engine
+            socket.on('assign_task_to_milestone', (data, cb) => this.emit('socket:assign_task_to_milestone', { socket, data, cb }));
+            socket.on('focus_task',               (data, cb) => this.emit('socket:focus_task',               { socket, data, cb }));
 
             // ── Orchestrate milestone: mark active + broadcast + let AI know ──────
             socket.on('orchestrate_milestone', (milestoneId, cb) => {
@@ -1200,11 +1140,8 @@ class Hub extends EventEmitter {
             socket.on('add_mcp_server',     (data) => this.emit('add_mcp_server',     socket, data));
             socket.on('remove_mcp_server',  (data) => this.emit('remove_mcp_server',  socket, data));
 
-            // ── Task reorder ───────────────────────────────────────────────────
-            socket.on('tasks_reorder', (orderedIds) => {
-                const conv = this.getService('conversation');
-                if (conv && conv.reorderTasks) conv.reorderTasks(orderedIds);
-            });
+            // ── Task reorder → tasks-engine ────────────────────────────────────
+            socket.on('tasks_reorder', (data) => this.emit('socket:tasks_reorder', { socket, data }));
 
             // ── AI Fill: generate improved agent field suggestions ──────────────
             socket.on('ai_fill_agent', async (data, ack) => {

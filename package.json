@@ -1,8 +1,21 @@
 {
-  "name": "overlord-web",
+  "name": "@twitchyvr/overlord",
   "version": "1.2.0",
-  "description": "OVERLORD Web - Modular AI Coding Assistant Platform",
+  "description": "OVERLORD Web — AI orchestration platform with multi-agent coding assistant",
   "main": "launcher.js",
+  "bin": {
+    "overlord": "./launcher.js"
+  },
+  "files": [
+    "launcher.js",
+    "server.js",
+    "hub.js",
+    "modules/",
+    "public/"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
     "start": "node launcher.js",
     "dev": "node launcher.js",

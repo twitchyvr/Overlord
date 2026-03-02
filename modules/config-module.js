@@ -18,6 +18,7 @@ const PERSISTENT_KEYS = [
     'rateLimitTokens', 'rateLimitRefillRate', 'messageQueueSize',
     'chatMode', 'maxParallelAgents', 'autoCreateIssues',
     'referenceDocumentation', 'taskEnforcement',
+    'noTruncate', 'alwaysSecurity', 'neverStripFeatures', 'strictCompletion',
     'autoModelSwitch', 'pmModel',
     'queueDrainMode', 'thinkingEnabled', 'planLength',
     'gitOpsEnabled', 'gitOpsTrigger', 'gitOpsCommitStyle', 'gitOpsPush', 'gitOpsMinChanges',
@@ -121,6 +122,12 @@ function init(hub) {
         gitOpsCommitStyle: process.env.GITOPS_COMMIT_STYLE || 'comprehensive',  // 'comprehensive' | 'conventional' | 'brief'
         gitOpsPush: process.env.GITOPS_PUSH || 'always',                        // 'always' | 'never' | 'ask'
         gitOpsMinChanges: parseInt(process.env.GITOPS_MIN_CHANGES) || 3,        // Min changed files when trigger='count'
+        // ── Response Quality: guardrails injected into every system prompt ──
+        noTruncate: process.env.NO_TRUNCATE === 'true',                          // Never truncate output (default: OFF)
+        alwaysSecurity: process.env.ALWAYS_SECURITY === 'true',                  // Always add security measures (default: OFF)
+        neverStripFeatures: process.env.NEVER_STRIP_FEATURES === 'true',         // Never strip requested features (default: OFF)
+        // ── Strict Completion Mode: prevent agents simplifying/skipping work ─
+        strictCompletion: process.env.STRICT_COMPLETION !== 'false',             // Cannot remove tests, must create tasks (default: ON)
         // Cookbook reference path
         cookbookPath: path.join(baseDir, '..', 'docs', 'minimax-m2.5_official_docs', 'cookbook', 'COOKBOOK.md'),
         // Load cookbook content if exists

@@ -1229,7 +1229,7 @@ async function init(h) {
         }, (input) => {
             const config = hub.getService('config');
             if (!config) return 'ERROR: Config service not available';
-            const BOOL_KEYS = ['autoQA', 'autoQALint', 'autoQATypes', 'autoQATests', 'autoCompact', 'autoCreateIssues', 'taskEnforcement'];
+            const BOOL_KEYS = ['autoQA', 'autoQALint', 'autoQATypes', 'autoQATests', 'autoCompact', 'autoCreateIssues', 'taskEnforcement', 'strictCompletion', 'noTruncate', 'alwaysSecurity', 'neverStripFeatures'];
             const NUM_KEYS = ['compactKeepRecent', 'maxAICycles', 'maxQAAttempts', 'approvalTimeoutMs', 'requestTimeoutMs', 'sessionNotesLines', 'timelineLines', 'rateLimitTokens', 'rateLimitRefillRate', 'messageQueueSize', 'maxParallelAgents'];
             const SETTABLE = ['model', 'customInstructions', 'projectMemory', 'chatMode', 'referenceDocumentation', ...BOOL_KEYS, ...NUM_KEYS];
             if (!SETTABLE.includes(input.key)) return `ERROR: Cannot set "${input.key}". Settable keys: ${SETTABLE.join(', ')}`;

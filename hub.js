@@ -542,6 +542,12 @@ class Hub extends EventEmitter {
                     }
                     if (data.autoCreateIssues !== undefined) config.autoCreateIssues = Boolean(data.autoCreateIssues);
                     if (data.taskEnforcement !== undefined) config.taskEnforcement = Boolean(data.taskEnforcement);
+                    // Response quality guardrails
+                    if (data.noTruncate !== undefined) config.noTruncate = Boolean(data.noTruncate);
+                    if (data.alwaysSecurity !== undefined) config.alwaysSecurity = Boolean(data.alwaysSecurity);
+                    if (data.neverStripFeatures !== undefined) config.neverStripFeatures = Boolean(data.neverStripFeatures);
+                    // Strict completion mode
+                    if (data.strictCompletion !== undefined) config.strictCompletion = Boolean(data.strictCompletion);
                     // Queue drain mode
                     if (data.queueDrainMode !== undefined && ['consolidated', 'sequential'].includes(data.queueDrainMode)) config.queueDrainMode = data.queueDrainMode;
                     // Thinking mode
@@ -583,6 +589,10 @@ class Hub extends EventEmitter {
                         maxParallelAgents: config.maxParallelAgents ?? 3,
                         autoCreateIssues: config.autoCreateIssues === true,
                         taskEnforcement: config.taskEnforcement === true,
+                        noTruncate: config.noTruncate === true,
+                        alwaysSecurity: config.alwaysSecurity === true,
+                        neverStripFeatures: config.neverStripFeatures === true,
+                        strictCompletion: config.strictCompletion !== false,
                         autoModelSwitch: config.autoModelSwitch === true,
                         pmModel: config.pmModel || 'MiniMax-Text-01',
                         queueDrainMode: config.queueDrainMode || 'consolidated',
@@ -629,6 +639,10 @@ class Hub extends EventEmitter {
                         maxParallelAgents: config.maxParallelAgents ?? 3,
                         autoCreateIssues: config.autoCreateIssues === true,
                         taskEnforcement: config.taskEnforcement === true,
+                        noTruncate: config.noTruncate === true,
+                        alwaysSecurity: config.alwaysSecurity === true,
+                        neverStripFeatures: config.neverStripFeatures === true,
+                        strictCompletion: config.strictCompletion !== false,
                         autoModelSwitch: config.autoModelSwitch === true,
                         pmModel: config.pmModel || 'MiniMax-Text-01',
                         queueDrainMode: config.queueDrainMode || 'consolidated',

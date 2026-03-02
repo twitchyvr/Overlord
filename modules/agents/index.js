@@ -14,7 +14,6 @@ const AGENTS = {
         workingDir: null,
         execute: async (task, context) => {
             const { tools } = context;
-            console.log("[git-keeper] raw task:", task);
             
             let cmd = task.replace(/^(git-keeper:\s*)?/i, '').trim();
             cmd = cmd.replace(/^check\s+(git\s+)/i, '$1');
@@ -27,7 +26,6 @@ const AGENTS = {
                 gitCmd = 'git ' + cmd;
             }
             
-            console.log('[git-keeper] final gitCmd:', gitCmd);
             const result = await tools.execute('bash', { command: gitCmd });
             return { agent: 'git-keeper', task, success: result.success, output: result.content || result.error, duration: 0 };
         }
@@ -81,7 +79,6 @@ const AGENTS = {
                     }
                     
                     if (content) {
-                        console.log('[code-implementer] file:', filePath, 'content:', content.substring(0, 50));
                         const result = await tools.execute('write_file', { path: filePath, content: content });
                         return { agent: 'code-implementer', task, success: result.success, output: result.content, duration: 0 };
                     }
@@ -322,7 +319,9 @@ class AgentManager {
                     };
                 }
             }
-        } catch (e) { console.error('[AgentManager] Error:', e.message); }
+        } catch (e) { 
+            // Agent execution error handled gracefully
+        }
     }
     
     getAgentList() {

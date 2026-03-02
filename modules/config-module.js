@@ -187,15 +187,15 @@ function init(hub) {
         hub.log('⚠️ Could not load persisted settings: ' + e.message, 'warn');
     }
 
-    // Log config status (masked key)
-    console.log('=== CONFIG ===');
-    console.log('baseUrl:', config.baseUrl);
-    console.log('apiKey:', config.apiKey.length > 0 ? 'Loaded (' + config.apiKey.length + ' chars)' : '❌ EMPTY');
-    console.log('imgApiKey:', config.imgApiKey.length > 0 ? 'Loaded (' + config.imgApiKey.length + ' chars)' : '❌ NOT SET');
-    console.log('model:', config.model);
-    console.log('OS:', platform + (isWindows ? ' (Windows)' : isMac ? ' (macOS)' : ' (Linux)'));
-    console.log('shell:', config.shell);
-    console.log('=============\n');
+    // Log config status using hub.log (masked key)
+    hub?.log('=== CONFIG ===', 'info');
+    hub?.log('baseUrl: ' + config.baseUrl, 'info');
+    hub?.log('apiKey: ' + (config.apiKey.length > 0 ? 'Loaded (' + config.apiKey.length + ' chars)' : 'EMPTY'), 'info');
+    hub?.log('imgApiKey: ' + (config.imgApiKey.length > 0 ? 'Loaded (' + config.imgApiKey.length + ' chars)' : 'NOT SET'), 'info');
+    hub?.log('model: ' + config.model, 'info');
+    hub?.log('OS: ' + platform + (isWindows ? ' (Windows)' : isMac ? ' (macOS)' : ' (Linux)'), 'info');
+    hub?.log('shell: ' + config.shell, 'info');
+    hub?.log('=============', 'info');
 
     hub.registerService('config', config);
 

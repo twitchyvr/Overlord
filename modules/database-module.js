@@ -98,7 +98,7 @@ function initializeTables() {
         )
     `);
     
-    console.log('[Database] Tables initialized');
+    // Tables initialized - register service
 }
 
 // Conversations

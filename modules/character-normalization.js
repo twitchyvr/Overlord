@@ -111,7 +111,7 @@ function safePatch(path, search, replace) {
     // First validate
     const validation = validatePatch(search, replace);
     if (!validation.valid) {
-        console.error('⚠️ Patch validation failed:', validation.issues);
+        // Log validation failure - return error to caller
         return { success: false, error: validation.issues.join('; ') };
     }
     

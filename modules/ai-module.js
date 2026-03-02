@@ -16,7 +16,7 @@ function initGuardrail() {
     try {
         guardrail = require('./guardrail-module');
     } catch (e) {
-        console.log('[AI] Guardrail not available, using fallback sanitization');
+        // Guardrail unavailable - will use fallback sanitization
         guardrail = null;
     }
 }
@@ -234,7 +234,7 @@ class AIClient {
                 let body = '';
                 res.on('data', c => body += c);
                 res.on('end', () => {
-                    console.log('[AI] Rate limited (429). Waiting 2s before signaling retry...');
+                    // Rate limited - signal caller after delay
                     setTimeout(() => onError(new Error('RATE_LIMITED')), 2000);
                 });
                 return;
@@ -260,10 +260,8 @@ class AIClient {
                         const parsed = safeJSONParse(jsonStr);
                         if (parsed.success) {
                             onEvent(parsed.data);
-                        } else {
-                            // Log the error but don't crash
-                            console.log('[safeJSONParse] Failed:', parsed.error);
                         }
+                        // Note: silent failure for parse errors - continue processing
                     }
                 }
             });

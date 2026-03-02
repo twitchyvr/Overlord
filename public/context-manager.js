@@ -269,5 +269,3 @@ if (document.readyState === 'loading') {
     addContextCSS();
     initContextManagement();
 }
-
-console.log('[Context] Management module loaded');

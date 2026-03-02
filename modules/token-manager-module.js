@@ -161,7 +161,7 @@ function truncateHistory(history, maxTokens = CONFIG.MAX_HISTORY_TOKENS) {
             tracker.recordCompaction({
                 messagesBefore,
                 messagesAfter: result.length,
-                tokensBefor: totalTokens,
+                tokensBefore: totalTokens,
                 tokensAfter: calculateHistoryTokens(result),
                 reason: 'token_limit'
             });
@@ -392,9 +392,6 @@ function stripScreenshots(history, keepLast = 1) {
         return { ...msg, content: newContent };
     });
 
-    if (stripped > 0) {
-        console.log(`[TokenManager] stripScreenshots: replaced base64 in ${stripped} message(s) (keepLast=${keepLast})`);
-    }
     return result;
 }
 
@@ -553,10 +550,7 @@ async function init(h) {
         CONFIG.MAX_HISTORY_TOKENS = Math.max(40000, CONFIG.MAX_INPUT_TOKENS - CONFIG.SYSTEM_OVERHEAD_RESERVE);
         CONFIG.MAX_OUTPUT_TOKENS = maxOutput;
 
-        console.log('[TokenManager] Model: ' + config.model);
-        console.log('[TokenManager] Context: ' + ctxWindow + ', Max Output: ' + maxOutput +
-                    ', System Reserve: ' + CONFIG.SYSTEM_OVERHEAD_RESERVE +
-                    ', History limit: ' + CONFIG.MAX_HISTORY_TOKENS);
+        hub.log('Token Manager initialized: ' + config.model + ' | Context: ' + ctxWindow + ', Max Output: ' + maxOutput, 'info');
     }
     
     hub.registerService('tokenManager', {

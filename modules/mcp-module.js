@@ -50,13 +50,12 @@ class McpSubprocessClient {
 
     async _start() {
         if (!this.uvxPath) {
-            console.log('[MCP-proc] uvx not found, MCP subprocess unavailable');
+            // uvx not found - MCP subprocess unavailable
             this.failed = true;
             return false;
         }
 
         this.starting = true;
-        console.log('[MCP-proc] Starting minimax-coding-plan-mcp via', this.uvxPath);
 
         try {
             this.proc = spawn(this.uvxPath, ['minimax-coding-plan-mcp', '-y'], {
@@ -70,15 +69,12 @@ class McpSubprocessClient {
 
             this.proc.stdout.on('data', d => this._onData(d.toString()));
             this.proc.stderr.on('data', d => {
-                const msg = d.toString().trim();
-                if (msg) console.log('[MCP-proc stderr]', msg.substring(0, 200));
+                // Silently capture stderr (for debugging if needed)
             });
             this.proc.on('error', e => {
-                console.error('[MCP-proc error]', e.message);
                 this._onCrash();
             });
             this.proc.on('exit', (code) => {
-                console.log('[MCP-proc] Process exited with code', code);
                 this._onCrash();
             });
 
@@ -94,11 +90,9 @@ class McpSubprocessClient {
 
             this.ready = true;
             this.starting = false;
-            console.log('[MCP-proc] Ready. Server:', initResult?.serverInfo?.name || 'minimax-coding-plan-mcp');
             return true;
 
         } catch (e) {
-            console.error('[MCP-proc] Failed to start:', e.message);
             this.failed = true;
             this.starting = false;
             try { this.proc?.kill(); } catch(ke) {}
@@ -340,11 +334,10 @@ function init(h) {
                     if (mcpClient) {
                         mcpClient.destroy();
                         mcpClient = null;
-                        console.log('[MCP] Subprocess cleaned up');
                     }
                 });
 
-                console.log('[MCP] Initialized with subprocess support');
+                // Subprocess support initialized
                 resolve();
             } else {
                 setTimeout(checkConfig, 100);
@@ -357,8 +350,6 @@ function init(h) {
 // ==================== WEB SEARCH ====================
 
 async function executeWebSearch(query, apiKey) {
-    console.log('[MCP] executeWebSearch:', query);
-
     // Check search provider preference
     const searchProvider = config?.searchProvider || process.env.SEARCH_PROVIDER || 'mcp';
 
@@ -367,32 +358,27 @@ async function executeWebSearch(query, apiKey) {
         const client = getMcpClient();
         if (client) {
             try {
-                console.log('[MCP] Trying MCP subprocess for web_search...');
                 const result = await client.callTool('web_search', { query });
                 if (result && result.length > 10) {
-                    console.log('[MCP] web_search via MCP subprocess: success');
                     return result;
                 }
             } catch (e) {
-                console.log('[MCP] MCP subprocess search failed:', e.message, '— trying fallback');
+                // MCP subprocess failed - will try fallback
             }
         }
     }
 
     // DuckDuckGo fallback (or primary if configured)
     try {
-        console.log('[MCP] Trying DuckDuckGo search...');
         const ddgResult = await duckDuckGoSearch(query);
         if (ddgResult) {
-            console.log('[MCP] DuckDuckGo search: success');
             return ddgResult;
         }
     } catch(e) {
-        console.log('[MCP] DuckDuckGo failed:', e.message);
+        // DuckDuckGo failed - will try model fallback
     }
 
     // Final fallback: model-based (labeled clearly)
-    console.log('[MCP] Using model-based fallback for search');
     if (apiKey && apiKey.length > 10) {
         try {
             const response = await makeRequest('/v1/chat/completions', {
@@ -405,10 +391,10 @@ async function executeWebSearch(query, apiKey) {
             }, apiKey);
 
             if (response.choices && response.choices[0]?.message?.content) {
-                return `# AI Response (not live search): ${query}\n\n⚠️ *Note: Web search unavailable. This is AI knowledge from training data.*\n\n${response.choices[0].message.content}`;
+                return `# AI Response (not live search): ${query}\n\n*Note: Web search unavailable. This is AI knowledge from training data.*\n\n${response.choices[0].message.content}`;
             }
         } catch(e) {
-            console.log('[MCP] Model fallback failed:', e.message);
+            // Model fallback failed
         }
     }
 
@@ -418,15 +404,12 @@ async function executeWebSearch(query, apiKey) {
 // ==================== IMAGE UNDERSTANDING ====================
 
 async function executeUnderstandImage(imagePath, prompt, apiKey) {
-    console.log('[MCP] executeUnderstandImage:', imagePath);
-
     if (!imagePath) return 'ERROR: No image path provided';
 
     // Try MCP subprocess first
     const client = getMcpClient();
     if (client) {
         try {
-            console.log('[MCP] Trying MCP subprocess for understand_image...');
             // The MCP server (minimax-coding-plan-mcp) expects `image_source`, not `image_url`
             const args = {
                 image_source: imagePath,
@@ -434,11 +417,10 @@ async function executeUnderstandImage(imagePath, prompt, apiKey) {
             };
             const result = await client.callTool('understand_image', args);
             if (result && result.length > 10) {
-                console.log('[MCP] understand_image via MCP subprocess: success');
                 return result;
             }
         } catch(e) {
-            console.log('[MCP] MCP subprocess understand_image failed:', e.message, '— trying fallback');
+            // MCP subprocess failed - will try direct API
         }
     }
 

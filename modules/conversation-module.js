@@ -158,7 +158,7 @@ function listConversations() {
             return meta.conversations || [];
         }
     } catch (e) {
-        console.error('Error loading conversations list:', e.message);
+        hub.log('Error loading conversations list: ' + e.message, 'error');
     }
     return [];
 }
@@ -188,8 +188,7 @@ function loadConversationById(convId) {
                 history = tokenMgr.sanitizeHistory(history);
                 const removed = beforeCount - history.length;
                 if (removed > 0) {
-                    console.log(`[Conversation] Cleaned ${removed} orphaned tool entries from loaded conversation`);
-                    hub.log(`Cleaned ${removed} orphaned tool entries from loaded conversation`, 'warning');
+                    hub.log('Cleaned ' + removed + ' orphaned tool entries from loaded conversation', 'warning');
                 }
             }
             
@@ -225,11 +224,11 @@ function loadLastConversation() {
             }
         }
     } catch (e) {
-        console.log('No previous conversation found, starting fresh');
+        // No previous conversation found - starting fresh
     }
     
     conversationId = generateId();
-    console.log('Started fresh conversation: ' + conversationId);
+    hub.log('Started fresh conversation: ' + conversationId, 'info');
     // CRITICAL: Broadcast working directory for fresh conversation
     hub.broadcast('working_dir_update', workingDir);
 }
@@ -434,8 +433,6 @@ function addToolResult(toolId, content) {
             content: String(content) 
         }] 
     });
-    // Debug
-    console.log('[addToolResult] Added result for tool_use_id:', toolId);
 }
 
 function addRoadmapItem(text, type) {

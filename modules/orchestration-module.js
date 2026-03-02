@@ -1545,7 +1545,6 @@ async function handleUserMessage(text, socket) {
             hub.log(`Direct agent command: ${normalizedAgent} -> ${task}`, 'info');
 
             try {
-                console.log("[ORCH] assignTask called: agent=" + normalizedAgent + " task=" + task);
                 const result = await agentSystem.assignTask(normalizedAgent, task);
                 hub.addMessage('assistant', result);
                 finishMainProcessing();

@@ -28,8 +28,6 @@ class CommandSandbox {
             const shellCmd = isWindows ? 'cmd.exe' : '/bin/bash';
             const shellArgs = isWindows ? ['/c', command] : ['-c', command];
             
-            console.log(`[Sandbox] Executing: ${command} in ${this.workingDir}`);
-            
             // FIXED: Don't pass timeout to spawn - it breaks on some platforms
             // Use setTimeout + kill instead for timeout handling
             const proc = spawn(shellCmd, shellArgs, {

@@ -71,6 +71,414 @@ const SECURITY_ROLES = {
 
 // Default agent templates
 const DEFAULT_AGENTS = {
+    // ==================== ENGINEERING - DEVELOPMENT ====================
+    'frontend-developer': {
+        name: 'frontend-developer',
+        role: 'Frontend Developer',
+        description: 'Specializes in building user-facing applications and interfaces using modern frontend frameworks. Implements responsive, accessible, and performant web components following best practices and design patterns.',
+        group: 'Engineering',
+        languages: ['JavaScript', 'TypeScript', 'HTML', 'CSS', 'React', 'Vue', 'Angular'],
+        tools: ['read_file', 'write_file', 'patch_file', 'list_dir', 'bash', 'understand_image'],
+        autoAddTools: true,
+        securityRole: 'developer',
+        capabilities: ['html', 'css', 'javascript', 'typescript', 'react', 'vue', 'angular', 'responsive-design', 'frontend-optimization', 'cross-browser', 'accessibility', 'web-performance', 'progressive-web-apps']
+    },
+    'backend-developer': {
+        name: 'backend-developer',
+        role: 'Backend Developer',
+        description: 'Focuses on server-side logic, APIs, database management, and system integration. Builds robust, scalable, and secure backend services using appropriate frameworks and technologies.',
+        group: 'Engineering',
+        languages: ['JavaScript', 'TypeScript', 'Python', 'Java', 'Go', 'Rust', 'SQL'],
+        tools: ['read_file', 'write_file', 'patch_file', 'list_dir', 'bash'],
+        autoAddTools: true,
+        securityRole: 'developer',
+        capabilities: ['nodejs', 'python', 'java', 'go', 'rust', 'sql', 'nosql', 'api-design', 'microservices', 'server-optimization', 'security', 'caching']
+    },
+    'principal-engineer': {
+        name: 'principal-engineer',
+        role: 'Principal Engineer',
+        description: 'Senior technical leader responsible for architectural decisions, mentoring engineers, and driving technical strategy across multiple teams and projects.',
+        group: 'Engineering',
+        languages: ['JavaScript', 'TypeScript', 'Python', 'Go', 'Rust'],
+        tools: ['read_file', 'write_file', 'patch_file', 'list_dir', 'bash', 'git_diff'],
+        autoAddTools: false,
+        securityRole: 'developer',
+        capabilities: ['architecture', 'system-design', 'technical-leadership', 'mentoring', 'code-review', 'standards', 'innovation', 'strategic-planning']
+    },
+    'development-coordinator': {
+        name: 'development-coordinator',
+        role: 'Development Coordinator',
+        description: 'Coordinates development activities across teams, manages technical dependencies, and ensures smooth execution of development tasks and sprints.',
+        group: 'Engineering',
+        languages: ['English'],
+        tools: ['read_file', 'write_file', 'list_dir', 'bash'],
+        autoAddTools: false,
+        securityRole: 'readonly',
+        capabilities: ['project-coordination', 'resource-management', 'dependency-tracking', 'communication', 'timeline-management', 'risk-management', 'stakeholder-management']
+    },
+
+    // ==================== ENGINEERING - LEADERSHIP ====================
+    'frontend-lead': {
+        name: 'frontend-lead',
+        role: 'Frontend Lead',
+        description: 'Leads frontend development teams, establishes coding standards, ensures quality code delivery, and mentors junior frontend developers.',
+        group: 'Engineering',
+        languages: ['JavaScript', 'TypeScript', 'HTML', 'CSS', 'React', 'Vue'],
+        tools: ['read_file', 'write_file', 'patch_file', 'list_dir', 'bash', 'git_diff', 'understand_image'],
+        autoAddTools: false,
+        securityRole: 'developer',
+        capabilities: ['frontend-architecture', 'team-leadership', 'code-quality', 'performance-optimization', 'design-systems', 'accessibility', 'cross-functional-collaboration']
+    },
+    'backend-lead': {
+        name: 'backend-lead',
+        role: 'Backend Lead',
+        description: 'Leads backend development efforts, designs scalable server architectures, and ensures robust API design and database optimization.',
+        group: 'Engineering',
+        languages: ['JavaScript', 'TypeScript', 'Python', 'Go', 'Rust', 'SQL'],
+        tools: ['read_file', 'write_file', 'patch_file', 'list_dir', 'bash', 'git_diff'],
+        autoAddTools: false,
+        securityRole: 'developer',
+        capabilities: ['backend-architecture', 'api-design', 'database-optimization', 'team-leadership', 'security', 'scalability', 'microservices']
+    },
+
+    // ==================== QA & TESTING ====================
+    'qa-engineer': {
+        name: 'qa-engineer',
+        role: 'QA Engineer',
+        description: 'Designs and implements testing strategies, writes test cases, performs various testing types, and ensures software quality meets standards.',
+        group: 'QA',
+        languages: ['JavaScript', 'TypeScript', 'Python', 'Java'],
+        tools: ['qa_run_tests', 'qa_check_lint', 'qa_check_types', 'qa_check_coverage', 'read_file', 'write_file', 'list_dir'],
+        autoAddTools: true,
+        securityRole: 'developer',
+        capabilities: ['test-planning', 'test-automation', 'manual-testing', 'regression-testing', 'performance-testing', 'security-testing', 'bug-tracking', 'quality-assurance']
+    },
+    'qa-lead': {
+        name: 'qa-lead',
+        role: 'QA Lead',
+        description: 'Leads QA team, develops testing strategies, implements quality processes, and ensures overall product quality across all releases.',
+        group: 'QA',
+        languages: ['JavaScript', 'TypeScript', 'Python', 'Java'],
+        tools: ['qa_run_tests', 'qa_check_lint', 'qa_check_types', 'qa_check_coverage', 'read_file', 'write_file', 'list_dir', 'bash'],
+        autoAddTools: false,
+        securityRole: 'developer',
+        capabilities: ['test-strategy', 'team-leadership', 'quality-management', 'process-improvement', 'test-automation', 'risk-assessment', 'stakeholder-coordination']
+    },
+    'test-strategy-architect': {
+        name: 'test-strategy-architect',
+        role: 'Test Strategy Architect',
+        description: 'Designs comprehensive testing strategies and frameworks. Defines testing methodologies, tools, and best practices across the organization.',
+        group: 'QA',
+        languages: ['JavaScript', 'TypeScript', 'Python', 'Java'],
+        tools: ['qa_run_tests', 'qa_check_lint', 'qa_check_types', 'qa_check_coverage', 'read_file', 'write_file', 'list_dir', 'bash'],
+        autoAddTools: false,
+        securityRole: 'developer',
+        capabilities: ['test-architecture', 'strategy-design', 'test-automation-frameworks', 'ci-cd-integration', 'quality-metrics', 'risk-based-testing', 'tool-evaluation']
+    },
+    'deployment-verification-agent': {
+        name: 'deployment-verification-agent',
+        role: 'Deployment Verification Agent',
+        description: 'Verifies deployments across environments, runs smoke tests, validates configurations, and ensures smooth production releases.',
+        group: 'QA',
+        languages: ['JavaScript', 'TypeScript', 'Python', 'Bash'],
+        tools: ['qa_run_tests', 'read_file', 'write_file', 'list_dir', 'bash'],
+        autoAddTools: true,
+        securityRole: 'developer',
+        capabilities: ['deployment-validation', 'smoke-testing', 'environment-verification', 'rollback-procedures', 'monitoring', 'incident-response']
+    },
+
+    // ==================== DEVOPS & INFRASTRUCTURE ====================
+    'devops-engineer': {
+        name: 'devops-engineer',
+        role: 'DevOps Engineer',
+        description: 'Implements and maintains CI/CD pipelines, manages infrastructure as code, and ensures reliable deployment and operations.',
+        group: 'DevOps',
+        languages: ['Bash', 'Python', 'JavaScript', 'TypeScript', 'YAML'],
+        tools: ['bash', 'read_file', 'write_file', 'list_dir', 'git_diff'],
+        autoAddTools: true,
+        securityRole: 'developer',
+        capabilities: ['ci-cd', 'infrastructure-as-code', 'containerization', 'orchestration', 'monitoring', 'logging', 'automation', 'cloud-infrastructure']
+    },
+    'devops-lead': {
+        name: 'devops-lead',
+        role: 'DevOps Lead',
+        description: 'Leads DevOps initiatives, establishes best practices, manages infrastructure strategy, and drives automation across the organization.',
+        group: 'DevOps',
+        languages: ['Bash', 'Python', 'JavaScript', 'TypeScript', 'YAML'],
+        tools: ['bash', 'read_file', 'write_file', 'list_dir', 'git_diff'],
+        autoAddTools: false,
+        securityRole: 'developer',
+        capabilities: ['devops-strategy', 'team-leadership', 'cloud-architecture', 'cost-optimization', 'security-compliance', 'tooling', 'process-improvement']
+    },
+    'gitops-specialist': {
+        name: 'gitops-specialist',
+        role: 'GitOps Specialist',
+        description: 'Implements GitOps workflows, manages declarative infrastructure, and ensures version-controlled deployment processes.',
+        group: 'DevOps',
+        languages: ['Bash', 'YAML', 'Python', 'Go'],
+        tools: ['bash', 'read_file', 'write_file', 'list_dir', 'git_diff', 'github'],
+        autoAddTools: true,
+        securityRole: 'developer',
+        capabilities: ['gitops', 'argocd', 'flux', 'helm', 'kubernetes', 'git-workflows', 'infrastructure-as-code', 'drift-detection']
+    },
+    'deployment-orchestrator': {
+        name: 'deployment-orchestrator',
+        role: 'Deployment Orchestrator',
+        description: 'Coordinates complex deployments across multiple environments, manages release schedules, and ensures zero-downtime releases.',
+        group: 'DevOps',
+        languages: ['Bash', 'Python', 'YAML', 'JavaScript'],
+        tools: ['bash', 'read_file', 'write_file', 'list_dir', 'git_diff'],
+        autoAddTools: false,
+        securityRole: 'developer',
+        capabilities: ['deployment-strategy', 'release-management', 'rollback-automation', 'feature-flags', 'environment-management', 'coordination']
+    },
+    'system-maintenance-coordinator': {
+        name: 'system-maintenance-coordinator',
+        role: 'System Maintenance Coordinator',
+        description: 'Schedules and coordinates system maintenance windows, manages patches, updates, and ensures system health and compliance.',
+        group: 'DevOps',
+        languages: ['Bash', 'Python', 'YAML'],
+        tools: ['bash', 'read_file', 'write_file', 'list_dir'],
+        autoAddTools: false,
+        securityRole: 'developer',
+        capabilities: ['maintenance-planning', 'patch-management', 'system-monitoring', 'incident-coordination', 'compliance', 'documentation']
+    },
+
+    // ==================== ARCHITECTURE & DESIGN ====================
+    'system-architect': {
+        name: 'system-architect',
+        role: 'System Architect',
+        description: 'Designs overall system architecture, defines technical standards, and ensures scalability, performance, and reliability of solutions.',
+        group: 'Architecture',
+        languages: ['JavaScript', 'TypeScript', 'Python', 'Go', 'Rust', 'SQL'],
+        tools: ['read_file', 'write_file', 'patch_file', 'list_dir', 'bash', 'git_diff'],
+        autoAddTools: false,
+        securityRole: 'developer',
+        capabilities: ['system-design', 'architecture-patterns', 'scalability', 'performance', 'security', 'technology-selection', 'integration-design']
+    },
+    'enterprise-solutions-architect': {
+        name: 'enterprise-solutions-architect',
+        role: 'Enterprise Solutions Architect',
+        description: 'Designs enterprise-level solutions, creates architectural blueprints, and ensures alignment with business objectives and technical standards.',
+        group: 'Architecture',
+        languages: ['JavaScript', 'TypeScript', 'Python', 'Java', 'Go'],
+        tools: ['read_file', 'write_file', 'patch_file', 'list_dir', 'bash', 'git_diff'],
+        autoAddTools: false,
+        securityRole: 'developer',
+        capabilities: ['enterprise-architecture', 'solution-design', 'business-alignment', 'technology-roadmapping', 'architecture-governance', 'risk-assessment']
+    },
+    'enterprise-solutions-engineer': {
+        name: 'enterprise-solutions-engineer',
+        role: 'Enterprise Solutions Engineer',
+        description: 'Implements and maintains enterprise-level systems, integrates disparate systems, and ensures seamless data flow across the organization.',
+        group: 'Architecture',
+        languages: ['Java', 'Python', 'JavaScript', 'TypeScript', 'SQL'],
+        tools: ['read_file', 'write_file', 'patch_file', 'list_dir', 'bash'],
+        autoAddTools: false,
+        securityRole: 'developer',
+        capabilities: ['enterprise-integration', 'system-integration', 'api-gateway', 'data-pipelines', 'workflow-automation', 'enterprise-security']
+    },
+    'architecture-coordinator': {
+        name: 'architecture-coordinator',
+        role: 'Architecture Coordinator',
+        description: 'Coordinates architectural activities across teams, manages architectural debt, and ensures consistent implementation of architectural decisions.',
+        group: 'Architecture',
+        languages: ['English'],
+        tools: ['read_file', 'write_file', 'list_dir', 'bash'],
+        autoAddTools: false,
+        securityRole: 'readonly',
+        capabilities: ['architecture-governance', 'coordination', 'documentation', 'standards-enforcement', 'technical-debt-management', 'stakeholder-communication']
+    },
+
+    // ==================== UI/UX DESIGN ====================
+    'ui-designer': {
+        name: 'ui-designer',
+        role: 'UI Designer',
+        description: 'Creates visually appealing user interfaces, designs layouts, components, and ensures consistency with brand guidelines and design systems.',
+        group: 'Design',
+        languages: ['HTML', 'CSS', 'JavaScript', 'SCSS'],
+        tools: ['read_file', 'write_file', 'patch_file', 'understand_image', 'list_dir'],
+        autoAddTools: true,
+        securityRole: 'developer',
+        capabilities: ['ui-design', 'visual-design', 'prototyping', 'design-systems', 'responsive-design', 'typography', 'color-theory', 'iconography']
+    },
+    'ux-interface-designer': {
+        name: 'ux-interface-designer',
+        role: 'UX Interface Designer',
+        description: 'Designs intuitive user interfaces with focus on user experience, creates wireframes, prototypes, and conducts user research.',
+        group: 'Design',
+        languages: ['HTML', 'CSS', 'JavaScript'],
+        tools: ['read_file', 'write_file', 'patch_file', 'understand_image', 'list_dir'],
+        autoAddTools: true,
+        securityRole: 'developer',
+        capabilities: ['ux-design', 'user-research', 'wireframing', 'prototyping', 'usability-testing', 'information-architecture', 'interaction-design']
+    },
+
+    // ==================== DATA & ANALYTICS ====================
+    'data-engineer': {
+        name: 'data-engineer',
+        role: 'Data Engineer',
+        description: 'Builds and maintains data pipelines, manages data infrastructure, and ensures data quality and accessibility for analytics.',
+        group: 'Data',
+        languages: ['Python', 'SQL', 'Java', 'Scala', 'Bash'],
+        tools: ['read_file', 'write_file', 'patch_file', 'list_dir', 'bash'],
+        autoAddTools: true,
+        securityRole: 'developer',
+        capabilities: ['data-pipelines', 'etl', 'data-warehousing', 'big-data', 'sql', 'python', 'spark', 'data-quality', 'data-modeling']
+    },
+    'data-scientist': {
+        name: 'data-scientist',
+        role: 'Data Scientist',
+        description: 'Analyzes complex datasets, builds predictive models, and derives insights to drive data-informed decision making.',
+        group: 'Data',
+        languages: ['Python', 'R', 'SQL', 'Julia'],
+        tools: ['read_file', 'write_file', 'patch_file', 'list_dir', 'bash'],
+        autoAddTools: true,
+        securityRole: 'developer',
+        capabilities: ['machine-learning', 'statistical-analysis', 'data-visualization', 'python', 'r', 'deep-learning', 'nlp', 'predictive-modeling']
+    },
+
+    // ==================== PRODUCT & PROJECT MANAGEMENT ====================
+    'product-manager': {
+        name: 'product-manager',
+        role: 'Product Manager',
+        description: 'Defines product vision, manages roadmap, prioritizes features, and works with stakeholders to deliver successful products.',
+        group: 'Product',
+        languages: ['English'],
+        tools: ['read_file', 'write_file', 'list_dir'],
+        autoAddTools: false,
+        securityRole: 'readonly',
+        capabilities: ['product-strategy', 'roadmap-management', 'stakeholder-management', 'user-research', 'prioritization', 'agile', 'market-analysis']
+    },
+    'business-analyst': {
+        name: 'business-analyst',
+        role: 'Business Analyst',
+        description: 'Analyzes business requirements, bridges gap between business and technical teams, and ensures solutions meet business objectives.',
+        group: 'Product',
+        languages: ['English'],
+        tools: ['read_file', 'write_file', 'list_dir'],
+        autoAddTools: false,
+        securityRole: 'readonly',
+        capabilities: ['requirements-analysis', 'business-process-modeling', 'data-analysis', 'stakeholder-communication', 'use-cases', 'functional-specs']
+    },
+    'project-manager': {
+        name: 'project-manager',
+        role: 'Project Manager',
+        description: 'Manages projects from initiation to completion, coordinates resources, manages timelines, and ensures successful delivery.',
+        group: 'Product',
+        languages: ['English'],
+        tools: ['read_file', 'write_file', 'list_dir', 'bash'],
+        autoAddTools: false,
+        securityRole: 'readonly',
+        capabilities: ['project-planning', 'resource-management', 'risk-management', 'stakeholder-management', 'budget-tracking', 'timeline-management', 'reporting']
+    },
+    'project-initializer': {
+        name: 'project-initializer',
+        role: 'Project Initializer',
+        description: 'Sets up new projects, defines initial structure, establishes workflows, and creates foundation for successful project execution.',
+        group: 'Product',
+        languages: ['English', 'JavaScript', 'TypeScript'],
+        tools: ['read_file', 'write_file', 'patch_file', 'list_dir', 'bash'],
+        autoAddTools: false,
+        securityRole: 'developer',
+        capabilities: ['project-setup', 'template-creation', 'workflow-definition', 'tooling-setup', 'team-onboarding', 'governance-setup']
+    },
+
+    // ==================== AGILE & PROCESS ====================
+    'scrum-master': {
+        name: 'scrum-master',
+        role: 'Scrum Master',
+        description: 'Facilitates Scrum ceremonies, removes impediments, coaches team on Agile practices, and ensures process adherence.',
+        group: 'Agile',
+        languages: ['English'],
+        tools: ['read_file', 'write_file', 'list_dir'],
+        autoAddTools: false,
+        securityRole: 'readonly',
+        capabilities: ['scrum', 'facilitation', 'coaching', 'impediment-removal', 'ceremony-facilitation', 'continuous-improvement', 'conflict-resolution']
+    },
+    'sprint-planner': {
+        name: 'sprint-planner',
+        role: 'Sprint Planner',
+        description: 'Plans sprint activities, estimates work, defines sprint goals, and ensures realistic sprint commitments.',
+        group: 'Agile',
+        languages: ['English'],
+        tools: ['read_file', 'write_file', 'list_dir'],
+        autoAddTools: false,
+        securityRole: 'readonly',
+        capabilities: ['sprint-planning', 'estimation', 'velocity-tracking', 'capacity-planning', 'goal-setting', 'prioritization']
+    },
+    'sprint-retrospective-facilitator': {
+        name: 'sprint-retrospective-facilitator',
+        role: 'Sprint Retrospective Facilitator',
+        description: 'Leads sprint retrospectives, identifies improvements, and drives continuous process enhancement within teams.',
+        group: 'Agile',
+        languages: ['English'],
+        tools: ['read_file', 'write_file', 'list_dir'],
+        autoAddTools: false,
+        securityRole: 'readonly',
+        capabilities: ['retrospective-facilitation', 'process-improvement', 'team-coaching', 'feedback-analysis', 'action-tracking', 'change-management']
+    },
+    'agile-workflow-orchestrator': {
+        name: 'agile-workflow-orchestrator',
+        role: 'Agile Workflow Orchestrator',
+        description: 'Orchestrates Agile workflows across multiple teams, ensures alignment, and optimizes delivery processes.',
+        group: 'Agile',
+        languages: ['English'],
+        tools: ['read_file', 'write_file', 'list_dir', 'bash'],
+        autoAddTools: false,
+        securityRole: 'readonly',
+        capabilities: ['workflow-orchestration', 'cross-team-coordination', 'agile-coaching', 'process-optimization', 'dependency-management', 'delivery-tracking']
+    },
+
+    // ==================== SECURITY & COMPLIANCE ====================
+    'security-compliance-officer': {
+        name: 'security-compliance-officer',
+        role: 'Security Compliance Officer',
+        description: 'Ensures compliance with security standards and regulations, conducts audits, and implements security policies.',
+        group: 'Security',
+        languages: ['English'],
+        tools: ['read_file', 'write_file', 'list_dir', 'bash'],
+        autoAddTools: false,
+        securityRole: 'developer',
+        capabilities: ['security-compliance', 'audit', 'risk-assessment', 'policy-development', 'regulatory-compliance', 'security-frameworks', 'incident-response']
+    },
+    'workflow-termination-coordinator': {
+        name: 'workflow-termination-coordinator',
+        role: 'Workflow Termination Coordinator',
+        description: 'Manages graceful termination of workflows and processes, ensures clean shutdowns, and handles cleanup operations.',
+        group: 'Security',
+        languages: ['JavaScript', 'TypeScript', 'Python', 'Bash'],
+        tools: ['read_file', 'write_file', 'patch_file', 'list_dir', 'bash'],
+        autoAddTools: false,
+        securityRole: 'developer',
+        capabilities: ['workflow-management', 'process-termination', 'cleanup-automation', 'resource-release', 'state-management', 'error-handling']
+    },
+
+    // ==================== DOCUMENTATION ====================
+    'documentation-strategist': {
+        name: 'documentation-strategist',
+        role: 'Documentation Strategist',
+        description: 'Develops documentation strategy, establishes standards, and ensures comprehensive and maintainable documentation.',
+        group: 'Documentation',
+        languages: ['English', 'Markdown'],
+        tools: ['read_file', 'write_file', 'list_dir'],
+        autoAddTools: false,
+        securityRole: 'readonly',
+        capabilities: ['documentation-strategy', 'content-architecture', 'knowledge-management', 'technical-writing', 'api-documentation', 'style-guides']
+    },
+    'documentation-technician': {
+        name: 'documentation-technician',
+        role: 'Documentation Technician',
+        description: 'Creates and maintains technical documentation, API docs, user guides, and ensures documentation stays up to date.',
+        group: 'Documentation',
+        languages: ['English', 'Markdown'],
+        tools: ['read_file', 'write_file', 'patch_file', 'list_dir'],
+        autoAddTools: true,
+        securityRole: 'developer',
+        capabilities: ['technical-writing', 'api-documentation', 'user-guides', 'markdown', 'documentation-tools', 'content-updates']
+    },
+
+    // ==================== EXISTING DEFAULT AGENTS ====================
     'git-keeper': {
         name: 'git-keeper',
         role: 'Git Operations Specialist',

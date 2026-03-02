@@ -650,6 +650,411 @@ async function init(h) {
         });
         hub.log('✅ remove_agent tool registered', 'info');
 
+        // ── list_agents: AI lists all team agents ─────────────────────────────
+        tools.registerTool({
+            name: 'list_agents',
+            description: 'List all agents on the team with their names, roles, descriptions, and capabilities. Use this to see who is available before delegating or to check what agents exist before adding a new one.',
+            input_schema: {
+                type: 'object',
+                properties: {
+                    group: { type: 'string', description: 'Optional: filter by group name (e.g. "engineering", "qa", "custom")' }
+                }
+            }
+        }, (input) => {
+            const agentMgr = hub.getService('agentManager');
+            if (!agentMgr || !agentMgr.listAgents) return 'ERROR: Agent manager service not available';
+            try {
+                const agents = agentMgr.listAgents();
+                let filtered = agents;
+                if (input.group) {
+                    filtered = agents.filter(a => (a.group || '').toLowerCase() === input.group.toLowerCase());
+                }
+                if (!filtered.length) return input.group ? `No agents in group "${input.group}".` : 'No agents found.';
+                const lines = filtered.map(a =>
+                    `- **${a.name}** (${a.role || 'No role'}) [group: ${a.group || 'none'}]\n  ${a.description || 'No description'}` +
+                    (a.capabilities && a.capabilities.length ? `\n  Capabilities: ${a.capabilities.join(', ')}` : '')
+                );
+                return `## Team Agents (${filtered.length})\n\n${lines.join('\n\n')}`;
+            } catch (e) {
+                return `ERROR listing agents: ${e.message}`;
+            }
+        });
+        hub.log('✅ list_agents tool registered', 'info');
+
+        // ── get_agent_info: get full details about one agent ───────────────────
+        tools.registerTool({
+            name: 'get_agent_info',
+            description: 'Get detailed information about a specific agent: role, description, capabilities, group, system prompt, and allowed tools. Use list_agents first to find the agent name.',
+            input_schema: {
+                type: 'object',
+                properties: {
+                    name: { type: 'string', description: 'Agent name (e.g. "code-implementer", "testing-engineer")' }
+                },
+                required: ['name']
+            }
+        }, (input) => {
+            const agentMgr = hub.getService('agentManager');
+            if (!agentMgr) return 'ERROR: Agent manager not available';
+            try {
+                const agent = agentMgr.getAgent(input.name);
+                if (!agent) return `ERROR: No agent found with name "${input.name}". Use list_agents to see all agents.`;
+                const lines = [
+                    `## Agent: ${agent.name}`,
+                    `**Role:** ${agent.role || 'N/A'}`,
+                    `**Group:** ${agent.group || 'none'}`,
+                    `**Description:** ${agent.description || 'N/A'}`,
+                    `**Capabilities:** ${(agent.capabilities || []).join(', ') || 'N/A'}`,
+                    `**Languages:** ${(agent.languages || []).join(', ') || 'N/A'}`,
+                    `**Security Role:** ${agent.securityRole || 'N/A'}`,
+                ];
+                if (agent.systemPrompt) lines.push(`**System Prompt:** ${agent.systemPrompt.substring(0, 300)}${agent.systemPrompt.length > 300 ? '...' : ''}`);
+                return lines.join('\n');
+            } catch (e) {
+                return `ERROR: ${e.message}`;
+            }
+        });
+        hub.log('✅ get_agent_info tool registered', 'info');
+
+        // ── update_agent: AI modifies an existing agent ───────────────────────
+        tools.registerTool({
+            name: 'update_agent',
+            description: 'Update an existing agent\'s properties: name, role, description, capabilities, group, systemPrompt, or languages. Only provide the fields you want to change.',
+            input_schema: {
+                type: 'object',
+                properties: {
+                    name:         { type: 'string', description: 'Current agent name (used to look up the agent)' },
+                    role:         { type: 'string', description: 'New role title' },
+                    description:  { type: 'string', description: 'New description' },
+                    capabilities: { type: 'array', items: { type: 'string' }, description: 'Replace capabilities list' },
+                    group:        { type: 'string', description: 'Move agent to a different group' },
+                    systemPrompt: { type: 'string', description: 'New system prompt for the agent' },
+                    languages:    { type: 'array', items: { type: 'string' }, description: 'Programming languages the agent works with' }
+                },
+                required: ['name']
+            }
+        }, (input) => {
+            const agentMgr = hub.getService('agentManager');
+            if (!agentMgr) return 'ERROR: Agent manager not available';
+            try {
+                const agent = agentMgr.getAgent(input.name);
+                if (!agent) return `ERROR: No agent found with name "${input.name}". Use list_agents to see available agents.`;
+                const { name: _n, ...updates } = input;
+                const result = agentMgr.updateAgent(agent.id || agent.name, updates);
+                if (result && result.success === false) return `ERROR: ${result.error || 'Update failed'}`;
+                return `Agent "${input.name}" updated successfully.${Object.keys(updates).length ? ' Changed: ' + Object.keys(updates).join(', ') : ''}`;
+            } catch (e) {
+                return `ERROR: ${e.message}`;
+            }
+        });
+        hub.log('✅ update_agent tool registered', 'info');
+
+        // ── list_agent_groups: list all agent groups ───────────────────────────
+        tools.registerTool({
+            name: 'list_agent_groups',
+            description: 'List all agent groups with their names, descriptions, and agent counts.',
+            input_schema: { type: 'object', properties: {} }
+        }, () => {
+            const agentMgr = hub.getService('agentManager');
+            if (!agentMgr) return 'ERROR: Agent manager not available';
+            try {
+                const groups = agentMgr.listGroups();
+                if (!groups || !groups.length) return 'No groups defined yet.';
+                const lines = groups.map(g =>
+                    `- **${g.name}** (id: ${g.id}): ${g.description || 'No description'} — ${g.agentCount || 0} agent(s)`
+                );
+                return `## Agent Groups (${groups.length})\n\n${lines.join('\n')}`;
+            } catch (e) {
+                return `ERROR: ${e.message}`;
+            }
+        });
+        hub.log('✅ list_agent_groups tool registered', 'info');
+
+        // ── create_agent_group: create a new group ─────────────────────────────
+        tools.registerTool({
+            name: 'create_agent_group',
+            description: 'Create a new agent group to organize agents by department or function (e.g. "engineering", "qa", "devops").',
+            input_schema: {
+                type: 'object',
+                properties: {
+                    name:        { type: 'string', description: 'Group name (e.g. "security", "data-team")' },
+                    description: { type: 'string', description: 'What this group is for' },
+                    color:       { type: 'string', description: 'Optional hex color for the group badge (e.g. "#4CAF50")' }
+                },
+                required: ['name']
+            }
+        }, (input) => {
+            const agentMgr = hub.getService('agentManager');
+            if (!agentMgr) return 'ERROR: Agent manager not available';
+            try {
+                const result = agentMgr.createGroup({ name: input.name, description: input.description || '', color: input.color });
+                if (result && result.success === false) return `ERROR: ${result.error || 'Create failed'}`;
+                return `Group "${input.name}" created successfully.`;
+            } catch (e) {
+                return `ERROR: ${e.message}`;
+            }
+        });
+        hub.log('✅ create_agent_group tool registered', 'info');
+
+        // ── update_agent_group: rename or re-describe a group ─────────────────
+        tools.registerTool({
+            name: 'update_agent_group',
+            description: 'Update an existing agent group\'s name, description, or color.',
+            input_schema: {
+                type: 'object',
+                properties: {
+                    group_id:    { type: 'string', description: 'Group ID or current name' },
+                    name:        { type: 'string', description: 'New name for the group' },
+                    description: { type: 'string', description: 'New description' },
+                    color:       { type: 'string', description: 'New hex color' }
+                },
+                required: ['group_id']
+            }
+        }, (input) => {
+            const agentMgr = hub.getService('agentManager');
+            if (!agentMgr) return 'ERROR: Agent manager not available';
+            try {
+                const { group_id, ...updates } = input;
+                const result = agentMgr.updateGroup(group_id, updates);
+                if (result && result.success === false) return `ERROR: ${result.error || 'Update failed'}`;
+                return `Group "${group_id}" updated successfully.`;
+            } catch (e) {
+                return `ERROR: ${e.message}`;
+            }
+        });
+        hub.log('✅ update_agent_group tool registered', 'info');
+
+        // ── delete_agent_group: remove a group ────────────────────────────────
+        tools.registerTool({
+            name: 'delete_agent_group',
+            description: 'Delete an agent group. Agents in the group will remain but will no longer be associated with it.',
+            input_schema: {
+                type: 'object',
+                properties: {
+                    group_id: { type: 'string', description: 'Group ID or name to delete' }
+                },
+                required: ['group_id']
+            }
+        }, (input) => {
+            const agentMgr = hub.getService('agentManager');
+            if (!agentMgr) return 'ERROR: Agent manager not available';
+            try {
+                const result = agentMgr.deleteGroup(input.group_id);
+                if (result && result.success === false) return `ERROR: ${result.error || 'Delete failed'}`;
+                return `Group "${input.group_id}" deleted.`;
+            } catch (e) {
+                return `ERROR: ${e.message}`;
+            }
+        });
+        hub.log('✅ delete_agent_group tool registered', 'info');
+
+        // ── add_agent_to_group: move an agent into a group ────────────────────
+        tools.registerTool({
+            name: 'add_agent_to_group',
+            description: 'Add an existing agent to a group. Use list_agents and list_agent_groups to find the names/IDs.',
+            input_schema: {
+                type: 'object',
+                properties: {
+                    agent_name: { type: 'string', description: 'Agent name' },
+                    group_id:   { type: 'string', description: 'Group ID or name' }
+                },
+                required: ['agent_name', 'group_id']
+            }
+        }, (input) => {
+            const agentMgr = hub.getService('agentManager');
+            if (!agentMgr) return 'ERROR: Agent manager not available';
+            try {
+                const agent = agentMgr.getAgent(input.agent_name);
+                if (!agent) return `ERROR: Agent "${input.agent_name}" not found.`;
+                const result = agentMgr.addAgentToGroup(agent.id || agent.name, input.group_id);
+                if (result && result.success === false) return `ERROR: ${result.error || 'Failed'}`;
+                return `Agent "${input.agent_name}" added to group "${input.group_id}".`;
+            } catch (e) {
+                return `ERROR: ${e.message}`;
+            }
+        });
+        hub.log('✅ add_agent_to_group tool registered', 'info');
+
+        // ── remove_agent_from_group: unassign an agent from its group ─────────
+        tools.registerTool({
+            name: 'remove_agent_from_group',
+            description: 'Remove an agent from its current group (the agent is not deleted, just ungrouped).',
+            input_schema: {
+                type: 'object',
+                properties: {
+                    agent_name: { type: 'string', description: 'Agent name to remove from its group' }
+                },
+                required: ['agent_name']
+            }
+        }, (input) => {
+            const agentMgr = hub.getService('agentManager');
+            if (!agentMgr) return 'ERROR: Agent manager not available';
+            try {
+                const agent = agentMgr.getAgent(input.agent_name);
+                if (!agent) return `ERROR: Agent "${input.agent_name}" not found.`;
+                const result = agentMgr.removeAgentFromGroup(agent.id || agent.name);
+                if (result && result.success === false) return `ERROR: ${result.error || 'Failed'}`;
+                return `Agent "${input.agent_name}" removed from its group.`;
+            } catch (e) {
+                return `ERROR: ${e.message}`;
+            }
+        });
+        hub.log('✅ remove_agent_from_group tool registered', 'info');
+
+        // ── list_projects: list all projects ──────────────────────────────────
+        tools.registerTool({
+            name: 'list_projects',
+            description: 'List all projects. Shows each project\'s name, description, working directory, and whether it is currently active.',
+            input_schema: { type: 'object', properties: {} }
+        }, () => {
+            const projects = hub.getService('projects');
+            if (!projects) return 'ERROR: Projects service not available';
+            try {
+                const list = projects.listProjects();
+                if (!list || !list.length) return 'No projects yet. Use create_project to start one.';
+                const activeId = projects.getActiveProjectId ? projects.getActiveProjectId() : null;
+                const lines = list.map(p =>
+                    `- **${p.name}** (id: ${p.id})${p.id === activeId ? ' [ACTIVE]' : ''}: ${p.description || 'No description'} — dir: ${p.workingDir || 'default'}`
+                );
+                return `## Projects (${list.length})\n\n${lines.join('\n')}`;
+            } catch (e) {
+                return `ERROR: ${e.message}`;
+            }
+        });
+        hub.log('✅ list_projects tool registered', 'info');
+
+        // ── get_project: get full details for one project ─────────────────────
+        tools.registerTool({
+            name: 'get_project',
+            description: 'Get full details about a specific project including its description, working directory, linked agents, and metadata.',
+            input_schema: {
+                type: 'object',
+                properties: {
+                    project_id: { type: 'string', description: 'Project ID or name' }
+                },
+                required: ['project_id']
+            }
+        }, (input) => {
+            const projects = hub.getService('projects');
+            if (!projects) return 'ERROR: Projects service not available';
+            try {
+                const p = projects.getProject(input.project_id);
+                if (!p) return `ERROR: No project found with id/name "${input.project_id}". Use list_projects to see all.`;
+                const lines = [
+                    `## Project: ${p.name}`,
+                    `**ID:** ${p.id}`,
+                    `**Description:** ${p.description || 'N/A'}`,
+                    `**Working Dir:** ${p.workingDir || 'default'}`,
+                    `**Created:** ${p.createdAt ? new Date(p.createdAt).toLocaleString() : 'N/A'}`,
+                ];
+                return lines.join('\n');
+            } catch (e) {
+                return `ERROR: ${e.message}`;
+            }
+        });
+        hub.log('✅ get_project tool registered', 'info');
+
+        // ── create_project: create a new project ──────────────────────────────
+        tools.registerTool({
+            name: 'create_project',
+            description: 'Create a new project. Projects let you organize work with separate tasks, agents, and working directories.',
+            input_schema: {
+                type: 'object',
+                properties: {
+                    name:        { type: 'string', description: 'Project name' },
+                    description: { type: 'string', description: 'What this project is for' },
+                    workingDir:  { type: 'string', description: 'Absolute path to the project\'s working directory' }
+                },
+                required: ['name']
+            }
+        }, async (input) => {
+            const projects = hub.getService('projects');
+            if (!projects) return 'ERROR: Projects service not available';
+            try {
+                const p = await projects.createProject({ name: input.name, description: input.description || '', workingDir: input.workingDir });
+                if (p && p.error) return `ERROR: ${p.error}`;
+                return `Project "${input.name}" created (id: ${p.id || 'unknown'}). Use switch_project to activate it.`;
+            } catch (e) {
+                return `ERROR: ${e.message}`;
+            }
+        });
+        hub.log('✅ create_project tool registered', 'info');
+
+        // ── update_project: modify an existing project ────────────────────────
+        tools.registerTool({
+            name: 'update_project',
+            description: 'Update a project\'s name, description, or working directory.',
+            input_schema: {
+                type: 'object',
+                properties: {
+                    project_id:  { type: 'string', description: 'Project ID or name to update' },
+                    name:        { type: 'string', description: 'New name' },
+                    description: { type: 'string', description: 'New description' },
+                    workingDir:  { type: 'string', description: 'New working directory path' }
+                },
+                required: ['project_id']
+            }
+        }, async (input) => {
+            const projects = hub.getService('projects');
+            if (!projects) return 'ERROR: Projects service not available';
+            try {
+                const { project_id, ...updates } = input;
+                const result = await projects.updateProject(project_id, updates);
+                if (result && result.error) return `ERROR: ${result.error}`;
+                return `Project "${project_id}" updated.`;
+            } catch (e) {
+                return `ERROR: ${e.message}`;
+            }
+        });
+        hub.log('✅ update_project tool registered', 'info');
+
+        // ── delete_project: delete a project ──────────────────────────────────
+        tools.registerTool({
+            name: 'delete_project',
+            description: 'Delete a project and all its data. This is irreversible. The project\'s tasks and agents are removed.',
+            input_schema: {
+                type: 'object',
+                properties: {
+                    project_id: { type: 'string', description: 'Project ID or name to delete' }
+                },
+                required: ['project_id']
+            }
+        }, async (input) => {
+            const projects = hub.getService('projects');
+            if (!projects) return 'ERROR: Projects service not available';
+            try {
+                const result = await projects.deleteProject(input.project_id);
+                if (result && result.error) return `ERROR: ${result.error}`;
+                return `Project "${input.project_id}" deleted.`;
+            } catch (e) {
+                return `ERROR: ${e.message}`;
+            }
+        });
+        hub.log('✅ delete_project tool registered', 'info');
+
+        // ── switch_project: change the active project ──────────────────────────
+        tools.registerTool({
+            name: 'switch_project',
+            description: 'Switch to a different project, making it the active context. Tasks, agents, and working directory will switch to the selected project.',
+            input_schema: {
+                type: 'object',
+                properties: {
+                    project_id: { type: 'string', description: 'Project ID or name to activate' }
+                },
+                required: ['project_id']
+            }
+        }, async (input) => {
+            const projects = hub.getService('projects');
+            if (!projects) return 'ERROR: Projects service not available';
+            try {
+                const result = await projects.switchProject(input.project_id);
+                if (result && result.error) return `ERROR: ${result.error}`;
+                return `Switched to project "${input.project_id}". This is now the active project.`;
+            } catch (e) {
+                return `ERROR: ${e.message}`;
+            }
+        });
+        hub.log('✅ switch_project tool registered', 'info');
+
         // ── delegate_to_agent: orchestrator hands a task to a specialist agent ─
         tools.registerTool({
             name: 'delegate_to_agent',

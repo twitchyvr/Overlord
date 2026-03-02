@@ -1179,6 +1179,57 @@
             opacity: 0.5;
         }
 
+        /* ── Voice input button ── */
+        .voice-btn {
+            flex-shrink: 0;
+            width: 36px;
+            height: 36px;
+            background: rgba(0,212,255,0.08);
+            border: 1px solid rgba(0,212,255,0.25);
+            border-radius: 8px;
+            color: var(--accent-cyan);
+            font-size: 16px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+            position: relative;
+            margin: 4px 0 4px 4px;
+        }
+        .voice-btn:hover:not(:disabled) {
+            background: rgba(0,212,255,0.15);
+            border-color: var(--electric);
+            box-shadow: 0 0 12px rgba(0,212,255,0.3), 0 0 4px rgba(0,212,255,0.15);
+            transform: scale(1.05);
+        }
+        .voice-btn:active:not(:disabled) {
+            transform: scale(0.95);
+        }
+        .voice-btn:disabled {
+            opacity: 0.35;
+            cursor: not-allowed;
+            border-color: rgba(255,255,255,0.1);
+            color: var(--text-muted);
+        }
+        /* Recording state - pulsing red */
+        .voice-btn.recording {
+            background: rgba(248,81,73,0.2);
+            border-color: var(--accent-red);
+            color: var(--accent-red);
+            animation: voice-pulse 1s ease-in-out infinite;
+        }
+        @keyframes voice-pulse {
+            0%, 100% { 
+                box-shadow: 0 0 8px rgba(248,81,73,0.4), 0 0 16px rgba(248,81,73,0.15);
+                transform: scale(1);
+            }
+            50% { 
+                box-shadow: 0 0 16px rgba(248,81,73,0.6), 0 0 32px rgba(248,81,73,0.25);
+                transform: scale(1.08);
+            }
+        }
+
         /* Chat Mode Selector */
         .chat-mode-selector { display:flex;align-items:center;background:var(--bg-input);border:1px solid var(--border);border-radius:6px;overflow:hidden; }
         .chat-mode-btn { padding:3px 10px;font-size:10px;font-weight:700;letter-spacing:.05em;background:transparent;color:var(--text-secondary);border:none;border-right:1px solid var(--border);cursor:pointer;transition:background .12s,color .12s; }
@@ -1855,6 +1906,12 @@
             width: 100%; padding: 8px 10px; background: rgba(8,12,18,0.8); border: 1px solid var(--glass-border);
             border-radius: var(--radius-2); color: var(--text-primary); font-size: 13px; font-family: inherit;
         }
+        .settings-select {
+            width: 100%; padding: 8px 10px; background: var(--bg-input); border: 1px solid var(--border);
+            border-radius: var(--radius-2); color: var(--text-primary); font-size: 12px; font-family: inherit;
+            cursor: pointer;
+        }
+        .settings-select:focus { border-color: var(--electric); outline: none; }
         .settings-input-full {
             width: 100%; box-sizing: border-box; padding: 7px 10px; background: rgba(8,12,18,0.8);
             border: 1px solid var(--glass-border); border-radius: var(--radius-2);
@@ -3037,6 +3094,7 @@
                         <textarea id="user-input" placeholder="Type a message… (Ctrl+Enter to send, paste image to attach)" rows="1"></textarea>
                         <div id="send-area" style="display:flex;align-items:center;gap:4px;flex-shrink:0;position:relative;z-index:1;">
                             <div class="thinking-ring" id="thinking-ring"></div>
+                            <button id="btn-voice" class="voice-btn" title="Voice input (click to start, click again to stop)">🎤</button>
                             <button id="btn-send">Send</button>
                         </div>
                     </div>
@@ -3549,6 +3607,41 @@
                     </div>
 
                     <div class="settings-section">
+                        <div class="settings-section-title">🎤 Voice Input</div>
+                        <div class="settings-section-desc">Speech recognition settings for voice input. Click the microphone button in the chat to start/stop recording.</div>
+                        
+                        <!-- Language Selection -->
+                        <div style="margin-bottom:12px;">
+                            <label style="display:block;font-size:11px;color:var(--text-secondary);margin-bottom:4px;">Speech Recognition Language</label>
+                            <select id="settings-voice-language" class="settings-select" onchange="saveVoiceSetting('voiceLanguage', this.value)">
+                                <option value="en-US">English (US)</option>
+                                <option value="en-GB">English (UK)</option>
+                                <option value="es-ES">Spanish (Spain)</option>
+                                <option value="fr-FR">French (France)</option>
+                                <option value="de-DE">German (Germany)</option>
+                                <option value="ja-JP">Japanese (Japan)</option>
+                                <option value="zh-CN">Chinese (Simplified)</option>
+                            </select>
+                        </div>
+
+                        <!-- Continuous Mode -->
+                        <label class="toggle-wrap">
+                            <input type="checkbox" id="settings-voice-continuous" onchange="saveVoiceSetting('voiceContinuous', this.checked)">
+                            <span class="toggle-track"></span>
+                            <span class="toggle-label">Continuous mode</span>
+                        </label>
+                        <div class="settings-section-desc" style="margin-top:2px;margin-bottom:10px;">Keep listening for speech without stopping after each phrase.</div>
+
+                        <!-- Auto-send -->
+                        <label class="toggle-wrap">
+                            <input type="checkbox" id="settings-voice-autosend" onchange="saveVoiceSetting('voiceAutoSend', this.checked)">
+                            <span class="toggle-track"></span>
+                            <span class="toggle-label">Auto-send on completion</span>
+                        </label>
+                        <div class="settings-section-desc" style="margin-top:2px;">Automatically send the message when speech recognition completes (instead of waiting for you to press Send).</div>
+                    </div>
+
+                    <div class="settings-section">
                         <div class="settings-section-title">Session Behavior</div>
                         <div class="settings-section-desc">Saved across sessions.</div>
                         <label class="toggle-wrap">
@@ -3558,6 +3651,96 @@
                         </label>
                         <div style="font-size:10px;color:var(--text-muted);margin-top:4px;padding-left:2px;">Instructs the AI to implement ALL features completely — no simplification, no stubs, always add security and error handling.</div>
                     </div>
+
+                    <!-- ── GitOps Auto-Commit ─────────────────────────────── -->
+                    <div class="settings-section" id="gitops-section">
+                        <div class="settings-section-title">GitOps Auto-Commit
+                            <span style="font-size:9px;background:rgba(0,230,118,0.12);color:var(--accent-green);border:1px solid rgba(0,230,118,0.3);border-radius:3px;padding:1px 5px;margin-left:6px;font-weight:400;">GIT</span>
+                        </div>
+                        <div class="settings-section-desc">Automatically stage, commit, and push changes with well-structured, conventional commit messages. Choose when to commit and how verbose the messages should be.</div>
+
+                        <!-- Master toggle -->
+                        <label class="toggle-wrap" style="margin-bottom:8px;">
+                            <input type="checkbox" id="settings-gitops-enabled" onchange="onGitOpsToggle(this.checked)">
+                            <span class="toggle-track"></span>
+                            <span class="toggle-label"><strong>Enable GitOps Auto-Commit</strong> (master toggle)</span>
+                        </label>
+
+                        <div id="gitops-sub" style="display:flex;flex-direction:column;gap:10px;">
+
+                            <!-- Trigger mode -->
+                            <div>
+                                <label style="font-size:10px;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:6px;">Commit Trigger</label>
+                                <div style="display:flex;flex-direction:column;gap:5px;">
+                                    <label style="display:flex;align-items:flex-start;gap:8px;cursor:pointer;">
+                                        <input type="radio" name="gitops-trigger" id="gtrig-every" value="every" onchange="updateGitOpsSetting('gitOpsTrigger','every')" style="margin-top:2px;">
+                                        <span style="font-size:12px;color:var(--text-primary);">After every file change <span style="color:var(--text-muted);font-size:11px;">(debounced 3 s)</span></span>
+                                    </label>
+                                    <label style="display:flex;align-items:flex-start;gap:8px;cursor:pointer;">
+                                        <input type="radio" name="gitops-trigger" id="gtrig-task" value="task" onchange="updateGitOpsSetting('gitOpsTrigger','task')" checked style="margin-top:2px;">
+                                        <span style="font-size:12px;color:var(--text-primary);">After each task completes <span style="color:var(--accent-green);font-size:11px;">(recommended)</span></span>
+                                    </label>
+                                    <label style="display:flex;align-items:flex-start;gap:8px;cursor:pointer;">
+                                        <input type="radio" name="gitops-trigger" id="gtrig-milestone" value="milestone" onchange="updateGitOpsSetting('gitOpsTrigger','milestone')" style="margin-top:2px;">
+                                        <span style="font-size:12px;color:var(--text-primary);">After each milestone completes</span>
+                                    </label>
+                                    <label style="display:flex;align-items:flex-start;gap:8px;cursor:pointer;">
+                                        <input type="radio" name="gitops-trigger" id="gtrig-count" value="count" onchange="updateGitOpsSetting('gitOpsTrigger','count');document.getElementById('gitops-count-row').style.display='flex';" style="margin-top:2px;">
+                                        <span style="font-size:12px;color:var(--text-primary);">After N changed files accumulate</span>
+                                    </label>
+                                    <div id="gitops-count-row" style="display:none;align-items:center;gap:8px;padding-left:24px;">
+                                        <span style="font-size:11px;color:var(--text-secondary);">Commit when</span>
+                                        <input type="number" class="num-input" id="settings-gitops-min-changes" min="1" max="50" value="3"
+                                               onchange="updateGitOpsSetting('gitOpsMinChanges', parseInt(this.value)||3)">
+                                        <span style="font-size:11px;color:var(--text-muted);">files changed</span>
+                                    </div>
+                                    <label style="display:flex;align-items:flex-start;gap:8px;cursor:pointer;">
+                                        <input type="radio" name="gitops-trigger" id="gtrig-manual" value="manual" onchange="updateGitOpsSetting('gitOpsTrigger','manual')" style="margin-top:2px;">
+                                        <span style="font-size:12px;color:var(--text-primary);">Manual only <span style="color:var(--text-muted);font-size:11px;">(use COMMIT button)</span></span>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <!-- Commit style -->
+                            <div>
+                                <label style="font-size:10px;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:6px;">Commit Message Style</label>
+                                <select id="settings-gitops-style" class="settings-select-full" onchange="updateGitOpsSetting('gitOpsCommitStyle', this.value)">
+                                    <option value="comprehensive">Comprehensive — full impact summary, file list, trigger context</option>
+                                    <option value="conventional">Conventional Commits — type(scope): subject + file list</option>
+                                    <option value="brief">Brief — one-line type(scope): summary</option>
+                                </select>
+                            </div>
+
+                            <!-- Push behavior -->
+                            <div>
+                                <label style="font-size:10px;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:6px;">Push Behavior</label>
+                                <div style="display:flex;flex-direction:column;gap:5px;">
+                                    <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+                                        <input type="radio" name="gitops-push" id="gpush-always" value="always" onchange="updateGitOpsSetting('gitOpsPush','always')" checked>
+                                        <span style="font-size:12px;color:var(--text-primary);">Always push after commit</span>
+                                    </label>
+                                    <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+                                        <input type="radio" name="gitops-push" id="gpush-ask" value="ask" onchange="updateGitOpsSetting('gitOpsPush','ask')">
+                                        <span style="font-size:12px;color:var(--text-primary);">Ask before each push</span>
+                                    </label>
+                                    <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+                                        <input type="radio" name="gitops-push" id="gpush-never" value="never" onchange="updateGitOpsSetting('gitOpsPush','never')">
+                                        <span style="font-size:12px;color:var(--text-primary);">Never push (commit only)</span>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <!-- Manual trigger button -->
+                            <div>
+                                <button class="settings-btn-sm" onclick="triggerManualGitOpsCommit()" style="margin-top:2px;">
+                                    ⚡ Commit &amp; Push Now
+                                </button>
+                                <span style="font-size:10px;color:var(--text-muted);margin-left:8px;">Stage all and commit immediately</span>
+                            </div>
+
+                        </div><!-- end gitops-sub -->
+                    </div>
+                    <!-- ── end GitOps Auto-Commit ─────────────────────────── -->
 
                 </div><!-- end settings-tab-general -->
 
@@ -4019,6 +4202,7 @@
             messages: document.getElementById('messages'),
             input: document.getElementById('user-input'),
             btnSend: document.getElementById('btn-send'),
+            btnVoice: document.getElementById('btn-voice'),
             btnCancel: document.getElementById('btn-cancel'),
             status: document.getElementById('status'),
             roadmap: document.getElementById('roadmap'),
@@ -4039,6 +4223,165 @@
         let attachedImages = [];
         let imageDataStore = {};
         console.log("Page loaded, checking image functionality...");
+
+        // ==================== Voice Input (Speech Recognition) ====================
+        let recognition = null;
+        let isRecording = false;
+
+        // ==================== Audio Feedback Module ====================
+        // Uses Web Audio API to generate subtle tones for voice feedback
+        let audioContext = null;
+
+        function getAudioContext() {
+            // Create audio context on first user interaction (browser autoplay policy)
+            if (!audioContext) {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            return audioContext;
+        }
+
+        function playTone(frequency, duration, type = 'sine', gain = 0.15) {
+            try {
+                const ctx = getAudioContext();
+                const oscillator = ctx.createOscillator();
+                const gainNode = ctx.createGain();
+
+                oscillator.connect(gainNode);
+                gainNode.connect(ctx.destination);
+
+                oscillator.type = type;
+                oscillator.frequency.setValueAtTime(frequency, ctx.currentTime);
+
+                // Quick fade in/out to avoid clicks
+                gainNode.gain.setValueAtTime(0, ctx.currentTime);
+                gainNode.gain.linearRampToValueAtTime(gain, ctx.currentTime + 0.01);
+                gainNode.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration / 1000);
+
+                oscillator.start(ctx.currentTime);
+                oscillator.stop(ctx.currentTime + duration / 1000);
+            } catch (e) {
+                console.warn('Audio feedback failed:', e);
+            }
+        }
+
+        // Audio feedback functions for different states
+        function playRecordingStartSound() {
+            // ~440Hz (A4) short beep - start recording
+            playTone(440, 100, 'sine', 0.12);
+        }
+
+        function playRecordingStopSound() {
+            // ~880Hz (A5) slightly higher - stop recording
+            playTone(880, 80, 'sine', 0.1);
+        }
+
+        function playErrorSound() {
+            // ~220Hz (A3) low buzz - error
+            playTone(220, 150, 'sawtooth', 0.08);
+        }
+
+        // Check for browser support
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        
+        // Get saved voice settings
+        function getVoiceSettings() {
+            return {
+                lang: localStorage.getItem('voiceLanguage') || 'en-US',
+                continuous: localStorage.getItem('voiceContinuous') === 'true',
+                autoSend: localStorage.getItem('voiceAutoSend') === 'true'
+            };
+        }
+
+        if (SpeechRecognition) {
+            recognition = new SpeechRecognition();
+            // Apply saved settings
+            const voiceSettings = getVoiceSettings();
+            recognition.continuous = voiceSettings.continuous;
+            recognition.interimResults = true;
+            recognition.lang = voiceSettings.lang;
+
+            recognition.onstart = function() {
+                isRecording = true;
+                elements.btnVoice?.classList.add('recording');
+                elements.btnVoice?.setAttribute('title', 'Recording... Click to stop');
+                playRecordingStartSound();
+                console.log('Voice recording started');
+            };
+
+            recognition.onend = function() {
+                isRecording = false;
+                elements.btnVoice?.classList.remove('recording');
+                elements.btnVoice?.setAttribute('title', 'Voice input (click to start, click again to stop)');
+                playRecordingStopSound();
+                console.log('Voice recording ended');
+            };
+
+            recognition.onresult = function(event) {
+                let finalTranscript = '';
+                let interimTranscript = '';
+                
+                for (let i = event.resultIndex; i < event.results.length; i++) {
+                    if (event.results[i].isFinal) {
+                        finalTranscript += event.results[i][0].transcript;
+                    } else {
+                        interimTranscript += event.results[i][0].transcript;
+                    }
+                }
+                
+                if (finalTranscript) {
+                    // Append recognized text to input
+                    const currentText = elements.input.value;
+                    elements.input.value = currentText + (currentText ? ' ' : '') + finalTranscript;
+                    elements.input.focus();
+
+                    // Auto-send if enabled
+                    const voiceSettings = getVoiceSettings();
+                    if (voiceSettings.autoSend && elements.btnSend) {
+                        // Small delay to let user hear the stop sound first
+                        setTimeout(() => {
+                            elements.btnSend.click();
+                        }, 150);
+                    }
+                }
+            };
+
+            recognition.onerror = function(event) {
+                console.error('Speech recognition error:', event.error);
+                // Don't play error sound for "no-speech" - that's normal when user stops talking
+                if (event.error !== 'no-speech') {
+                    playErrorSound();
+                }
+                isRecording = false;
+                elements.btnVoice?.classList.remove('recording');
+                elements.btnVoice?.setAttribute('title', 'Voice input (click to start, click again to stop)');
+            };
+
+            // Click handler for voice button
+            elements.btnVoice?.addEventListener('click', function() {
+                if (isRecording) {
+                    recognition.stop();
+                } else {
+                    try {
+                        // Resume audio context if suspended (browser autoplay policy)
+                        const ctx = getAudioContext();
+                        if (ctx.state === 'suspended') {
+                            ctx.resume();
+                        }
+                        recognition.start();
+                    } catch (e) {
+                        console.error('Failed to start recognition:', e);
+                        playErrorSound();
+                    }
+                }
+            });
+        } else {
+            // Speech recognition not supported - disable button
+            if (elements.btnVoice) {
+                elements.btnVoice.disabled = true;
+                elements.btnVoice.title = 'Voice input not supported in this browser';
+            }
+            console.log('Speech recognition not supported in this browser');
+        }
 
         // ==================== Input Image Pills ====================
         function renderInputImages() {
@@ -7685,6 +8028,34 @@
             const lrSaved = localStorage.getItem('overlord_long_running') === 'on';
             const slr = document.getElementById('settings-long-running');
             if (slr) slr.checked = lrSaved;
+            // Sync voice settings
+            updateVoiceSettingsUI();
+        }
+
+        // ==================== Voice Settings ====================
+        function saveVoiceSetting(key, value) {
+            localStorage.setItem(key, value);
+            console.log('Voice setting saved:', key, '=', value);
+        }
+
+        function getVoiceSetting(key, defaultValue) {
+            return localStorage.getItem(key) || defaultValue;
+        }
+
+        function updateVoiceSettingsUI() {
+            const langSelect = document.getElementById('settings-voice-language');
+            const continuousCheck = document.getElementById('settings-voice-continuous');
+            const autoSendCheck = document.getElementById('settings-voice-autosend');
+
+            if (langSelect) {
+                langSelect.value = getVoiceSetting('voiceLanguage', 'en-US');
+            }
+            if (continuousCheck) {
+                continuousCheck.checked = getVoiceSetting('voiceContinuous', 'false') === 'true';
+            }
+            if (autoSendCheck) {
+                autoSendCheck.checked = getVoiceSetting('voiceAutoSend', 'false') === 'true';
+            }
         }
         
         function closeSettings(event) {
@@ -9092,6 +9463,57 @@
             socket.emit('update_config', update);
         }
 
+        // ── GitOps Auto-Commit settings ──────────────────────────────────────
+
+        function updateGitOpsSetting(key, value) {
+            const update = {};
+            update[key] = value;
+            socket.emit('update_config', update);
+        }
+
+        function onGitOpsToggle(enabled) {
+            updateGitOpsSetting('gitOpsEnabled', enabled);
+            const sub = document.getElementById('gitops-sub');
+            if (sub) sub.style.opacity = enabled ? '1' : '0.4';
+            sub.style.pointerEvents = enabled ? '' : 'none';
+        }
+
+        function triggerManualGitOpsCommit() {
+            socket.emit('gitops_commit_now', {});
+            log('[GitOps] Manual commit triggered', 'info');
+        }
+
+        // Populate GitOps UI from server config when settings open
+        function syncGitOpsUI(cfg) {
+            if (!cfg) return;
+            const en = document.getElementById('settings-gitops-enabled');
+            if (en) en.checked = cfg.gitOpsEnabled !== false;
+
+            const trigger = cfg.gitOpsTrigger || 'task';
+            const tr = document.getElementById('gtrig-' + trigger);
+            if (tr) tr.checked = true;
+            const countRow = document.getElementById('gitops-count-row');
+            if (countRow) countRow.style.display = trigger === 'count' ? 'flex' : 'none';
+
+            const mc = document.getElementById('settings-gitops-min-changes');
+            if (mc) mc.value = cfg.gitOpsMinChanges || 3;
+
+            const style = cfg.gitOpsCommitStyle || 'comprehensive';
+            const sel = document.getElementById('settings-gitops-style');
+            if (sel) sel.value = style;
+
+            const push = cfg.gitOpsPush || 'always';
+            const pr = document.getElementById('gpush-' + push);
+            if (pr) pr.checked = true;
+
+            // Dim sub-section if disabled
+            const sub = document.getElementById('gitops-sub');
+            if (sub) {
+                sub.style.opacity = (cfg.gitOpsEnabled !== false) ? '1' : '0.4';
+                sub.style.pointerEvents = (cfg.gitOpsEnabled !== false) ? '' : 'none';
+            }
+        }
+
         // Live behavior limit update
         // ── Notification helpers ──
         function playDing() {
@@ -9310,6 +9732,8 @@
             if (refDocsEl && data.referenceDocumentation !== undefined) refDocsEl.value = data.referenceDocumentation || '';
             // Per-mode model switching
             _applyModelSwitchSettings(data);
+            // GitOps auto-commit settings
+            syncGitOpsUI(data);
         });
 
         socket.on('config_updated', (data) => {

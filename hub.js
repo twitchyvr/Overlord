@@ -549,6 +549,12 @@ class Hub extends EventEmitter {
                     if (data.thinkingBudget !== undefined) { const tb = parseInt(data.thinkingBudget); if (!isNaN(tb) && tb >= 512) config.thinkingBudget = tb; }
                     // Plan length
                     if (data.planLength !== undefined && ['short','regular','long','unlimited'].includes(data.planLength)) config.planLength = data.planLength;
+                    // GitOps auto-commit settings
+                    if (data.gitOpsEnabled !== undefined) config.gitOpsEnabled = Boolean(data.gitOpsEnabled);
+                    if (data.gitOpsTrigger !== undefined && ['every','task','milestone','count','manual'].includes(data.gitOpsTrigger)) config.gitOpsTrigger = data.gitOpsTrigger;
+                    if (data.gitOpsCommitStyle !== undefined && ['comprehensive','conventional','brief'].includes(data.gitOpsCommitStyle)) config.gitOpsCommitStyle = data.gitOpsCommitStyle;
+                    if (data.gitOpsPush !== undefined && ['always','never','ask'].includes(data.gitOpsPush)) config.gitOpsPush = data.gitOpsPush;
+                    if (data.gitOpsMinChanges !== undefined) { const n = parseInt(data.gitOpsMinChanges); if (!isNaN(n) && n >= 1) config.gitOpsMinChanges = n; }
                     // Also propagate behavior limits to orchestration module
                     const orch = this.getService('orchestration');
                     if (orch && orch._updateLimits) orch._updateLimits(config);
@@ -582,7 +588,12 @@ class Hub extends EventEmitter {
                         queueDrainMode: config.queueDrainMode || 'consolidated',
                         thinkingEnabled: config.thinkingEnabled === true,
                         thinkingBudget: config.thinkingBudget || 2048,
-                        planLength: config.planLength || 'regular'
+                        planLength: config.planLength || 'regular',
+                        gitOpsEnabled: config.gitOpsEnabled !== false,
+                        gitOpsTrigger: config.gitOpsTrigger || 'task',
+                        gitOpsCommitStyle: config.gitOpsCommitStyle || 'comprehensive',
+                        gitOpsPush: config.gitOpsPush || 'always',
+                        gitOpsMinChanges: config.gitOpsMinChanges || 3
                     });
                 }
             });
@@ -623,9 +634,19 @@ class Hub extends EventEmitter {
                         queueDrainMode: config.queueDrainMode || 'consolidated',
                         thinkingEnabled: config.thinkingEnabled === true,
                         thinkingBudget: config.thinkingBudget || 2048,
-                        planLength: config.planLength || 'regular'
+                        planLength: config.planLength || 'regular',
+                        gitOpsEnabled: config.gitOpsEnabled !== false,
+                        gitOpsTrigger: config.gitOpsTrigger || 'task',
+                        gitOpsCommitStyle: config.gitOpsCommitStyle || 'comprehensive',
+                        gitOpsPush: config.gitOpsPush || 'always',
+                        gitOpsMinChanges: config.gitOpsMinChanges || 3
                     });
                 }
+            });
+
+            // Manual GitOps commit trigger from UI
+            socket.on('gitops_commit_now', () => {
+                this.emit('gitops_commit_now');
             });
 
             // ── Agent session socket handlers ──

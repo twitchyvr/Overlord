@@ -20,6 +20,7 @@ const PERSISTENT_KEYS = [
     'referenceDocumentation', 'taskEnforcement',
     'autoModelSwitch', 'pmModel',
     'queueDrainMode', 'thinkingEnabled', 'planLength',
+    'gitOpsEnabled', 'gitOpsTrigger', 'gitOpsCommitStyle', 'gitOpsPush', 'gitOpsMinChanges',
     '_aiSet'
 ];
 
@@ -114,6 +115,12 @@ function init(hub) {
         // ── Per-mode model switching ──────────────────────────────────────────
         autoModelSwitch: false,                                                  // Auto-switch model when entering PM mode (opt-in, affects billing)
         pmModel: process.env.PM_MODEL || 'MiniMax-Text-01',                     // Model to use in PM mode when autoModelSwitch is enabled
+        // ── GitOps Auto-Commit: AI-quality commit messages, configurable triggers ─
+        gitOpsEnabled: process.env.GITOPS_ENABLED !== 'false',                  // Master toggle (default: ON)
+        gitOpsTrigger: process.env.GITOPS_TRIGGER || 'task',                    // 'every' | 'task' | 'milestone' | 'count' | 'manual'
+        gitOpsCommitStyle: process.env.GITOPS_COMMIT_STYLE || 'comprehensive',  // 'comprehensive' | 'conventional' | 'brief'
+        gitOpsPush: process.env.GITOPS_PUSH || 'always',                        // 'always' | 'never' | 'ask'
+        gitOpsMinChanges: parseInt(process.env.GITOPS_MIN_CHANGES) || 3,        // Min changed files when trigger='count'
         // Cookbook reference path
         cookbookPath: path.join(baseDir, '..', 'docs', 'minimax-m2.5_official_docs', 'cookbook', 'COOKBOOK.md'),
         // Load cookbook content if exists

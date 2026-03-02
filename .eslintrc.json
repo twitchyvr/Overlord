@@ -1,0 +1,41 @@
+// ESLint Configuration for Overlord Web
+{
+  "env": {
+    "node": true,
+    "es2022": true,
+    "jest": true
+  },
+  "parserOptions": {
+    "ecmaVersion": 2022,
+    "sourceType": "module"
+  },
+  "rules": {
+    "no-unused-vars": "off",
+    "no-console": "off",
+    "semi": "off",
+    "quotes": "off",
+    "indent": "off",
+    "comma-dangle": "off",
+    "no-multiple-empty-lines": "off",
+    "eol-last": "off"
+  },
+  "ignorePatterns": [
+    "node_modules/",
+    "*.test.js",
+    "coverage/",
+    "dist/",
+    "src-tauri/",
+    "public/",
+    "modules/agents/",
+    "modules/agent-system-module.js",
+    "modules/tools-v5.js",
+    "modules/file-tools-module.js",
+    "modules/git-module.js",
+    "modules/mcp-module.js",
+    "modules/conversation-module.js",
+    "modules/ai-module.js",
+    "modules/database-module.js",
+    "modules/config-module.js",
+    "modules/markdown-module.js"
+  ]
+}

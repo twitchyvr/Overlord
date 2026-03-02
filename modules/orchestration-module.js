@@ -41,7 +41,7 @@ let _consecutiveToolErrors = 0;
 let _agentChainDepth = 0;
 
 // Current orchestration state (visible to clients via 'get_orchestration_state')
-let orchestrationState = {
+const orchestrationState = {
     agent: null,
     task: null,
     tool: null,
@@ -97,12 +97,14 @@ async function init(h) {
     hub = h;
 
     // Read behavior limits from config (overrides module-level defaults)
+    // Fixed: radix parameter added to parseInt (ESLint rule radix)
+    // Fixed: strict equality (== null -> !== null) for lint compliance
     const cfg = hub.getService('config');
     if (cfg) {
-        if (cfg.maxAICycles != null) MAX_CYCLES = cfg.maxAICycles === 0 ? Infinity : cfg.maxAICycles;
+        if (cfg.maxAICycles !== null) MAX_CYCLES = cfg.maxAICycles === 0 ? Infinity : cfg.maxAICycles;
         if (cfg.maxQAAttempts) MAX_QA_ATTEMPTS = cfg.maxQAAttempts;
         if (cfg.approvalTimeoutMs) APPROVAL_TIMEOUT_MS = cfg.approvalTimeoutMs;
-        if (cfg.maxParallelAgents != null) maxParallelAgents = Math.max(1, Math.min(8, parseInt(cfg.maxParallelAgents) || 3));
+        if (cfg.maxParallelAgents !== null) maxParallelAgents = Math.max(1, Math.min(8, parseInt(cfg.maxParallelAgents, 10) || 3));
     }
 
     // Listen to hub events
@@ -121,11 +123,12 @@ async function init(h) {
         isProcessing: () => isProcessing,
         checkpoint: checkpoint,
         getState: () => ({ ...orchestrationState }),
+        // _updateLimits: runtime config update (same fixes applied)
         _updateLimits: (cfg) => {
-            if (cfg.maxAICycles != null) MAX_CYCLES = cfg.maxAICycles === 0 ? Infinity : cfg.maxAICycles;
+            if (cfg.maxAICycles !== null) MAX_CYCLES = cfg.maxAICycles === 0 ? Infinity : cfg.maxAICycles;
             if (cfg.maxQAAttempts) MAX_QA_ATTEMPTS = cfg.maxQAAttempts;
             if (cfg.approvalTimeoutMs) APPROVAL_TIMEOUT_MS = cfg.approvalTimeoutMs;
-            if (cfg.maxParallelAgents != null) maxParallelAgents = Math.max(1, Math.min(8, parseInt(cfg.maxParallelAgents) || 3));
+            if (cfg.maxParallelAgents !== null) maxParallelAgents = Math.max(1, Math.min(8, parseInt(cfg.maxParallelAgents, 10) || 3));
         },
         runAgentSession,
         pauseAgent,

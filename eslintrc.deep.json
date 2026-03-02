@@ -1,0 +1,113 @@
+// Deep ESLint Configuration for Overlord Web - Focus on real issues
+// This config enables strict linting rules that catch real bugs and security issues.
+// Use: npx eslint --config eslintrc.deep.json .
+// Run as part of CI/CD pipeline for comprehensive static analysis.
+{
+  "env": {
+    "node": true,
+    "es2022": true,
+    "jest": true
+  },
+  "parserOptions": {
+    "ecmaVersion": 2022,
+    "sourceType": "module"
+  },
+  "extends": [
+    "eslint:recommended"
+  ],
+  "rules": {
+    // Errors - Real bugs
+    "no-unused-vars": "warn",
+    "no-undef": "error",
+    "no-debugger": "error",
+    "no-alert": "warn",
+    "no-var": "error",
+    "prefer-const": "error",
+    "no-const-assign": "error",
+    "no-dupe-args": "error",
+    "no-dupe-else-if": "error",
+    "no-dupe-keys": "error",
+    "no-empty": "off",
+    "no-extra-semi": "off",
+    "no-unreachable": "error",
+    "valid-typeof": "error",
+    "no-async-promise-executor": "warn",
+    "no-case-declarations": "error",
+    "no-class-assign": "error",
+    "no-compare-neg-zero": "error",
+    "no-cond-assign": "error",
+    "no-control-regex": "error",
+    "no-delete-var": "error",
+    "no-ex-assign": "error",
+    "no-extend-native": "error",
+    "no-extra-bind": "error",
+    "no-extra-boolean-cast": "error",
+    "no-fallthrough": "error",
+    "no-floating-decimal": "error",
+    "no-global-assign": "error",
+    "no-implicit-coercion": "off",
+    "no-implied-eval": "error",
+    "no-invalid-regexp": "error",
+    "no-loss-of-precision": "error",
+    "no-misleading-character-class": "error",
+    "no-new-symbol": "error",
+    "no-obj-calls": "error",
+    "no-octal": "error",
+    "no-octal-escape": "error",
+    "no-proto": "error",
+    "no-redeclare": "error",
+    "no-regex-spaces": "error",
+    "no-return-assign": "error",
+    "no-script-url": "error",
+    "no-self-assign": "error",
+    "no-self-compare": "error",
+    "no-sequences": "error",
+    "no-shadow-restricted-names": "error",
+    "no-sparse-arrays": "error",
+    "no-unexpected-multiline": "error",
+    "no-unmodified-loop-condition": "error",
+    "no-unreachable-loop": "error",
+    "no-unsafe-finally": "error",
+    "no-unsafe-negation": "error",
+    "no-unsafe-optional-chaining": "error",
+    "require-yield": "error",
+    "use-isnan": "error",
+    
+    // Security - Use === instead of ==
+    "eqeqeq": ["error", "always"],
+    
+    // Best practices
+    "curly": "off",
+    "default-case": "off",
+    "default-case-last": "off",
+    "default-param-last": "off",
+    "dot-notation": "off",
+    "guard-for-in": "error",
+    "no-caller": "error",
+    "no-eval": "error",
+    "no-fallthrough": "error",
+    "no-new": "off",
+    "no-new-func": "error",
+    "no-new-wrappers": "error",
+    "no-param-reassign": "off",
+    "no-throw-literal": "error",
+    "no-useless-return": "off",
+    "no-void": "error",
+    "prefer-promise-reject-errors": ["error", { "allowEmptyReject": false }],
+    "radix": "error",
+    "wrap-iife": "off",
+    
+    // Node.js specific
+    "global-require": "off",
+    "no-buffer-constructor": "error",
+    "no-new-require": "error",
+    "no-path-concat": "error"
+  },
+  "ignorePatterns": [
+    "node_modules/",
+    "coverage/",
+    "dist/",
+    "public/",
+    "uploads/"
+  ]
+}

@@ -125,12 +125,13 @@ function getCompactionStats() {
 
 // ==================== API TOKEN TRACKING ====================
 
+// Record API token usage for telemetry (strict equality for lint compliance)
 function recordApiTokens(inputTokens, outputTokens) {
-    if (inputTokens != null) {
+    if (inputTokens !== null) {
         contextState.lastInputTokens = inputTokens;
         contextState.totalInputTokens += inputTokens;
     }
-    if (outputTokens != null) {
+    if (outputTokens !== null) {
         contextState.lastOutputTokens = outputTokens;
         contextState.totalOutputTokens += outputTokens;
     }

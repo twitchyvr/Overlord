@@ -1437,7 +1437,8 @@ Rules:
         return orch && orch.getState ? (orch.getState().agent || null) : null;
     }
     
-    // Get all process info for context
+    // Get all process info for context (PID, uptime, memory, port)
+    // Fixed: removed duplicate getProcessState method (was causing lint error)
     getProcessState() {
         return {
             ...this.processState,

@@ -777,7 +777,8 @@ function createAgent(agentData) {
                 'active',
                 'global',
                 agentData.thinkingEnabled ? 1 : 0,
-                parseInt(agentData.thinkingBudget) || 0,
+                // radix parameter added for strict lint compliance (ESLint rule radix)
+                parseInt(agentData.thinkingBudget, 10) || 0,
                 now,
                 now
             ]);

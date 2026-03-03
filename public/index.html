@@ -2420,8 +2420,161 @@
             .message { font-size: 14px; }
         }
 
+        /* ══════════════════════════════════════════════════════════════════════
+           MOBILE LANDSCAPE — side-by-side dual-pane layout
+           Triggers when width ≤768px AND orientation is landscape
+           (covers iPhone SE landscape, small Androids, etc.)
+           For larger phones in landscape (>768px), a compact-height block below
+           keeps things usable.
+        ══════════════════════════════════════════════════════════════════════ */
+        @media (max-width: 768px) and (orientation: landscape) {
+            /* ── Switch from tab-based stacking to side-by-side ── */
+            .content {
+                position: static !important;
+                flex-direction: row !important;
+            }
+
+            /* Chat takes left 56% — always visible in landscape */
+            .chat-panel {
+                position: relative !important;
+                inset: auto !important;
+                display: flex !important;
+                flex: 1 1 56%;
+                min-width: 0;
+                padding-bottom: 0 !important;
+            }
+            /* Force visible even if a previous tab-switch hid it */
+            .chat-panel.mobile-hidden { display: flex !important; }
+
+            /* Right panel: right 44% — always visible */
+            .right-panel {
+                position: relative !important;
+                inset: auto !important;
+                display: flex !important;
+                flex-direction: column !important;
+                width: 44% !important;
+                min-width: 150px !important;
+                max-width: 44% !important;
+                overflow-y: auto;
+                overflow-x: hidden;
+                border-left: 1px solid var(--border);
+            }
+
+            /* All sub-panels show as header-only (collapsed) */
+            .right-panel > .panel {
+                display: flex !important;
+                flex-direction: column;
+                flex: 0 0 28px;        /* header only */
+                min-height: 28px;
+            }
+            .right-panel > .panel .panel-content {
+                display: none !important; /* collapsed content */
+            }
+            /* Active panel expands and shows content */
+            .right-panel > .panel.mobile-panel-active {
+                flex: 1 1 auto !important;
+            }
+            .right-panel > .panel.mobile-panel-active .panel-content {
+                display: flex !important;
+                flex-direction: column;
+            }
+
+            /* Show panel dividers between sections */
+            .panel-divider { display: block !important; }
+
+            /* ── Hide the tab bar — both panes always visible ── */
+            .mobile-nav { display: none !important; }
+
+            /* ── Ultra-compact status bar ── */
+            .status-bar {
+                height: 32px !important;
+                min-height: 32px !important;
+                padding: 0 6px !important;
+            }
+            .logo { font-size: 10px !important; letter-spacing: 0.1em; }
+            #status { font-size: 9px !important; max-width: 70px; }
+            #latency-hud { display: none !important; }
+            .sys-toggle-btn { display: none !important; }
+            #sys-info-pills { display: none !important; }
+
+            /* ── Compact input area ── */
+            .input-area { padding: 3px 6px env(safe-area-inset-bottom, 2px) !important; }
+            .input-toolbar { margin-bottom: 2px !important; gap: 3px !important; }
+            .toolbar-btn {
+                width: 28px !important; height: 28px !important;
+                font-size: 13px !important; border-radius: 6px;
+            }
+            #user-input {
+                min-height: 34px !important;
+                max-height: 72px !important;
+                font-size: 15px !important;
+                padding: 6px 10px !important;
+            }
+            #btn-send {
+                min-height: 34px !important;
+                padding: 6px 12px !important;
+                font-size: 12px !important;
+            }
+
+            /* ── Compact messages ── */
+            .chat-messages { padding: 4px 8px !important; gap: 5px !important; }
+            .message {
+                font-size: 13px !important;
+                padding: 7px 10px !important;
+                max-width: 95% !important;
+            }
+
+            /* ── Compact right-panel headers ── */
+            .panel-header {
+                height: 26px !important;
+                min-height: 26px !important;
+                flex: 0 0 26px !important;
+                font-size: 9px !important;
+                padding: 0 6px !important;
+            }
+            .panel-content { padding: 4px 6px !important; font-size: 11px !important; }
+        }
+
+        /* ══════════════════════════════════════════════════════════════════════
+           ALL DEVICES IN LANDSCAPE (any width, short viewport height ≤450px)
+           Keeps desktop-sized phones (iPhone 14 landscape = 844×390) usable too.
+        ══════════════════════════════════════════════════════════════════════ */
+        @media (max-height: 450px) {
+            .status-bar { height: 32px; min-height: 32px; }
+            .input-area { padding-top: 3px; padding-bottom: env(safe-area-inset-bottom, 3px); }
+            #user-input { min-height: 34px; max-height: 72px; }
+            #btn-send { min-height: 34px; }
+            .input-toolbar { margin-bottom: 2px; }
+            .chat-messages { padding: 4px 10px; gap: 5px; }
+            .message { font-size: 13px; padding: 7px 10px; }
+            .panel-header { height: 28px; min-height: 28px; flex: 0 0 28px; }
+            /* Clip the plan-approval bar so it doesn't swamp the viewport */
+            #plan-approval-bar { padding: 4px 8px; font-size: 11px; }
+            #plan-approval-bar button { min-height: 30px; padding: 3px 10px; font-size: 11px; }
+        }
+
+        /* ══════════════════════════════════════════════════════════════════════
+           PORTRAIT MOBILE — safe area + keyboard handling improvements
+        ══════════════════════════════════════════════════════════════════════ */
+        @media (max-width: 768px) and (orientation: portrait) {
+            /* Mobile nav accounts for home indicator on notched iPhones */
+            .mobile-nav-items {
+                padding-bottom: env(safe-area-inset-bottom, 4px);
+            }
+        }
+
         /* ==================== ACTIVITY FEED ==================== */
         .activity-feed { display: flex; flex-direction: column; gap: 2px; max-height: 200px; overflow-y: auto; }
+        /* When activity panel is full-screen active tab on mobile, let feed scroll freely */
+        @media (max-width: 768px) {
+            .right-panel > .panel.mobile-panel-active .activity-feed {
+                max-height: none;
+                flex: 1;
+                overflow-y: auto;
+            }
+            /* Cap neural section so activity feed gets most of the space */
+            .right-panel > .panel.mobile-panel-active .neural-section { max-height: 150px; overflow: hidden; }
+        }
         .activity-item {
             display: flex;
             align-items: flex-start;
@@ -3304,10 +3457,9 @@
                     <span class="icon">📜</span>
                     <span>Log</span>
                 </div>
-                <div class="mobile-nav-item" data-panel="telemetry" onclick="openTelemetry();showMobilePanel('chat',event)" style="position:relative;">
+                <div class="mobile-nav-item" data-panel="project" onclick="showMobilePanel('project', event)" style="position:relative;">
                     <span class="icon">📊</span>
-                    <span>Stats</span>
-                    <span class="tp-badge" id="tp-mobile-badge" style="display:none;top:2px;right:6px;"></span>
+                    <span>Project</span>
                 </div>
             </div>
         </div>
@@ -6708,14 +6860,33 @@
                     '</div>';
                 }
             } else {
-                if (msNameEl) msNameEl.textContent = 'No milestones yet';
-                if (kpiRowEl) {
-                    // Show global task stats
-                    const done = tasks.filter(t => t.completed || t.status === 'completed').length;
+                if (msNameEl) msNameEl.textContent = 'All Tasks';
+                if (msColorEl) msColorEl.style.background = 'var(--accent-cyan)';
+                if (msProgressEl) {
+                    const done = tasks.filter(t => t.completed || t.status === 'completed' || t.status === 'done').length;
                     const total = tasks.length;
-                    kpiRowEl.innerHTML = '<div style="flex:1;text-align:center;padding:4px 2px;">' +
-                        '<div style="font-size:14px;font-weight:800;color:#10b981;">' + done + '/' + total + '</div>' +
-                        '<div style="font-size:9px;color:var(--text-muted);">Tasks Done</div></div>';
+                    const pct = total > 0 ? Math.round((done / total) * 100) : 0;
+                    msProgressEl.style.width = pct + '%';
+                    if (msDaysEl) msDaysEl.textContent = total > 0 ? pct + '% complete' : '';
+                }
+                if (kpiRowEl) {
+                    // Show global task KPIs
+                    const done = tasks.filter(t => t.completed || t.status === 'completed' || t.status === 'done').length;
+                    const inProg = tasks.filter(t => t.status === 'in_progress' || t.status === 'working').length;
+                    const total = tasks.length;
+                    const blocked = tasks.filter(t => t.status === 'blocked' || t.status === 'skipped').length;
+                    const kpis = [
+                        { label: 'Done', value: done + '/' + total, color: '#10b981' },
+                        { label: 'Active', value: inProg, color: '#6366f1' },
+                        { label: 'Blocked', value: blocked, color: '#f59e0b' },
+                        { label: 'Todo', value: total - done - inProg - blocked, color: '#3b82f6' }
+                    ];
+                    kpiRowEl.innerHTML = kpis.map((k, i) =>
+                        '<div style="flex:1;text-align:center;padding:4px 2px;' + (i < kpis.length - 1 ? 'border-right:1px solid var(--border);' : '') + '">' +
+                        '<div style="font-size:14px;font-weight:800;color:' + k.color + ';">' + k.value + '</div>' +
+                        '<div style="font-size:9px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.04em;">' + k.label + '</div>' +
+                        '</div>'
+                    ).join('');
                 }
             }
 
@@ -7591,6 +7762,27 @@
 
             header.addEventListener('click', (e) => {
                 if (e.target.tagName === 'BUTTON' || e.target.closest('button')) return;
+
+                // ── Landscape mobile: tap header → make that panel the active one ──
+                // (instead of toggling collapse, which isn't useful in landscape side-pane)
+                const isLandscapeMobile = window.innerWidth <= 768 && window.innerHeight <= 500 && window.innerWidth > window.innerHeight;
+                if (isLandscapeMobile) {
+                    const rightPanel = document.getElementById('right-panel');
+                    if (rightPanel && rightPanel.contains(panel)) {
+                        // Map panel id → the tab name
+                        const panelTabMap = {
+                            'panel-roadmap': 'project', 'panel-team': 'team',
+                            'panel-activity': 'activity', 'panel-tasks': 'tasks',
+                            'panel-tools': 'activity', 'panel-log': 'log'
+                        };
+                        const tabName = panelTabMap[panel.id];
+                        if (tabName && typeof showMobilePanel === 'function') {
+                            showMobilePanel(tabName, e);
+                        }
+                        return;
+                    }
+                }
+
                 panel.classList.toggle('collapsed');
                 applyPanelAriaState(panel);
                 savePanelStates();
@@ -10247,6 +10439,7 @@
             tools:    'panel-activity', // legacy alias
             log:      'panel-log',
             roadmap:  'panel-roadmap',
+            project:  'panel-roadmap', // Dashboard / KPI tab
         };
 
         let _mobileActiveTab = 'chat';
@@ -10296,6 +10489,10 @@
                     target.classList.add('mobile-panel-active');
                     // Also expand it if collapsed
                     target.classList.remove('collapsed');
+                    // Refresh dashboard when switching to Project tab
+                    if ((panelName === 'project' || panelName === 'roadmap') && typeof renderDashboard === 'function') {
+                        setTimeout(renderDashboard, 50);
+                    }
                 } else {
                     // Fallback: show first available panel
                     const first = rightPanel.querySelector('.panel');

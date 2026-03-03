@@ -308,8 +308,38 @@ function listServers() {
     const seen = new Set();
 
     for (const cfg of configs) {
-        // minimax is managed by mcp-module.js — don't surface it here
-        if (cfg.name === 'minimax') continue;
+        // minimax is managed by mcp-module.js — surface it via hub service
+        if (cfg.name === 'minimax') {
+            seen.add('minimax');
+            try {
+                const mcpService = hub?.getService('mcp');
+                const client = mcpService?.getMcpClient?.();
+                const connStatus = !client        ? 'disabled'
+                    : client.failed              ? 'error'
+                    : client.starting            ? 'connecting'
+                    : client.ready               ? 'connected'
+                    :                              'idle';
+                const toolList = connStatus === 'connected'
+                    ? [{ name: 'web_search', description: 'Search the web' }, { name: 'understand_image', description: 'Analyze images' }]
+                    : [];
+                result.push({
+                    name:        'minimax',
+                    description: 'MiniMax AI — web_search + understand_image (managed internally)',
+                    status:      connStatus,
+                    tools:       toolList,
+                    toolCount:   toolList.length,
+                    lastError:   client?.failed ? 'Subprocess connection failed' : null,
+                    enabled:     cfg.enabled !== false,
+                    builtin:     true
+                });
+            } catch(e) {
+                result.push({
+                    name: 'minimax', description: 'MiniMax AI — web_search + understand_image',
+                    status: 'unknown', tools: [], toolCount: 0, lastError: e.message, enabled: true, builtin: true
+                });
+            }
+            continue;
+        }
         seen.add(cfg.name);
 
         const conn = servers.get(cfg.name);

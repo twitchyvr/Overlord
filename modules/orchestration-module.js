@@ -2323,6 +2323,44 @@ async function runAutoQA(filePath, conv, toolsService) {
     const qaErrors = [];
     const baseName = path.basename(filePath);
 
+    // ── JS/TS Syntax check: node --check (always runs regardless of lint config) ──
+    // spawnSync with args array — injection-safe (no shell interpolation)
+    const isJsLike = ['js', 'cjs', 'mjs', 'ts', 'tsx', 'jsx'].includes(ext);
+    if (isJsLike) {
+        try {
+            hub.log(`[AutoQA] Syntax → ${baseName}`, 'info');
+            broadcastActivity('tool_start', { tool: 'node_syntax [auto]', inputSummary: baseName, agent: 'autoqa' });
+            const { spawnSync } = require('child_process');
+            const proc = spawnSync(process.execPath, ['--check', filePath], { encoding: 'utf8', timeout: 10000 });
+            const syntaxOk = proc.status === 0;
+            const syntaxOutput = syntaxOk
+                ? `✓ Syntax OK: ${baseName}`
+                : ((proc.stderr || proc.stdout || 'Parse error').trim());
+            hub.toolResult({ tool: 'node_syntax [auto]', input: { path: filePath }, output: syntaxOutput, timestamp: Date.now() });
+            broadcastActivity('tool_complete', { tool: 'node_syntax [auto]', success: syntaxOk, durationMs: 0 });
+            if (!syntaxOk) {
+                qaErrors.push(`## SYNTAX ERROR in ${baseName}:\n${syntaxOutput.substring(0, 1200)}`);
+                hub.log(`[AutoQA] ✗ SYNTAX FAILED: ${baseName}`, 'warning');
+            } else {
+                hub.log(`[AutoQA] ✓ Syntax OK: ${baseName}`, 'success');
+            }
+        } catch (e) {
+            hub.log(`[AutoQA] Syntax check error: ${e.message}`, 'warning');
+        }
+    }
+
+    // ── JSON syntax check ────────────────────────────────────────────────────
+    if (ext === 'json') {
+        try {
+            const jsonFs = require('fs');
+            JSON.parse(jsonFs.readFileSync(filePath, 'utf8'));
+            hub.log(`[AutoQA] ✓ JSON valid: ${baseName}`, 'success');
+        } catch (e) {
+            qaErrors.push(`## JSON PARSE ERROR in ${baseName}:\n${e.message}`);
+            hub.log(`[AutoQA] ✗ JSON invalid: ${baseName} — ${e.message}`, 'warning');
+        }
+    }
+
     // ── Lint check ──────────────────────────────────────────────────────────
     if (cfg?.autoQALint !== false) {
         try {
@@ -2949,6 +2987,68 @@ function buildAgentSystemPrompt(session) {
         '5. When done, report your result clearly. Do not loop or continue working after task completion.',
         '6. If you identify improvements outside scope, mention them in your response — do NOT implement them.',
     ];
+
+    // ── Code Quality Enforcement (injected for all agents — cannot be waived) ──
+    const agentName = (def.name || session.name || '').toLowerCase();
+    const isCodeAgent = /code|implement|engineer|develop|build|fix|patch|architect|backend|frontend|ui|fullstack|stack/.test(agentName);
+    const isTestAgent = /test|qa|quality|spec|lint|audit/.test(agentName);
+    const isGitAgent  = /git|commit|merge|branch|deploy|release|keeper/.test(agentName);
+
+    if (isCodeAgent || isTestAgent) {
+        const cfg = hub.getService('config');
+        parts.push(`
+## CODE QUALITY PROTOCOL — ABSOLUTE, NON-NEGOTIABLE
+
+You are a code-writing agent. These rules apply to EVERY file you write or modify.
+
+### Before touching any file:
+1. ALWAYS call read_file (or read_file_lines for large files) on the target file FIRST.
+2. Never write a file you haven't read — you will miss context and introduce regressions.
+
+### While writing code:
+3. Write COMPLETE implementations. ZERO stubs, ZERO "TODO: add rest here", ZERO placeholder comments.
+4. Never truncate a function, class, or block mid-way. If it's too large, split it properly.
+5. One file write per clear intent. Don't mix unrelated changes in a single write_file call.
+
+### After writing any .js / .cjs / .mjs / .ts / .tsx file:
+6. The AutoQA will automatically run node --check on your file. If it fails, YOU must fix it.
+7. If qa_check_lint reports errors, fix ALL of them before marking the task done. Zero tolerance.
+8. If you used a variable or function name in one part of a file, be consistent — check spelling across the entire file.
+
+### Code grammar rules (enforced — not suggestions):
+- Variable/function names: camelCase for variables/functions, PascalCase for classes. Never mix.
+- No trailing whitespace, no missing semicolons where the codebase uses them.
+- String consistency: use the quote style already present in the file (single or double — don't mix).
+- No unreachable code (dead else after return, code after throw, etc.).
+- No shadowed variables — don't reuse a name that already exists in the parent scope.
+- No implicit globals — every require/import must be at the top.
+- Array/object literals: trailing comma on the LAST item if multi-line (matches Node.js convention).
+- Never abbreviate variable names to single letters except for loop counters (i, j, k).
+
+### After editing:
+9. Re-read the file (or the changed section) to verify correctness before reporting done.
+10. If a node --check or lint error appears in the QA result feedback, fix it IMMEDIATELY.
+11. NEVER mark a task "complete" or "done" while syntax or lint errors exist.
+${cfg?.autoQATests ? '12. Run qa_run_tests after implementing features. ALL tests must pass 100%.' : ''}`);
+    }
+
+    if (isTestAgent) {
+        parts.push(`
+## TESTING AGENT RULES:
+- Write REAL tests — no trivial asserts, no always-passing stubs.
+- Cover: happy path, boundary conditions, error cases, and at least one edge case per function.
+- If a test fails because the source code is wrong, report the bug — do NOT weaken the test.
+- Test files must be complete. Never write "// tests for X — to be added".`);
+    }
+
+    if (isGitAgent) {
+        parts.push(`
+## GIT AGENT RULES:
+- Verify working tree is clean before branching or merging.
+- Commit messages follow Conventional Commits: type(scope): subject (50 chars max).
+- Always run git status before and after operations to confirm expected state.
+- NEVER force-push to main/master. Refuse and report instead.`);
+    }
 
     // Inject per-task scope constraints when dispatched via delegate_to_agent
     const scope = session.taskScope;

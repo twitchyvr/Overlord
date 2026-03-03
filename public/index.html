@@ -6064,10 +6064,11 @@
             if (data.toolId === _approvalToolId) hideApprovalModal();
         });
 
-        // Another client (e.g. phone) already responded — dismiss modal on this device too
+        // Another client (e.g. phone) already responded — dismiss modal + OS notification
         socket.on('approval_resolved', (data) => {
             if (data.toolId === _approvalToolId) {
                 hideApprovalModal();
+                _dismissActiveNotification();
                 log((data.approved ? '✅ Approved' : '❌ Denied') + ' from another device', data.approved ? 'success' : 'warning');
             }
         });
@@ -8118,9 +8119,10 @@
             _updateVariantTabs(d.variant);
             log('Plan variant: ' + d.variant + ' (' + d.taskCount + ' tasks)', 'info');
         });
-        socket.on('plan_cancelled_ack',    ()  => hidePlanBar());
-        socket.on('plan_timeout',          ()  => { hidePlanBar(); log('Plan timed out — auto-cancelled', 'warning'); });
-        socket.on('plan_bypass_approved',  ()  => { hidePlanBar(); log('⚡ Plan auto-approved — bypass mode active', 'warning'); });
+        socket.on('plan_cancelled_ack',   ()  => hidePlanBar());
+        socket.on('plan_approved_ack',    ()  => { hidePlanBar(); _dismissActiveNotification(); });
+        socket.on('plan_timeout',         ()  => { hidePlanBar(); log('Plan timed out — auto-cancelled', 'warning'); });
+        socket.on('plan_bypass_approved', ()  => { hidePlanBar(); log('⚡ Plan auto-approved — bypass mode active', 'warning'); });
         socket.on('approval_request_notice', d => log(d.message || 'Plan awaiting approval', 'warning'));
 
         // Input & Send
@@ -9820,12 +9822,27 @@
             }
         }
 
+        // Track the last active OS notification so we can close it from another device
+        let _activeNotification = null;
+
+        function _dismissActiveNotification() {
+            if (_activeNotification) {
+                try { _activeNotification.close(); } catch(e) {}
+                _activeNotification = null;
+            }
+        }
+
         function notifyUser(title, body) {
             // OS notification — respects app-level on/off preference
             if (_notifAppEnabled() && typeof Notification !== 'undefined' && Notification.permission === 'granted') {
                 try {
+                    // Close any previous notification before creating a new one so they
+                    // don't stack in the notification center across multiple events.
+                    _dismissActiveNotification();
                     const n = new Notification(title, { body, tag: 'overlord-alert' });
-                    n.onclick = () => { window.focus(); n.close(); };
+                    _activeNotification = n;
+                    n.onclick  = () => { window.focus(); n.close(); _activeNotification = null; };
+                    n.onclose  = () => { if (_activeNotification === n) _activeNotification = null; };
                 } catch(e) {}
             }
             // Audio ding (always plays regardless of notif setting)

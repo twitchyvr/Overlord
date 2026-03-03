@@ -459,11 +459,24 @@ class Hub extends EventEmitter {
             socket.on('input_response', (data) => this.emit('input_response', data));
 
             // ── Plan approval ────────────────────────────────────────────────
-            socket.on('approve_plan', () => this.emit('plan_approved'));
-            socket.on('cancel_plan',  () => this.emit('plan_cancelled'));
-            socket.on('revise_plan',  (feedback) => {
-                if (typeof feedback === 'string' && feedback.trim())
+            socket.on('approve_plan', () => {
+                this.emit('plan_approved');
+                // Tell every other device to dismiss the plan bar immediately —
+                // whichever device tapped "Approve" first wins.
+                this.broadcastAll('plan_approved_ack', {});
+            });
+            socket.on('cancel_plan', () => {
+                this.emit('plan_cancelled');
+                // plan_cancelled_ack is already broadcast by orchestration-module
+                // after deleting tasks, so no extra broadcast needed here.
+            });
+            socket.on('revise_plan', (feedback) => {
+                if (typeof feedback === 'string' && feedback.trim()) {
                     this.emit('plan_revision', feedback.trim());
+                    // Hide the plan bar on all devices while the revision is being
+                    // generated — a new plan_ready will arrive when ready.
+                    this.broadcastAll('plan_cancelled_ack', {});
+                }
             });
             socket.on('switch_plan_variant', (data) => this.emit('switch_plan_variant', data || {}));
 

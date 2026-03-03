@@ -7,11 +7,17 @@
 
 try { require('dotenv').config({ override: false }); } catch (_) {}
 
+// Early banner — printed before heavy requires so the terminal isn't silent
+process.stdout.write('\n⚡ OVERLORD loading… (this may take 10–30 seconds)\n');
+
 const express = require('express');
-const http = require('http');
+const http    = require('http');
 const { Server } = require('socket.io');
-const path = require('path');
-const fs = require('fs');
+
+process.stdout.write('   ✅ Core dependencies ready\n');
+
+const path   = require('path');
+const fs     = require('fs');
 const crypto = require('crypto');
 
 // Create app and server

@@ -13,12 +13,20 @@ const fs = require('fs');
 const path = require('path');
 
 // ── Web Push (VAPID) ──────────────────────────────────────────────────────
-const webpush = require('web-push');
-webpush.setVapidDetails(
-    'mailto:overlord@localhost',
-    'BNCkqsZ1xzKoJ4IWK4l4wrqGZG1c_0VGt1dS9lmgeTqzg2KgIXMRuyrWyNgiV_u6t1OYfVfpF0moON7mOd3ot_0',
-    'Td8JxAznufbkndPF4r1l-xNvqy4Uq_Oq-JBsajQtwtg'
-);
+let webpush = null;
+try {
+    webpush = require('web-push');
+    webpush.setVapidDetails(
+        'mailto:overlord@localhost',
+        'BNCkqsZ1xzKoJ4IWK4l4wrqGZG1c_0VGt1dS9lmgeTqzg2KgIXMRuyrWyNgiV_u6t1OYfVfpF0moON7mOd3ot_0',
+        'Td8JxAznufbkndPF4r1l-xNvqy4Uq_Oq-JBsajQtwtg'
+    );
+    console.log('[Hub] Web Push ready ✅');
+} catch (e) {
+    console.warn('[Hub] Web Push disabled — could not load web-push package:', e.message);
+    console.warn('[Hub] Push notifications will not work. Try: npm install web-push@latest');
+    webpush = null;
+}
 
 class Hub extends EventEmitter {
     constructor() {
@@ -203,7 +211,7 @@ class Hub extends EventEmitter {
     }
 
     async sendPush(title, body, opts = {}) {
-        if (this._pushSubscriptions.size === 0) return;
+        if (!webpush || this._pushSubscriptions.size === 0) return;
         const payload = JSON.stringify({ title, body, tag: 'overlord-push', ...opts });
         const dead = [];
         for (const [id, sub] of this._pushSubscriptions) {

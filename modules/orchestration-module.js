@@ -2670,8 +2670,57 @@ async function runAICycle() {
     if (toolCalls.length > 0) {
         // Use the same approval-gated execution
         await executeToolsWithApproval(toolCalls);
+        // ── Hot Injection Check ──────────────────────────────────────────────
+        // After all tool results are in history, before the next AI call —
+        // this is the safe cycle boundary where we can inject user messages.
+        await checkAndApplyHotInject();
+        // ────────────────────────────────────────────────────────────────────
     } else {
         finishMainProcessing();
+    }
+}
+
+// ==================== HOT CHAT INJECTION ====================
+
+/**
+ * Checks if any hot-inject messages are buffered and, if so, injects the
+ * next one into the conversation history as a user message.  Called at
+ * the safe cycle boundary — after tool results land, before the next AI
+ * call starts — so the AI sees the injection organically on the next turn.
+ */
+async function checkAndApplyHotInject() {
+    try {
+        const injection = hub.consumeHotInject?.();
+        if (!injection) return;
+
+        const conv = hub.getService('conversation');
+        if (!conv) return;
+
+        hub.log(`[HotInject] ⚡ Injecting: "${injection.text.substring(0, 80)}"`, 'info');
+
+        // Add the injected message to conversation history
+        conv.addUserMessage(injection.text);
+
+        // Broadcast to UI with a hot_injected flag so the frontend can style it
+        hub.broadcast('message_add', {
+            role: 'user',
+            content: injection.text,
+            hot_injected: true,
+            ts: injection.injectedAt
+        });
+
+        // Announce in activity feed
+        hub.broadcast('backchannel_msg', {
+            role: 'system',
+            content: `⚡ Hot injection applied: "${injection.text.substring(0, 60)}"`,
+            ts: Date.now()
+        });
+
+        hub.broadcastHotInjectApplied?.(injection);
+        hub.status('⚡ Hot inject received — processing…', 'thinking');
+
+    } catch (e) {
+        hub.log(`[HotInject] Error during injection: ${e.message}`, 'warning');
     }
 }
 

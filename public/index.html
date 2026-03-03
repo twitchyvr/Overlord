@@ -1315,6 +1315,21 @@
 
         /* Plan message — cyan left border to distinguish from normal responses */
         .message.assistant.plan-message { border-left:3px solid var(--accent-cyan); }
+        /* Hot-injected user message — amber left border + subtle glow */
+        .message.user.hot-injected {
+            border-left: 3px solid #ffaa00;
+            background: rgba(255, 170, 0, 0.06);
+        }
+        .message.user.hot-injected .role {
+            color: #ffaa00 !important;
+            font-weight: 700;
+        }
+        /* Hot inject button hover state */
+        #btn-hot-inject:hover {
+            background: rgba(255,170,0,0.22) !important;
+            border-color: rgba(255,170,0,0.7) !important;
+            transform: scale(1.04);
+        }
 
         /* AI-set badge in settings modal */
         .ai-set-badge { font-size:9px; background:rgba(168,85,247,.18); border:1px solid rgba(168,85,247,.35); border-radius:3px; padding:1px 4px; color:var(--plasma); margin-left:4px; vertical-align:middle; }
@@ -3323,6 +3338,7 @@
                         <div id="send-area" style="display:flex;align-items:center;gap:4px;flex-shrink:0;position:relative;z-index:1;">
                             <div class="thinking-ring" id="thinking-ring"></div>
                             <button id="btn-voice" class="voice-btn" title="Voice input (click to start, click again to stop)">🎤</button>
+                            <button id="btn-hot-inject" title="Hot inject — pops your message into the AI's context at the next cycle gap" style="display:none;background:rgba(255,170,0,0.12);border:1px solid rgba(255,170,0,0.45);color:#ffaa00;border-radius:8px;padding:6px 10px;font-size:11px;font-weight:700;cursor:pointer;letter-spacing:0.03em;transition:all 0.2s;white-space:nowrap;">⚡ Hot</button>
                             <button id="btn-send">Send</button>
                         </div>
                     </div>
@@ -5978,6 +5994,8 @@
                 btn.title = 'Send message';
                 btn.style.opacity = '';
             }
+            // Keep hot inject button visibility in sync
+            if (typeof updateHotInjectBtn === 'function') updateHotInjectBtn();
         }
         
         socket.on('message_add', (msg) => {
@@ -6010,7 +6028,7 @@
             if (last && last.classList.contains('assistant') && lastContent === newContent) {
                 return; // Skip duplicate
             }
-            addMessage(msg.role, msg.content, [], msg.isPlan);
+            addMessage(msg.role, msg.content, [], msg.isPlan, msg.hot_injected);
             // Track session message counts
             if (msg.role === 'user')      { _stats.userMsgs++; _updateStatCounters(); }
             if (msg.role === 'assistant') { _stats.aiMsgs++;   _updateStatCounters(); }
@@ -6808,7 +6826,7 @@
         socket.on('working_dir_update', (path) => setWorkingDirectory(path));
         
         // UI Functions
-        function addMessage(role, content, images = [], isPlan = false) {
+        function addMessage(role, content, images = [], isPlan = false, hotInjected = false) {
             let text = '';
             
             if (typeof content === 'string') {
@@ -6824,7 +6842,10 @@
             const div = document.createElement('div');
             div.className = 'message ' + role;
             
-            let roleLabel = role === 'user' ? '👤 USER' : role === 'assistant' ? 'Assistant 🤖' : role;
+            let roleLabel = role === 'user'
+                ? (hotInjected ? '⚡ HOT INJECT' : '👤 USER')
+                : role === 'assistant' ? 'Assistant 🤖' : role;
+            if (hotInjected) div.classList.add('hot-injected');
             
             // Strip plan JSON blocks — replace with a clean task list card
             text = cleanPlanJSON(text);
@@ -8471,8 +8492,64 @@
         }
         
         elements.btnSend.onclick = send;
-        elements.input.onkeydown = function(e) { if (e.key === 'Enter' && e.ctrlKey) { e.preventDefault(); send(); }};        
+        elements.input.onkeydown = function(e) { if (e.key === 'Enter' && e.ctrlKey) { e.preventDefault(); send(); }};
         elements.btnCancel.onclick = function() { socket.emit('cancel'); };
+
+        // ── Hot Chat Injection ────────────────────────────────────────────────
+        // Sends the message at the NEXT cycle boundary instead of queuing it
+        // at the back of the regular queue.  The AI sees it as a mid-task aside.
+        let _hotInjectCount = 0;
+
+        function hotInjectSend() {
+            let text = elements.input.value.trim();
+            if (!text) return;
+            elements.input.value = '';
+            socket.emit('hot_inject', text, (ack) => {
+                if (ack && ack.status === 'hot_queued') {
+                    log(`⚡ Hot inject queued — will be injected at next cycle gap`, 'info');
+                } else if (ack && ack.status === 'immediate') {
+                    log('⚡ Hot inject sent immediately (AI was idle)', 'info');
+                }
+            });
+        }
+
+        const btnHot = document.getElementById('btn-hot-inject');
+        if (btnHot) {
+            btnHot.onclick = hotInjectSend;
+            // Also allow Alt+Enter as a hot-inject shortcut
+        }
+        elements.input.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && e.altKey) { e.preventDefault(); hotInjectSend(); }
+        });
+
+        // Show/hide hot inject button based on processing state
+        function updateHotInjectBtn() {
+            const btn = document.getElementById('btn-hot-inject');
+            if (!btn) return;
+            if (isProcessing) {
+                btn.style.display = '';
+                btn.textContent = _hotInjectCount > 0 ? `⚡ Hot (${_hotInjectCount})` : '⚡ Hot';
+            } else {
+                btn.style.display = 'none';
+                _hotInjectCount = 0;
+            }
+        }
+
+        // Track pending hot inject count
+        socket.on('hot_inject_pending', (data) => {
+            _hotInjectCount = data.count || 0;
+            updateHotInjectBtn();
+            if (data.preview && data.count > 0) {
+                log(`⚡ Hot inject pending (${data.count}): "${data.preview}"`, 'info');
+            }
+        });
+
+        socket.on('hot_inject_applied', (data) => {
+            _hotInjectCount = Math.max(0, _hotInjectCount - 1);
+            updateHotInjectBtn();
+            log(`⚡ Hot injection applied to AI context`, 'success');
+        });
+        // ─────────────────────────────────────────────────────────────────────
         
         function showHelp() {
             const el = document.getElementById('help-overlay');

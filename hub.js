@@ -310,6 +310,38 @@ class Hub extends EventEmitter {
         this.broadcast('queue_updated', (this._msgQueue || []).slice());
     }
 
+    // ── Hot Chat Injection ──────────────────────────────────────────────────
+    // Hot injections are inserted into the orchestrator's context at the next
+    // safe cycle boundary (after tool results, before the next AI call).
+    // Unlike the regular queue, they don't wait until the task is fully done.
+
+    hotInject(text) {
+        if (!this._hotInjectBuffer) this._hotInjectBuffer = [];
+        const item = {
+            id: 'hi_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+            text: text.trim(),
+            injectedAt: new Date().toISOString()
+        };
+        this._hotInjectBuffer.push(item);
+        this.broadcast('hot_inject_pending', {
+            count: this._hotInjectBuffer.length,
+            preview: item.text.substring(0, 80)
+        });
+        this.log(`[HotInject] Buffered: "${item.text.substring(0, 60)}..."`, 'info');
+        return item;
+    }
+
+    consumeHotInject() {
+        if (!this._hotInjectBuffer || this._hotInjectBuffer.length === 0) return null;
+        const item = this._hotInjectBuffer.shift();
+        this.broadcast('hot_inject_pending', { count: this._hotInjectBuffer.length, preview: null });
+        return item;
+    }
+
+    broadcastHotInjectApplied(item) {
+        this.broadcast('hot_inject_applied', { id: item.id, text: item.text });
+    }
+
     // Bridge Socket.IO events to Hub events
     setupSocketBridge() {
         if (!this.io) return;
@@ -469,6 +501,33 @@ class Hub extends EventEmitter {
                 this.broadcast('queue_updated', this._msgQueue.slice());
                 if (item) this.emit('user_message', item.text, null);
                 if (typeof cb === 'function') cb({ success: true, queue: this._msgQueue.slice() });
+            });
+
+            // ── Hot Chat Injection ────────────────────────────────────────────
+            // Injects a message at the next cycle boundary when AI is busy.
+            // If AI is not busy, routes as a regular message immediately.
+            socket.on('hot_inject', (text, cb) => {
+                if (!text || !text.trim()) { if (typeof cb === 'function') cb({ status: 'empty' }); return; }
+                const orch = this.getService('orchestrator');
+                const busy = orch?.isProcessing?.() || false;
+                if (busy) {
+                    const item = this.hotInject(text.trim());
+                    if (typeof cb === 'function') cb({ status: 'hot_queued', id: item.id, queueSize: this._hotInjectBuffer.length });
+                } else {
+                    // Not busy — treat as regular user message
+                    this.emit('user_message', text.trim(), socket);
+                    if (typeof cb === 'function') cb({ status: 'immediate' });
+                }
+            });
+
+            socket.on('get_hot_inject_queue', (cb) => {
+                if (typeof cb === 'function') cb((this._hotInjectBuffer || []).slice());
+            });
+
+            socket.on('clear_hot_inject_queue', (cb) => {
+                this._hotInjectBuffer = [];
+                this.broadcast('hot_inject_pending', { count: 0, preview: null });
+                if (typeof cb === 'function') cb({ success: true });
             });
 
             socket.on('force_dequeue_all', ({ mode } = {}, cb) => {

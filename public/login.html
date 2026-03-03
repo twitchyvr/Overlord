@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>OVERLORD — Sign In</title>
+<style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+        --bg:        #060a10;
+        --panel:     rgba(10,16,26,0.95);
+        --electric:  #00d4ff;
+        --plasma:    #a855f7;
+        --gold:      #f59e0b;
+        --green:     #3fb950;
+        --red:       #f85149;
+        --text:      #e2e8f0;
+        --text-sub:  #94a3b8;
+        --border:    rgba(0,212,255,0.15);
+        --glow-sm:   0 0 8px rgba(0,212,255,0.25);
+        --glow-md:   0 0 20px rgba(0,212,255,0.18), 0 0 40px rgba(0,212,255,0.07);
+        --radius:    12px;
+    }
+
+    html, body {
+        height: 100%; min-height: 100dvh;
+        background: var(--bg);
+        font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', sans-serif;
+        color: var(--text);
+        overflow: hidden;
+    }
+
+    /* ── Animated background ── */
+    body::before {
+        content: '';
+        position: fixed; inset: 0;
+        background:
+            radial-gradient(ellipse 80% 50% at 50% -10%, rgba(0,212,255,0.08) 0%, transparent 60%),
+            radial-gradient(ellipse 60% 40% at 80% 80%, rgba(168,85,247,0.06) 0%, transparent 60%);
+        pointer-events: none; z-index: 0;
+    }
+
+    /* ── Scanline overlay ── */
+    body::after {
+        content: '';
+        position: fixed; inset: 0;
+        background: repeating-linear-gradient(
+            0deg, transparent, transparent 2px,
+            rgba(0,212,255,0.012) 2px, rgba(0,212,255,0.012) 4px
+        );
+        pointer-events: none; z-index: 0;
+    }
+
+    @keyframes float-up {
+        0%   { opacity: 0; transform: translateY(24px) scale(0.97); }
+        100% { opacity: 1; transform: translateY(0)    scale(1); }
+    }
+    @keyframes shimmer {
+        0%   { background-position: -200% 0; }
+        100% { background-position:  200% 0; }
+    }
+    @keyframes pulse-ring {
+        0%   { box-shadow: 0 0 0 0   rgba(0,212,255,0.4); }
+        70%  { box-shadow: 0 0 0 8px rgba(0,212,255,0);   }
+        100% { box-shadow: 0 0 0 0   rgba(0,212,255,0);   }
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    @keyframes logo-pulse {
+        0%,100% { text-shadow: 0 0 8px rgba(0,212,255,0.4), 0 0 24px rgba(0,212,255,0.15); }
+        50%     { text-shadow: 0 0 16px rgba(0,212,255,0.7), 0 0 48px rgba(0,212,255,0.25), 0 0 80px rgba(168,85,247,0.1); }
+    }
+
+    /* ── Card ── */
+    .card {
+        position: relative; z-index: 1;
+        display: flex; flex-direction: column; align-items: center;
+        min-height: 100dvh; padding: 24px 16px;
+        justify-content: center;
+    }
+
+    .card-inner {
+        width: 100%; max-width: 400px;
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: 20px;
+        padding: 40px 36px;
+        backdrop-filter: blur(24px);
+        -webkit-backdrop-filter: blur(24px);
+        box-shadow: 0 0 0 1px rgba(0,212,255,0.06),
+                    0 24px 64px rgba(0,0,0,0.6),
+                    var(--glow-md);
+        animation: float-up 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+    }
+
+    /* ── Logo ── */
+    .logo-wrap { text-align: center; margin-bottom: 32px; }
+    .logo-icon {
+        display: inline-block; font-size: 42px; line-height: 1;
+        margin-bottom: 10px;
+        filter: drop-shadow(0 0 12px rgba(0,212,255,0.5));
+    }
+    .logo-text {
+        font-size: 22px; font-weight: 800; letter-spacing: 0.18em;
+        background: linear-gradient(90deg, var(--electric), var(--plasma), var(--electric));
+        background-size: 200% 100%;
+        -webkit-background-clip: text; background-clip: text;
+        -webkit-text-fill-color: transparent;
+        animation: shimmer 3s linear infinite, logo-pulse 3s ease-in-out infinite;
+    }
+    .logo-sub {
+        display: block; margin-top: 4px;
+        font-size: 11px; letter-spacing: 0.12em;
+        color: var(--text-sub); text-transform: uppercase;
+    }
+
+    /* ── Tab switcher ── */
+    .tabs {
+        display: flex; gap: 4px; margin-bottom: 28px;
+        background: rgba(0,0,0,0.3); border-radius: 10px; padding: 4px;
+        border: 1px solid rgba(255,255,255,0.05);
+    }
+    .tab-btn {
+        flex: 1; padding: 8px; border: none; border-radius: 7px; cursor: pointer;
+        font-size: 13px; font-weight: 600; letter-spacing: 0.04em;
+        color: var(--text-sub); background: transparent;
+        transition: all 0.2s;
+    }
+    .tab-btn.active {
+        background: rgba(0,212,255,0.12);
+        color: var(--electric);
+        box-shadow: 0 1px 0 0 rgba(0,212,255,0.3) inset;
+    }
+
+    /* ── Form ── */
+    .form { display: flex; flex-direction: column; gap: 16px; }
+
+    .field { display: flex; flex-direction: column; gap: 6px; }
+    .field label {
+        font-size: 12px; font-weight: 600; letter-spacing: 0.06em;
+        color: var(--text-sub); text-transform: uppercase;
+    }
+    .field input {
+        padding: 12px 14px;
+        background: rgba(0,0,0,0.4);
+        border: 1px solid rgba(255,255,255,0.08);
+        border-radius: 8px;
+        color: var(--text);
+        font-size: 14px;
+        outline: none;
+        transition: border-color 0.2s, box-shadow 0.2s;
+        -webkit-appearance: none;
+    }
+    .field input:focus {
+        border-color: var(--electric);
+        box-shadow: var(--glow-sm), 0 0 0 1px rgba(0,212,255,0.2);
+    }
+    .field input::placeholder { color: rgba(148,163,184,0.4); }
+
+    /* ── Submit button ── */
+    .submit-btn {
+        margin-top: 4px;
+        padding: 13px;
+        border: none; border-radius: 10px; cursor: pointer;
+        font-size: 14px; font-weight: 700; letter-spacing: 0.06em;
+        color: #000;
+        background: linear-gradient(135deg, var(--electric) 0%, #0099cc 60%, var(--plasma) 100%);
+        background-size: 200% 100%;
+        transition: all 0.2s;
+        position: relative; overflow: hidden;
+    }
+    .submit-btn:hover {
+        background-position: 100% 0;
+        box-shadow: 0 4px 20px rgba(0,212,255,0.4);
+        transform: translateY(-1px);
+    }
+    .submit-btn:active { transform: translateY(0); }
+    .submit-btn:disabled {
+        opacity: 0.6; cursor: not-allowed; transform: none;
+    }
+    .submit-btn .spinner {
+        display: none; width: 16px; height: 16px; border-radius: 50%;
+        border: 2px solid rgba(0,0,0,0.3); border-top-color: #000;
+        animation: spin 0.7s linear infinite;
+        margin: 0 auto;
+    }
+    .submit-btn.loading .btn-text { display: none; }
+    .submit-btn.loading .spinner  { display: block; }
+
+    /* ── Messages ── */
+    .msg {
+        padding: 10px 14px; border-radius: 8px;
+        font-size: 13px; line-height: 1.4; display: none;
+    }
+    .msg.error   { background: rgba(248,81,73,0.1); border: 1px solid rgba(248,81,73,0.25); color: #f85149; }
+    .msg.success { background: rgba(63,185,80,0.1); border: 1px solid rgba(63,185,80,0.25); color: var(--green); }
+    .msg.show    { display: block; }
+
+    /* ── Footer ── */
+    .card-footer {
+        margin-top: 28px; text-align: center;
+        font-size: 11px; color: rgba(148,163,184,0.4);
+        letter-spacing: 0.04em;
+    }
+
+    /* ── Admin code field (hidden by default) ── */
+    .admin-code-row { display: none; }
+
+    @media (max-width: 440px) {
+        .card-inner { padding: 32px 24px; border-radius: 16px; }
+    }
+</style>
+</head>
+<body>
+<div class="card">
+    <div class="card-inner">
+
+        <div class="logo-wrap">
+            <div class="logo-icon">⚡</div>
+            <div class="logo-text">OVERLORD</div>
+            <span class="logo-sub">AI Orchestration Platform</span>
+        </div>
+
+        <div class="tabs" id="tabs">
+            <button class="tab-btn active" onclick="switchTab('login')">Sign In</button>
+            <button class="tab-btn"        onclick="switchTab('register')">Register</button>
+        </div>
+
+        <div id="msg" class="msg"></div>
+
+        <!-- Login form -->
+        <form class="form" id="login-form" onsubmit="submitLogin(event)">
+            <div class="field">
+                <label>Username</label>
+                <input type="text" id="login-user" placeholder="your username" autocomplete="username" required>
+            </div>
+            <div class="field">
+                <label>Password</label>
+                <input type="password" id="login-pass" placeholder="••••••••" autocomplete="current-password" required>
+            </div>
+            <button type="submit" class="submit-btn" id="login-btn">
+                <span class="btn-text">Sign In</span>
+                <div class="spinner"></div>
+            </button>
+        </form>
+
+        <!-- Register form -->
+        <form class="form" id="register-form" style="display:none" onsubmit="submitRegister(event)">
+            <div class="field">
+                <label>Username</label>
+                <input type="text" id="reg-user" placeholder="choose a username" autocomplete="username" required>
+            </div>
+            <div class="field">
+                <label>Password</label>
+                <input type="password" id="reg-pass" placeholder="at least 6 characters" autocomplete="new-password" required>
+            </div>
+            <div class="field">
+                <label>Confirm Password</label>
+                <input type="password" id="reg-pass2" placeholder="repeat password" autocomplete="new-password" required>
+            </div>
+            <div class="field admin-code-row" id="admin-code-row">
+                <label>Admin Invite Code</label>
+                <input type="password" id="reg-admin-code" placeholder="required for additional accounts">
+            </div>
+            <button type="submit" class="submit-btn" id="register-btn">
+                <span class="btn-text">Create Account</span>
+                <div class="spinner"></div>
+            </button>
+        </form>
+
+        <div class="card-footer">OVERLORD v2.0 &nbsp;·&nbsp; Secure session</div>
+    </div>
+</div>
+
+<script>
+(async function init() {
+    // Check auth status to know if registration is the right default view
+    try {
+        const r = await fetch('/api/auth/status');
+        const s = await r.json();
+        // If auth is disabled or already logged in, go straight to app
+        if (!s.enabled || s.authenticated) {
+            window.location.href = '/';
+            return;
+        }
+        // If no users yet (first-time setup), default to register
+        if (s.needsSetup) {
+            switchTab('register');
+            document.getElementById('tabs').style.display = 'none'; // hide tab switcher — must register
+            showMsg('Welcome! Create your admin account to get started.', 'success');
+        } else if (s.usersExist) {
+            // More users exist — show admin code field on register
+            document.getElementById('admin-code-row').style.display = 'flex';
+        }
+    } catch (e) {
+        // Server might be starting — continue showing login
+    }
+})();
+
+let activeTab = 'login';
+
+function switchTab(tab) {
+    activeTab = tab;
+    document.getElementById('login-form').style.display    = tab === 'login'    ? 'flex' : 'none';
+    document.getElementById('register-form').style.display = tab === 'register' ? 'flex' : 'none';
+    document.querySelectorAll('.tab-btn').forEach((b, i) => {
+        b.classList.toggle('active', (i === 0 && tab === 'login') || (i === 1 && tab === 'register'));
+    });
+    hideMsg();
+}
+
+function showMsg(text, type) {
+    const el = document.getElementById('msg');
+    el.textContent = text;
+    el.className = 'msg show ' + type;
+}
+function hideMsg() {
+    const el = document.getElementById('msg');
+    el.className = 'msg';
+}
+
+function setLoading(btnId, loading) {
+    const btn = document.getElementById(btnId);
+    btn.disabled = loading;
+    btn.classList.toggle('loading', loading);
+}
+
+async function submitLogin(e) {
+    e.preventDefault();
+    hideMsg();
+    const username = document.getElementById('login-user').value.trim();
+    const password = document.getElementById('login-pass').value;
+    if (!username || !password) return showMsg('Please enter your username and password.', 'error');
+    setLoading('login-btn', true);
+    try {
+        const r = await fetch('/api/auth/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username, password })
+        });
+        const d = await r.json();
+        if (d.success) {
+            showMsg('Welcome back, ' + (d.username || username) + '! Entering OVERLORD…', 'success');
+            setTimeout(() => { window.location.href = '/'; }, 700);
+        } else {
+            showMsg(d.error || 'Login failed. Please try again.', 'error');
+            setLoading('login-btn', false);
+        }
+    } catch (err) {
+        showMsg('Connection error. Is the server running?', 'error');
+        setLoading('login-btn', false);
+    }
+}
+
+async function submitRegister(e) {
+    e.preventDefault();
+    hideMsg();
+    const username  = document.getElementById('reg-user').value.trim();
+    const password  = document.getElementById('reg-pass').value;
+    const password2 = document.getElementById('reg-pass2').value;
+    const adminCode = document.getElementById('reg-admin-code').value;
+    if (!username) return showMsg('Please choose a username.', 'error');
+    if (username.length < 2) return showMsg('Username must be at least 2 characters.', 'error');
+    if (!password) return showMsg('Please enter a password.', 'error');
+    if (password.length < 6) return showMsg('Password must be at least 6 characters.', 'error');
+    if (password !== password2) return showMsg('Passwords do not match.', 'error');
+    setLoading('register-btn', true);
+    try {
+        const r = await fetch('/api/auth/register', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username, password, adminCode })
+        });
+        const d = await r.json();
+        if (d.success) {
+            showMsg('Account created! Welcome, ' + (d.username || username) + '. Loading OVERLORD…', 'success');
+            setTimeout(() => { window.location.href = '/'; }, 800);
+        } else {
+            showMsg(d.error || 'Registration failed. Please try again.', 'error');
+            setLoading('register-btn', false);
+        }
+    } catch (err) {
+        showMsg('Connection error. Is the server running?', 'error');
+        setLoading('register-btn', false);
+    }
+}
+</script>
+</body>
+</html>

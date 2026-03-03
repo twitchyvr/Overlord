@@ -219,11 +219,9 @@ async function init(h) {
                 updates.completed = false;
             }
 
-            // ── Auto-unassign from milestone when task is closed ──────────────
+            // Keep milestoneId intact on completion so progress calculations work.
+            // We track progress by filtering completed tasks within a milestone.
             const prevMilestoneId = task.milestoneId;
-            if ((input.status === 'completed' || input.status === 'skipped') && prevMilestoneId) {
-                updates.milestoneId = null; // remove task from milestone
-            }
 
             conv.updateTask(taskId, updates);
 

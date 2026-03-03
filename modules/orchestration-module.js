@@ -395,7 +395,7 @@ async function init(h) {
                     description: { type: 'string', description: 'Detailed description of what needs to be done (max 500 chars)' },
                     priority:    { type: 'string', enum: ['low', 'normal', 'high'], description: 'Priority level (default: normal)' },
                     milestoneId: { type: 'string', description: 'Optional milestone ID to assign this task to (use list_milestones to find IDs)' },
-                    assignee:    { type: 'string', description: 'Optional agent name to assign (e.g. code-implementer, testing-engineer)' }
+                    assignee:    { type: 'string', description: 'Agent to own this task. REQUIRED — always specify who will do this work (e.g. "code-implementer", "testing-engineer", "ui-expert", "git-keeper"). Use list_agents() to see all available agents.' }
                 },
                 required: ['title']
             }
@@ -410,13 +410,15 @@ async function init(h) {
                 status: 'pending',
                 completed: false,
                 milestoneId: input.milestoneId || null,
-                assignee: input.assignee ? [String(input.assignee).trim()] : [],
+                assignee: input.assignee
+                    ? [String(input.assignee).trim()]
+                    : ['code-implementer'], // default if omitted — always has an owner
                 actions: { test: false, lint: false, approval: false },
                 createdAt: new Date().toISOString()
             };
             conv.addTask(task);
-            hub.log(`[create_task] Created: "${task.title}" (${task.id})`, 'info');
-            return `Task created: "${task.title}" (id: ${task.id})${input.milestoneId ? ' — assigned to milestone' : ''}`;
+            hub.log(`[create_task] Created: "${task.title}" → ${task.assignee.join(', ')} (${task.id})`, 'info');
+            return `Task created: "${task.title}" (id: ${task.id}) — assigned to: ${task.assignee.join(', ')}${input.milestoneId ? ' | milestone attached' : ''}`;
         });
         hub.log('✅ create_task tool registered', 'info');
 
@@ -1873,6 +1875,10 @@ async function handleUserMessage(text, socket) {
                     });
                     hub.status('Awaiting plan approval…', 'thinking');
                     hub.log(`[Plan] ${planResult.tasks.length} tasks created — awaiting approval`, 'info');
+                    hub.sendPush('📋 Plan Ready',
+                        `${planResult.tasks.length} task${planResult.tasks.length !== 1 ? 's' : ''} — tap to review and approve`,
+                        { tag: 'overlord-plan' }
+                    );
 
                     const decision = await waitForPlanDecision();
                     awaitingPlanApproval = false;
@@ -2014,7 +2020,37 @@ async function executeToolsWithApproval(toolCalls) {
     const tools = hub.getService('tools');
     const agentSystem = hub.getService('agentSystem');
 
+    // ── ORCHESTRATOR GUARDRAIL: block direct implementation tools ──────────
+    // The orchestrator is the conductor — it MUST delegate to agents.
+    // These tools are hard-blocked regardless of mode (bypass only disables
+    // approval gates, not structural role constraints).
+    const ORCH_BLOCKED_TOOLS = new Set([
+        'write_file', 'patch_file', 'edit_file', 'apply_diff',
+        'run_command', 'bash', 'execute_code', 'execute_shell'
+    ]);
+    // Suggested agent by tool — gives the AI a direct correction path
+    const ORCH_TOOL_AGENT_MAP = {
+        write_file: 'code-implementer', patch_file: 'code-implementer',
+        edit_file: 'code-implementer',  apply_diff: 'code-implementer',
+        run_command: 'testing-engineer', bash: 'testing-engineer',
+        execute_code: 'testing-engineer', execute_shell: 'testing-engineer'
+    };
+
     for (const tool of toolCalls) {
+        // Hard-block implementation tools — must delegate
+        if (ORCH_BLOCKED_TOOLS.has(tool.name)) {
+            const suggestedAgent = ORCH_TOOL_AGENT_MAP[tool.name] || 'code-implementer';
+            hub.log(`⛔ [ORCHESTRATOR] Blocked ${tool.name} — must delegate to ${suggestedAgent}`, 'warning');
+            conv.addToolResult(tool.id,
+                `⛔ ORCHESTRATOR ROLE VIOLATION: You called \`${tool.name}\` directly.\n` +
+                `You are the conductor — you plan and delegate, never implement.\n\n` +
+                `REQUIRED: delegate_to_agent(agent: "${suggestedAgent}", task: "<describe exactly what to do>")\n` +
+                `Run list_agents() first if you need to see who is available.`
+            );
+            setOrchestratorState({ tool: null });
+            continue;
+        }
+
         hub.status(`🔧 Running: ${tool.name}`, 'tool');
 
         // Broadcast tool start activity — include full input for the live inspector
@@ -2049,6 +2085,10 @@ async function executeToolsWithApproval(toolCalls) {
                 reasoning: 'Ask Permissions mode — all tools require approval',
                 inputSummary: JSON.stringify(tool.input || {}).substring(0, 300)
             });
+            hub.sendPush('⚠ Approval Required',
+                `${tool.name} is waiting for your approval`,
+                { requireInteraction: true, tag: 'overlord-approval' }
+            );
             const askApproved = await waitForApproval(tool.id, APPROVAL_TIMEOUT_MS);
             if (!askApproved) {
                 conv.addToolResult(tool.id, `[DENIED] ${tool.name}`);
@@ -2099,14 +2139,18 @@ async function executeToolsWithApproval(toolCalls) {
 
                 // Emit approval request to all clients
                 hub.broadcast('approval_request', {
-                    toolName: tool.name,
-                    toolId: tool.id,
-                    input: tool.input,
-                    tier: recommendation.tier,
-                    confidence: recommendation.confidence,
-                    reasoning: recommendation.reasoning,
+                    toolName:    tool.name,
+                    toolId:      tool.id,
+                    input:       tool.input,
+                    tier:        recommendation.tier,
+                    confidence:  recommendation.confidence,
+                    reasoning:   recommendation.reasoning,
                     inputSummary: JSON.stringify(tool.input || {}).substring(0, 300)
                 });
+                hub.sendPush('⚠ Approval Required',
+                    `${tool.name} (Tier ${recommendation.tier}) is waiting for your approval`,
+                    { requireInteraction: true, tag: 'overlord-approval' }
+                );
 
                 // Block until approval arrives or configurable timeout
                 const userApproved = await waitForApproval(tool.id, APPROVAL_TIMEOUT_MS);

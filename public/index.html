@@ -5644,6 +5644,9 @@
             _setLogoState('connected');
             socket.emit('get_process_state');
             updateNotifBtn();
+            // Re-register push subscription on every connect so the server always
+            // has a live subscription for this device (survives server restarts).
+            if (Notification.permission === 'granted') initPushNotifications();
             // Rejoin conversation room on reconnect (or initial connect)
             if (_currentConvId) {
                 socket.emit('join_conversation', _currentConvId, (ack) => {
@@ -9755,10 +9758,10 @@
 
         function setNotifEnabled(enabled) {
             localStorage.setItem('overlord_notifications', enabled ? 'on' : 'off');
-            // If enabling and browser hasn't been asked yet, request permission
-            if (enabled && typeof Notification !== 'undefined' && Notification.permission === 'default') {
-                Notification.requestPermission().then(() => updateNotifUI());
-                return; // updateNotifUI called in the then()
+            if (enabled) {
+                // Request permission and set up Web Push in one shot
+                initPushNotifications();
+                return; // initPushNotifications handles permission + UI update
             }
             updateNotifUI();
         }
@@ -9854,6 +9857,71 @@
                 document.title = _tick++ % 2 === 0 ? '🔔 ' + title : _orig;
                 if (_tick > 8) { clearInterval(_iv); document.title = _orig; }
             }, 700);
+        }
+
+        // ── Web Push Notifications ─────────────────────────────────────────
+        // Uses Service Worker + VAPID so notifications arrive on locked screens,
+        // backgrounded browsers, and mobile devices where the tab is not active.
+        const _VAPID_PUBLIC_KEY = 'BNCkqsZ1xzKoJ4IWK4l4wrqGZG1c_0VGt1dS9lmgeTqzg2KgIXMRuyrWyNgiV_u6t1OYfVfpF0moON7mOd3ot_0';
+
+        function _urlBase64ToUint8Array(b64) {
+            const pad = '='.repeat((4 - b64.length % 4) % 4);
+            const raw = atob((b64 + pad).replace(/-/g, '+').replace(/_/g, '/'));
+            return Uint8Array.from([...raw].map(c => c.charCodeAt(0)));
+        }
+
+        async function initPushNotifications() {
+            if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+                log('Push notifications: Service Workers not supported in this browser', 'warning');
+                return;
+            }
+            try {
+                // Register (or reuse existing) Service Worker
+                const reg = await navigator.serviceWorker.register('/sw.js');
+
+                // Must have permission first
+                const perm = Notification.permission;
+                if (perm === 'denied') {
+                    log('Push blocked — allow notifications in browser site settings', 'warning');
+                    return;
+                }
+                if (perm !== 'granted') {
+                    const result = await Notification.requestPermission();
+                    if (result !== 'granted') {
+                        log('Push notification permission denied', 'warning');
+                        return;
+                    }
+                }
+
+                // Subscribe via VAPID
+                const sub = await reg.pushManager.subscribe({
+                    userVisibleOnly: true,
+                    applicationServerKey: _urlBase64ToUint8Array(_VAPID_PUBLIC_KEY)
+                });
+
+                // Send subscription to server so it can push to this device
+                socket.emit('push_subscribe', sub.toJSON());
+                log('🔔 Push notifications active — alerts will appear on your lock screen', 'success');
+                _updatePushStatusUI(true);
+
+                // Listen for key rotation (browser may rotate subscription keys)
+                navigator.serviceWorker.addEventListener('message', event => {
+                    if (event.data && event.data.type === 'push_resubscribe') {
+                        socket.emit('push_resubscribe', event.data.subscription);
+                    }
+                });
+            } catch (e) {
+                log('Push setup failed: ' + e.message, 'warning');
+            }
+        }
+
+        function _updatePushStatusUI(active) {
+            const statusEl = document.getElementById('settings-notif-status');
+            if (!statusEl) return;
+            if (active) {
+                statusEl.textContent = '✓ Push active — lock-screen notifications enabled on this device';
+                statusEl.className = 'notif-status-line ok';
+            }
         }
 
         function updateBehaviorSetting(key, value) {

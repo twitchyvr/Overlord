@@ -12,6 +12,14 @@ const EventEmitter = require('events');
 const fs = require('fs');
 const path = require('path');
 
+// ── Web Push (VAPID) ──────────────────────────────────────────────────────
+const webpush = require('web-push');
+webpush.setVapidDetails(
+    'mailto:overlord@localhost',
+    'BNCkqsZ1xzKoJ4IWK4l4wrqGZG1c_0VGt1dS9lmgeTqzg2KgIXMRuyrWyNgiV_u6t1OYfVfpF0moON7mOd3ot_0',
+    'Td8JxAznufbkndPF4r1l-xNvqy4Uq_Oq-JBsajQtwtg'
+);
+
 class Hub extends EventEmitter {
     constructor() {
         super();
@@ -20,6 +28,8 @@ class Hub extends EventEmitter {
         this.config = {};
         this.io = null;
         this.initialized = false;
+        // ── Web Push subscriptions (socketId → PushSubscription JSON) ──
+        this._pushSubscriptions = new Map();
         
         // Process state tracking
         this.processState = {
@@ -177,6 +187,35 @@ class Hub extends EventEmitter {
      */
     broadcastToRoom(room, event, data) {
         if (this.io) this.io.to(room).emit(event, data);
+    }
+
+    // ==================== WEB PUSH ====================
+
+    registerPushSubscription(socketId, sub) {
+        this._pushSubscriptions.set(socketId, sub);
+        this.log(`[Push] Subscription registered (${this._pushSubscriptions.size} total)`, 'info');
+    }
+
+    unregisterPushSubscription(socketId) {
+        if (this._pushSubscriptions.delete(socketId)) {
+            this.log(`[Push] Subscription removed (${this._pushSubscriptions.size} remaining)`, 'info');
+        }
+    }
+
+    async sendPush(title, body, opts = {}) {
+        if (this._pushSubscriptions.size === 0) return;
+        const payload = JSON.stringify({ title, body, tag: 'overlord-push', ...opts });
+        const dead = [];
+        for (const [id, sub] of this._pushSubscriptions) {
+            try {
+                await webpush.sendNotification(sub, payload);
+            } catch (e) {
+                // 410 Gone or 404 = subscription expired/unsubscribed — remove it
+                if (e.statusCode === 410 || e.statusCode === 404) dead.push(id);
+                else this.log(`[Push] Send error: ${e.message}`, 'warning');
+            }
+        }
+        dead.forEach(id => this._pushSubscriptions.delete(id));
     }
 
     // ==================== RATE LIMITING ====================
@@ -437,6 +476,15 @@ class Hub extends EventEmitter {
                 this.broadcastAll('approval_resolved', { toolId: data.toolId, approved: data.approved });
             });
             socket.on('register_client', (data) => this.emit('client_registered', data, socket));
+
+            // ── Web Push subscription registration ───────────────────────────
+            socket.on('push_subscribe', (sub) => {
+                if (sub && sub.endpoint) this.registerPushSubscription(socket.id, sub);
+            });
+            socket.on('push_resubscribe', (sub) => {
+                // Client received pushsubscriptionchange from SW and got a fresh sub
+                if (sub && sub.endpoint) this.registerPushSubscription(socket.id, sub);
+            });
 
             // ── Chat mode ────────────────────────────────────────────────────
             socket.on('set_mode', (mode) => {
@@ -1457,6 +1505,9 @@ Rules:
             });
 
             // ── Presence: update count when a socket disconnects ──────────────
+            socket.on('disconnect', () => {
+                this.unregisterPushSubscription(socket.id);
+            });
             socket.on('disconnecting', () => {
                 for (const room of socket.rooms) {
                     if (room.startsWith('conv:')) {

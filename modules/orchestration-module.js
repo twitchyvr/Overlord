@@ -124,14 +124,22 @@ async function init(h) {
     hub.on('switch_plan_variant', handleSwitchPlanVariant);
     // ── Live bypass: auto-approve all blocking approvals immediately when mode switches
     hub.on('bypass_active', () => {
+        // Auto-resolve pending individual tool approvals
         if (pendingApprovalResolvers.size > 0) {
-            hub.log(`⚡ [BYPASS] Auto-approving ${pendingApprovalResolvers.size} pending approval(s) — mode changed to bypass`, 'warning');
+            hub.log(`⚡ [BYPASS] Auto-approving ${pendingApprovalResolvers.size} pending tool approval(s) — mode changed to bypass`, 'warning');
             pendingApprovalResolvers.forEach(({ resolve, timer }, toolId) => {
                 clearTimeout(timer);
                 hub.broadcast('approval_resolved', { toolId, approved: true });
                 resolve(true);
             });
             pendingApprovalResolvers.clear();
+        }
+        // Auto-approve any pending plan approval — user shouldn't be blocked waiting
+        // for a plan decision when bypass mode is active
+        if (pendingPlanResolvers) {
+            hub.log('⚡ [BYPASS] Auto-approving pending plan — mode changed to bypass', 'warning');
+            handlePlanApproved();
+            hub.broadcastAll('plan_bypass_approved', {});
         }
     });
 
@@ -1832,7 +1840,7 @@ async function handleUserMessage(text, socket) {
                 .join('\n\n');
 
             // ── Plan Mode: strip raw JSON block before displaying, show clean card ──
-            if (cfg?.chatMode === 'plan' && !awaitingPlanApproval) {
+            if (cfg?.chatMode === 'plan' && !awaitingPlanApproval && !planExecutionActive) {
                 const planResult = extractAndCreatePlanTasks(textContent);
                 if (planResult.success) {
                     // Remove ```json ... ``` block from the displayed text

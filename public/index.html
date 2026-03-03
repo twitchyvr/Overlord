@@ -8103,6 +8103,12 @@
         }
 
         socket.on('plan_ready', d => {
+            // If bypass is already active client-side, immediately send approval
+            if (currentChatMode === 'bypass') {
+                socket.emit('plan_approved');
+                log('⚡ Plan auto-approved — bypass mode active', 'warning');
+                return;
+            }
             showPlanBar(d.taskCount, d);
             notifyUser('Plan Ready', (d.taskCount || '?') + ' tasks — approve or revise in Overlord');
         });
@@ -8112,8 +8118,9 @@
             _updateVariantTabs(d.variant);
             log('Plan variant: ' + d.variant + ' (' + d.taskCount + ' tasks)', 'info');
         });
-        socket.on('plan_cancelled_ack', ()  => hidePlanBar());
-        socket.on('plan_timeout',       ()  => { hidePlanBar(); log('Plan timed out — auto-cancelled', 'warning'); });
+        socket.on('plan_cancelled_ack',    ()  => hidePlanBar());
+        socket.on('plan_timeout',          ()  => { hidePlanBar(); log('Plan timed out — auto-cancelled', 'warning'); });
+        socket.on('plan_bypass_approved',  ()  => { hidePlanBar(); log('⚡ Plan auto-approved — bypass mode active', 'warning'); });
         socket.on('approval_request_notice', d => log(d.message || 'Plan awaiting approval', 'warning'));
 
         // Input & Send

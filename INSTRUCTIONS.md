@@ -1,8 +1,8 @@
 # OVERLORD WEB — Agent Operations Guide
 
 > **Version**: 1.2.0
-> **Last updated**: 2026-03-01 (commit 9d5c27e)
-> **Active branch**: `master`
+> **Last updated**: 2026-03-03 (commit 1c4872f)
+> **Active branch**: `milestone/virtual-crew-chief-foundation-core-architecture`
 > **Server**: http://localhost:3031
 
 ---
@@ -94,6 +94,10 @@ All modules are loaded by `server.js` and communicate exclusively through `hub.j
 | `hub.broadcastAll(event, data)` | Emit to all connected sockets (server-wide) |
 | `hub.broadcastToRoom(room, event, data)` | Emit to a specific named room |
 | `hub.log(message, level)` | Centralized logging |
+
+### Broadcast Error Guards (added commit `1c4872f`)
+
+All four broadcast paths — `broadcast()`, `broadcastVolatile()`, `broadcastAll()`, and the metrics `setInterval` volatile emit — are wrapped in try-catch blocks. Any socket.io exception (e.g. `BroadcastOperator is not a constructor` from zombie processes) is caught, logged at `warn` level, and swallowed so the server process never crashes. The metrics interval self-reschedules on error to prevent rapid error loops.
 
 ### Socket.IO Rooms
 
@@ -427,7 +431,7 @@ Current test suite (93/94 pass — 1 pre-existing failure in `token-manager.test
 | `tests/token-manager.test.js` | Token tracking and history truncation |
 | `tests/skills.test.js` | YAML frontmatter parser, skill file loading |
 | `tests/approval.test.js` | Promise-based T3/T4 approval flow |
-| `tests/integration/module-loading.test.js` | All 24 modules load without errors |
+| `tests/integration/module-loading.test.js` | All 27 modules load without errors |
 | `tests/integration/tool-execution.test.js` | Tool cycle, AutoQA, cycle guard |
 
 Known issue: `truncateHistory` in `token-manager-module.js` does not guarantee tool pair preservation at the 100-token limit — pre-existing bug, not introduced by recent work.
@@ -742,25 +746,26 @@ Example toast message: `PM mode: switched to MiniMax-Text-01`.
 
 | Commit | Description |
 |---|---|
+| `1c4872f` | fix(hub): harden all socket.io broadcast paths with try-catch guards |
+| `d38325c` | fix(stability): graceful web-push degradation + early startup banner |
+| `3dc111a` | feat(auth+ui): session-based auth system + delegate_to_agent magic chip animation |
+| `1aa3cc0` | fix: milestone progress always 0% + data consistency across all views |
+| `bc98758` | fix(ui): mobile-first overhaul — landscape layout, dashboard access, CSS fixes |
+| `b9e4117` | feat: hard-enforce orchestrator delegation + Web Push lock-screen notifications |
+| `3e73e05` | fix: full cross-device sync for approvals, plan bar, and notifications |
 | `9d5c27e` | feat(pm): auto-switch model per chat mode with billing safeguard |
 | `360c7e1` | fix(projects): active project selection now works reliably + clearer UX |
 | `cf6be28` | fix(overlord): 5 UI bug fixes — neural panel, ctx details, project badge, live thinking timer, live tokens |
-| `231df01` | feat(overlord): major UX + AI capability overhaul |
-| `8eca8d6` | feat(ui): rich drillable tool chips in thoughts bubble |
-| `821709c` | fix(images): show actual screenshot thumbnails in paste/attach pills |
-| `55e9250` | feat(settings): persist all user prefs + unify kanban/task statuses + move notif/theme to settings |
-| `b77e983` | feat(orchestrate): AI orchestration from task/milestone detail views |
-| `c82224f` | feat(ui): magical chat input — aurora animation + unified border |
-| `8eac0bd` | fix(context): prevent context overflow crash during long sessions |
 
 ---
 
 ## 24. Known Open Issues
 
-| Issue | Status |
-|---|---|
-| #1 UI blank space below input / system log panels | Open |
-| `token-manager.test.js` truncateHistory tool-pair preservation | Pre-existing bug, not blocking |
+| Issue | GitHub | Status |
+|---|---|---|
+| UI blank space below input / system log panels | #1 | Open |
+| `token-manager.test.js` truncateHistory tool-pair preservation | — | Pre-existing bug, not blocking |
+| Socket.io broadcast hardening (resolved in `1c4872f`) | #23 | Closed via PR #24 |
 
 ---
 
@@ -776,3 +781,5 @@ Example toast message: `PM mode: switched to MiniMax-Text-01`.
 ---
 
 *This file is maintained by the `gitops-orchestrator` agent. Do not edit manually without also updating the "Last updated" date and "Recent Significant Commits" table above.*
+
+<!-- Last sync: 2026-03-03 — commit 1c4872f — fix(hub): harden all socket.io broadcast paths with try-catch guards -->

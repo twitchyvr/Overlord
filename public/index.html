@@ -2989,7 +2989,6 @@
             <button class="sys-toggle-btn" onclick="toggleSysInfo()" title="System stats">SYS</button>
             <div id="sys-info-pills" class="hidden">
                 <span class="sys-pill" title="Server process ID — useful for debugging if you need to kill/restart the process manually"><span class="label">PID</span><span class="value" id="proc-pid">-</span></span>
-                <span class="sys-pill" title="Local time — updates every minute"><span class="label">LOCAL</span><span class="value" id="ctx-localtime">-</span></span>
                 <span class="sys-pill" title="Context compactions — how many times the conversation history has been AI-summarized to free up space"><span class="label">COMPACTIONS</span><span class="value" id="ctx-compact">-</span></span>
                 <span class="sys-pill" title="Last AI request duration — how long the most recent model call took end-to-end"><span class="label">LAST REQ</span><span class="value" id="ctx-duration">-</span></span>
                 <span class="sys-pill" title="Session uptime — how long this chat session has been running"><span class="label">SESSION</span><span class="value" id="ctx-chat">-</span></span>
@@ -4581,8 +4580,6 @@
             const label  = `${days[now.getDay()]}, ${mons[now.getMonth()]} ${now.getDate()}, ${h12}:${pad(m)} ${ampm} (${tzAbbr})`;
             const mainEl = document.getElementById('status-bar-clock');
             if (mainEl) mainEl.textContent = label;
-            const sysEl  = document.getElementById('ctx-localtime');
-            if (sysEl)  sysEl.textContent  = label;
         }
         _updateLocalClock();
         // Refresh at the top of every minute for accuracy

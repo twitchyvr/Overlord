@@ -157,12 +157,16 @@ class Hub extends EventEmitter {
      */
     broadcast(event, data) {
         if (!this.io) return;
-        const conv = this.getService('conversation');
-        const convId = conv?.getId?.();
-        if (convId) {
-            this.io.to(`conv:${convId}`).emit(event, data);
-        } else {
-            this.io.emit(event, data);
+        try {
+            const conv = this.getService('conversation');
+            const convId = conv?.getId?.();
+            if (convId) {
+                this.io.to(`conv:${convId}`).emit(event, data);
+            } else {
+                this.io.emit(event, data);
+            }
+        } catch (e) {
+            // Swallow broadcast errors — never let socket.io issues crash the server
         }
     }
 
@@ -173,12 +177,16 @@ class Hub extends EventEmitter {
      */
     broadcastVolatile(event, data) {
         if (!this.io) return;
-        const conv = this.getService('conversation');
-        const convId = conv?.getId?.();
-        if (convId) {
-            this.io.to(`conv:${convId}`).volatile.emit(event, data);
-        } else {
-            this.io.volatile.emit(event, data);
+        try {
+            const conv = this.getService('conversation');
+            const convId = conv?.getId?.();
+            if (convId) {
+                this.io.to(`conv:${convId}`).volatile.emit(event, data);
+            } else {
+                this.io.volatile.emit(event, data);
+            }
+        } catch (e) {
+            // Volatile broadcast is non-critical; swallow errors to prevent process crash
         }
     }
 
@@ -187,7 +195,8 @@ class Hub extends EventEmitter {
      * Sends to every connected socket regardless of conversation.
      */
     broadcastAll(event, data) {
-        if (this.io) this.io.emit(event, data);
+        if (!this.io) return;
+        try { this.io.emit(event, data); } catch (e) { /* swallow — never crash on broadcast */ }
     }
 
     /**
@@ -342,10 +351,14 @@ class Hub extends EventEmitter {
 
         // Stream metrics every 3s (volatile — drops if client isn't ready)
         setInterval(() => {
-            const tick = _getMetricsTick();
-            tick.loopLag = _loopLagMs;
-            _lastMetricsTick = tick;
-            metricsNs.volatile.emit('tick', tick);
+            try {
+                const tick = _getMetricsTick();
+                tick.loopLag = _loopLagMs;
+                _lastMetricsTick = tick;
+                metricsNs.volatile.emit('tick', tick);
+            } catch (e) {
+                // Metrics emit is non-critical; swallow errors to prevent process crash
+            }
         }, 3000);
 
         // Send current state immediately on new /metrics connection

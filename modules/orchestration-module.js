@@ -15,6 +15,34 @@ const path = require('path');
 
 let hub = null;
 let isProcessing = false;
+
+// ── Error description helper ──────────────────────────────────────────────
+// Node.js network errors (ECONNRESET, ETIMEDOUT, socket hang up) carry their
+// meaning in `.code` and `.syscall`, NOT in `.message` (which is often "").
+// This helper always returns something human-readable regardless of error shape.
+function describeError(e) {
+    if (!e) return 'Unknown error';
+    const parts = [];
+    if (e.message && e.message.trim()) parts.push(e.message.trim());
+    if (e.code)    parts.push(`[${e.code}]`);
+    if (e.syscall) parts.push(`(syscall: ${e.syscall})`);
+    if (parts.length === 0) {
+        // Last resort — stringify or use constructor name
+        const name = e.constructor?.name || 'Error';
+        try { return `${name}: ${JSON.stringify(e)}`; } catch { return String(e); }
+    }
+    return parts.join(' ');
+}
+
+// Network error codes that are transient and safe to retry once
+const RETRYABLE_CODES = new Set(['ECONNRESET', 'ETIMEDOUT', 'ECONNABORTED', 'EPIPE', 'ENOTFOUND', 'ENETUNREACH', 'EAI_AGAIN']);
+function isNetworkError(e) {
+    if (!e) return false;
+    if (RETRYABLE_CODES.has(e.code)) return true;
+    const msg = (e.message || '').toLowerCase();
+    return msg.includes('socket hang up') || msg.includes('connection reset') ||
+           msg.includes('network timeout') || msg.includes('econnreset');
+}
 let pendingApproval = null; // For T3-T4 approval flow
 const pendingApprovalResolvers = new Map(); // toolId → { resolve, reject, timer }
 
@@ -1825,7 +1853,7 @@ async function handleUserMessage(text, socket) {
                 resolve();
             },
             (err) => {
-                hub.log(`API Error: ${err.message}`, 'error');
+                hub.log(`API Error: ${describeError(err)}`, 'error');
                 reject(err);
             });
         });
@@ -1944,13 +1972,32 @@ async function handleUserMessage(text, socket) {
             try {
                 await runAICycle();
             } catch (e2) {
-                hub.log(`❌ Retry failed: ${e2.message}`, 'error');
+                const desc2 = describeError(e2);
+                hub.log(`❌ Retry failed: ${desc2}`, 'error');
+                hub.addMessage('assistant', `❌ **Request failed after retry:** ${desc2}`);
                 isProcessing = false;
                 hub.status('Error', 'error');
                 setTimeout(() => hub.drainMessageQueue(), 80);
             }
+        } else if (isNetworkError(e)) {
+            // ── Network error (ECONNRESET, socket hang up, etc.) — retry once ─
+            const desc = describeError(e);
+            hub.log(`⚠️ Network error — retrying in 3s: ${desc}`, 'warning');
+            hub.status('⏳ Network error — retrying...', 'thinking');
+            hub.addMessage('assistant', `⚠️ **Network hiccup** (${desc}) — retrying automatically in 3s…`);
+            await new Promise(r => setTimeout(r, 3000));
+            try {
+                await runAICycle();
+            } catch (e2) {
+                const desc2 = describeError(e2);
+                hub.log(`❌ Network retry failed: ${desc2}`, 'error');
+                hub.addMessage('assistant', `❌ **Network retry failed:** ${desc2}\n\nCheck your connection and try sending again.`);
+                isProcessing = false;
+                hub.status('Network error — check connection', 'error');
+                setTimeout(() => hub.drainMessageQueue(), 80);
+            }
         } else if (
-            e.message.includes('400') &&
+            (e.message || '').includes('400') &&
             (e.message.includes('context window') || e.message.includes('context_length') || e.message.includes('context_window'))
         ) {
             // ── Context window overflow recovery ─────────────────────────────
@@ -1992,7 +2039,7 @@ async function handleUserMessage(text, socket) {
 
                 await runAICycle();
             } catch (e2) {
-                hub.log(`❌ Context recovery failed: ${e2.message}`, 'error');
+                hub.log(`❌ Context recovery failed: ${describeError(e2)}`, 'error');
                 hub.addMessage('assistant',
                     '⚠️ **Context overflow** — I ran out of context space even after recovery. ' +
                     'The screenshot data was too large. Please start a new conversation to continue.');
@@ -2001,9 +2048,11 @@ async function handleUserMessage(text, socket) {
                 setTimeout(() => hub.drainMessageQueue(), 80);
             }
         } else {
-            hub.log(`❌ Error: ${e.message}`, 'error');
+            const desc = describeError(e);
+            hub.log(`❌ Error: ${desc}`, 'error');
+            hub.addMessage('assistant', `❌ **Error:** ${desc}`);
             isProcessing = false;
-            hub.status('Error', 'error');
+            hub.status(`Error: ${desc.substring(0, 60)}`, 'error');
             setTimeout(() => hub.drainMessageQueue(), 80);
         }
     }
@@ -3227,11 +3276,15 @@ async function runAgentCycle(session) {
     try {
         await runAgentAICycle(session);
     } catch (err) {
-        hub.log(`[agent:${session.name}] Error: ${err.message}`, 'error');
+        const agentErrDesc = describeError(err);
+        hub.log(`[agent:${session.name}] Error: ${agentErrDesc}`, 'error');
+        const isNet = isNetworkError(err);
         hub.broadcast('agent_message', {
             agentName: session.name,
             role: 'assistant',
-            content: `[Error: ${err.message}]`,
+            content: isNet
+                ? `[Network error: ${agentErrDesc} — check connection]`
+                : `[Error: ${agentErrDesc}]`,
             ts: Date.now()
         });
     } finally {

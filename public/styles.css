@@ -15,7 +15,18 @@
     --accent-red: #f85149;
     --accent-magenta: #bc8cff;
     --code-bg: #1c2128;
-    
+
+    /* Spacing */
+    --space-xs: 4px;
+    --space-sm: 8px;
+    --space-md: 16px;
+    --space-lg: 24px;
+
+    /* Layout */
+    --status-bar-height: 44px;
+    --panel-default-width: 320px;
+    --panel-max-width: 480px;
+
     /* Z-index - proper stacking order */
     --z-dropdown: 100;
     --z-dropdown-content: 150;
@@ -101,7 +112,7 @@ body {
 /* ==================== STATUS BAR ==================== */
 
 .status-bar {
-    flex: 0 0 var(--status-bar-height;
+    flex: 0 0 var(--status-bar-height);
     background: var(--bg-panel);
     display: flex;
     align-items: center;
@@ -216,126 +227,16 @@ body {
     background: var(--border);
     border-color: var(--accent-cyan);
 }
-}
 
 .conv-current .icon {
     font-size: 14px;
 }
 
 .conv-dropdown {
-    position: fixed;
-    /* top/left/width are set by JS so the panel escapes overflow:hidden ancestors */
-    max-height: 60vh;
-    background: var(--bg-panel);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
-    z-index: 2000;
-    display: none;
-    flex-direction: column;
-    overflow: hidden;
-}
-
-.conv-dropdown.open {
-    display: flex;
-}
-
-.conv-dropdown-header {
-    padding: 10px 12px;
-    border-bottom: 1px solid var(--border);
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-
-.conv-dropdown-header h3 {
-    font-size: 11px;
-    font-weight: 600;
-    text-transform: uppercase;
-    color: var(--text-secondary);
-    margin: 0;
-}
-
-.conv-search {
-    padding: 8px 12px;
-    border-bottom: 1px solid var(--border);
-}
-
-.conv-search input {
-    width: 100%;
-    padding: 8px 12px;
-    background: var(--bg-input);
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    color: var(--text-primary);
-    font-size: 13px;
-}
-
-.conv-search input:focus {
-    outline: none;
-    border-color: var(--accent-cyan);
-}
-
-.conv-list {
-    overflow-y: auto;
-    flex: 1;
-    max-height: 200px;
-}
-
-.conv-list::-webkit-scrollbar {
-    width: 6px;
-}
-
-.conv-list::-webkit-scrollbar-thumb {
-    background: var(--border);
-    border-radius: 3px;
-}
-
-.conv-item {
-    padding: 10px 12px;
-    border-bottom: 1px solid var(--border);
-    cursor: pointer;
-    transition: background 150ms ease;
-}
-
-.conv-item:hover {
-    background: var(--bg-input);
-}
-
-.conv-item-title {
-    font-size: 13px;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    margin-bottom: 2px;
-}
-
-.conv-item-meta {
-    font-size: 11px;
-    color: var(--text-secondary);
-    display: flex;
-    justify-content: space-between;
-}
-
-.conv-item-new {
-    padding: 12px;
-    background: var(--accent-green);
-    color: #000;
-    font-weight: 600;
-    text-align: center;
-    cursor: pointer;
-    transition: background 150ms ease;
-}
-
-.conv-item-new:hover {
-    background: #2ea043;
-}
-
-.conv-dropdown {
     position: absolute;
     top: calc(100% + 8px);
     left: 0;
-    width: min(320px, 85vw;
+    width: min(320px, 85vw);
     max-height: 60vh;
     background: var(--bg-panel);
     border: 1px solid var(--border);
@@ -559,7 +460,7 @@ body {
 
 .message.user {
     align-self: flex-end;
-    background: linear-gradient(135deg, #238636 0%, #2ea043 100%;
+    background: linear-gradient(135deg, #238636 0%, #2ea043 100%);
     color: #fff;
     border-bottom-right-radius: 4px;
     animation: userMessageIn 300ms var(--ease-spring) both;
@@ -807,7 +708,7 @@ body {
 /* ==================== RIGHT PANEL ==================== */
 
 .right-panel {
-    width: var(--panel-default-width;
+    width: var(--panel-default-width);
     flex-shrink: 0;
     display: flex;
     flex-direction: column;
@@ -815,7 +716,7 @@ body {
     overflow: hidden;
     resize: horizontal;
     min-width: 200px;
-    max-width: var(--panel-max-width;
+    max-width: var(--panel-max-width);
     background: var(--border);
 }
 
@@ -891,7 +792,7 @@ body {
 }
 
 .panel.collapsed .panel-toggle {
-    transform: rotate(-90deg;
+    transform: rotate(-90deg);
 }
 
 /* Panel content */
@@ -1503,7 +1404,7 @@ body {
 }
 
 .mobile-nav-item:active {
-    transform: scale(0.95;
+    transform: scale(0.95);
 }
 
 .mobile-nav-item.active {
@@ -1578,7 +1479,7 @@ body {
     .right-panel {
         display: none;
         position: fixed;
-        top: var(--status-bar-height;
+        top: var(--status-bar-height);
         right: 0;
         bottom: 60px; /* Space for mobile nav */
         width: 85%;
@@ -1600,7 +1501,7 @@ body {
     }
     
     .input-area {
-        padding-bottom: calc(var(--space-sm) + 60px;
+        padding-bottom: calc(var(--space-sm) + 60px);
     }
 }
 

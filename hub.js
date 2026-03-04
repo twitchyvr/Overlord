@@ -13,12 +13,20 @@ const fs = require('fs');
 const path = require('path');
 
 // ── Web Push (VAPID) ──────────────────────────────────────────────────────
-const webpush = require('web-push');
-webpush.setVapidDetails(
-    'mailto:overlord@localhost',
-    'BNCkqsZ1xzKoJ4IWK4l4wrqGZG1c_0VGt1dS9lmgeTqzg2KgIXMRuyrWyNgiV_u6t1OYfVfpF0moON7mOd3ot_0',
-    'Td8JxAznufbkndPF4r1l-xNvqy4Uq_Oq-JBsajQtwtg'
-);
+let webpush = null;
+try {
+    webpush = require('web-push');
+    webpush.setVapidDetails(
+        'mailto:overlord@localhost',
+        'BNCkqsZ1xzKoJ4IWK4l4wrqGZG1c_0VGt1dS9lmgeTqzg2KgIXMRuyrWyNgiV_u6t1OYfVfpF0moON7mOd3ot_0',
+        'Td8JxAznufbkndPF4r1l-xNvqy4Uq_Oq-JBsajQtwtg'
+    );
+    console.log('[Hub] Web Push ready ✅');
+} catch (e) {
+    console.warn('[Hub] Web Push disabled — could not load web-push package:', e.message);
+    console.warn('[Hub] Push notifications will not work. Try: npm install web-push@latest');
+    webpush = null;
+}
 
 class Hub extends EventEmitter {
     constructor() {
@@ -149,12 +157,16 @@ class Hub extends EventEmitter {
      */
     broadcast(event, data) {
         if (!this.io) return;
-        const conv = this.getService('conversation');
-        const convId = conv?.getId?.();
-        if (convId) {
-            this.io.to(`conv:${convId}`).emit(event, data);
-        } else {
-            this.io.emit(event, data);
+        try {
+            const conv = this.getService('conversation');
+            const convId = conv?.getId?.();
+            if (convId) {
+                this.io.to(`conv:${convId}`).emit(event, data);
+            } else {
+                this.io.emit(event, data);
+            }
+        } catch (e) {
+            // Swallow broadcast errors — never let socket.io issues crash the server
         }
     }
 
@@ -165,12 +177,16 @@ class Hub extends EventEmitter {
      */
     broadcastVolatile(event, data) {
         if (!this.io) return;
-        const conv = this.getService('conversation');
-        const convId = conv?.getId?.();
-        if (convId) {
-            this.io.to(`conv:${convId}`).volatile.emit(event, data);
-        } else {
-            this.io.volatile.emit(event, data);
+        try {
+            const conv = this.getService('conversation');
+            const convId = conv?.getId?.();
+            if (convId) {
+                this.io.to(`conv:${convId}`).volatile.emit(event, data);
+            } else {
+                this.io.volatile.emit(event, data);
+            }
+        } catch (e) {
+            // Volatile broadcast is non-critical; swallow errors to prevent process crash
         }
     }
 
@@ -179,7 +195,8 @@ class Hub extends EventEmitter {
      * Sends to every connected socket regardless of conversation.
      */
     broadcastAll(event, data) {
-        if (this.io) this.io.emit(event, data);
+        if (!this.io) return;
+        try { this.io.emit(event, data); } catch (e) { /* swallow — never crash on broadcast */ }
     }
 
     /**
@@ -203,7 +220,7 @@ class Hub extends EventEmitter {
     }
 
     async sendPush(title, body, opts = {}) {
-        if (this._pushSubscriptions.size === 0) return;
+        if (!webpush || this._pushSubscriptions.size === 0) return;
         const payload = JSON.stringify({ title, body, tag: 'overlord-push', ...opts });
         const dead = [];
         for (const [id, sub] of this._pushSubscriptions) {
@@ -293,6 +310,38 @@ class Hub extends EventEmitter {
         this.broadcast('queue_updated', (this._msgQueue || []).slice());
     }
 
+    // ── Hot Chat Injection ──────────────────────────────────────────────────
+    // Hot injections are inserted into the orchestrator's context at the next
+    // safe cycle boundary (after tool results, before the next AI call).
+    // Unlike the regular queue, they don't wait until the task is fully done.
+
+    hotInject(text) {
+        if (!this._hotInjectBuffer) this._hotInjectBuffer = [];
+        const item = {
+            id: 'hi_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+            text: text.trim(),
+            injectedAt: new Date().toISOString()
+        };
+        this._hotInjectBuffer.push(item);
+        this.broadcast('hot_inject_pending', {
+            count: this._hotInjectBuffer.length,
+            preview: item.text.substring(0, 80)
+        });
+        this.log(`[HotInject] Buffered: "${item.text.substring(0, 60)}..."`, 'info');
+        return item;
+    }
+
+    consumeHotInject() {
+        if (!this._hotInjectBuffer || this._hotInjectBuffer.length === 0) return null;
+        const item = this._hotInjectBuffer.shift();
+        this.broadcast('hot_inject_pending', { count: this._hotInjectBuffer.length, preview: null });
+        return item;
+    }
+
+    broadcastHotInjectApplied(item) {
+        this.broadcast('hot_inject_applied', { id: item.id, text: item.text });
+    }
+
     // Bridge Socket.IO events to Hub events
     setupSocketBridge() {
         if (!this.io) return;
@@ -334,10 +383,14 @@ class Hub extends EventEmitter {
 
         // Stream metrics every 3s (volatile — drops if client isn't ready)
         setInterval(() => {
-            const tick = _getMetricsTick();
-            tick.loopLag = _loopLagMs;
-            _lastMetricsTick = tick;
-            metricsNs.volatile.emit('tick', tick);
+            try {
+                const tick = _getMetricsTick();
+                tick.loopLag = _loopLagMs;
+                _lastMetricsTick = tick;
+                metricsNs.volatile.emit('tick', tick);
+            } catch (e) {
+                // Metrics emit is non-critical; swallow errors to prevent process crash
+            }
         }, 3000);
 
         // Send current state immediately on new /metrics connection
@@ -448,6 +501,33 @@ class Hub extends EventEmitter {
                 this.broadcast('queue_updated', this._msgQueue.slice());
                 if (item) this.emit('user_message', item.text, null);
                 if (typeof cb === 'function') cb({ success: true, queue: this._msgQueue.slice() });
+            });
+
+            // ── Hot Chat Injection ────────────────────────────────────────────
+            // Injects a message at the next cycle boundary when AI is busy.
+            // If AI is not busy, routes as a regular message immediately.
+            socket.on('hot_inject', (text, cb) => {
+                if (!text || !text.trim()) { if (typeof cb === 'function') cb({ status: 'empty' }); return; }
+                const orch = this.getService('orchestrator');
+                const busy = orch?.isProcessing?.() || false;
+                if (busy) {
+                    const item = this.hotInject(text.trim());
+                    if (typeof cb === 'function') cb({ status: 'hot_queued', id: item.id, queueSize: this._hotInjectBuffer.length });
+                } else {
+                    // Not busy — treat as regular user message
+                    this.emit('user_message', text.trim(), socket);
+                    if (typeof cb === 'function') cb({ status: 'immediate' });
+                }
+            });
+
+            socket.on('get_hot_inject_queue', (cb) => {
+                if (typeof cb === 'function') cb((this._hotInjectBuffer || []).slice());
+            });
+
+            socket.on('clear_hot_inject_queue', (cb) => {
+                this._hotInjectBuffer = [];
+                this.broadcast('hot_inject_pending', { count: 0, preview: null });
+                if (typeof cb === 'function') cb({ success: true });
             });
 
             socket.on('force_dequeue_all', ({ mode } = {}, cb) => {

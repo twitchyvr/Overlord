@@ -15,6 +15,34 @@ const path = require('path');
 
 let hub = null;
 let isProcessing = false;
+
+// ── Error description helper ──────────────────────────────────────────────
+// Node.js network errors (ECONNRESET, ETIMEDOUT, socket hang up) carry their
+// meaning in `.code` and `.syscall`, NOT in `.message` (which is often "").
+// This helper always returns something human-readable regardless of error shape.
+function describeError(e) {
+    if (!e) return 'Unknown error';
+    const parts = [];
+    if (e.message && e.message.trim()) parts.push(e.message.trim());
+    if (e.code)    parts.push(`[${e.code}]`);
+    if (e.syscall) parts.push(`(syscall: ${e.syscall})`);
+    if (parts.length === 0) {
+        // Last resort — stringify or use constructor name
+        const name = e.constructor?.name || 'Error';
+        try { return `${name}: ${JSON.stringify(e)}`; } catch { return String(e); }
+    }
+    return parts.join(' ');
+}
+
+// Network error codes that are transient and safe to retry once
+const RETRYABLE_CODES = new Set(['ECONNRESET', 'ETIMEDOUT', 'ECONNABORTED', 'EPIPE', 'ENOTFOUND', 'ENETUNREACH', 'EAI_AGAIN']);
+function isNetworkError(e) {
+    if (!e) return false;
+    if (RETRYABLE_CODES.has(e.code)) return true;
+    const msg = (e.message || '').toLowerCase();
+    return msg.includes('socket hang up') || msg.includes('connection reset') ||
+           msg.includes('network timeout') || msg.includes('econnreset');
+}
 let pendingApproval = null; // For T3-T4 approval flow
 const pendingApprovalResolvers = new Map(); // toolId → { resolve, reject, timer }
 
@@ -219,11 +247,9 @@ async function init(h) {
                 updates.completed = false;
             }
 
-            // ── Auto-unassign from milestone when task is closed ──────────────
+            // Keep milestoneId intact on completion so progress calculations work.
+            // We track progress by filtering completed tasks within a milestone.
             const prevMilestoneId = task.milestoneId;
-            if ((input.status === 'completed' || input.status === 'skipped') && prevMilestoneId) {
-                updates.milestoneId = null; // remove task from milestone
-            }
 
             conv.updateTask(taskId, updates);
 
@@ -1827,7 +1853,7 @@ async function handleUserMessage(text, socket) {
                 resolve();
             },
             (err) => {
-                hub.log(`API Error: ${err.message}`, 'error');
+                hub.log(`API Error: ${describeError(err)}`, 'error');
                 reject(err);
             });
         });
@@ -1946,13 +1972,32 @@ async function handleUserMessage(text, socket) {
             try {
                 await runAICycle();
             } catch (e2) {
-                hub.log(`❌ Retry failed: ${e2.message}`, 'error');
+                const desc2 = describeError(e2);
+                hub.log(`❌ Retry failed: ${desc2}`, 'error');
+                hub.addMessage('assistant', `❌ **Request failed after retry:** ${desc2}`);
                 isProcessing = false;
                 hub.status('Error', 'error');
                 setTimeout(() => hub.drainMessageQueue(), 80);
             }
+        } else if (isNetworkError(e)) {
+            // ── Network error (ECONNRESET, socket hang up, etc.) — retry once ─
+            const desc = describeError(e);
+            hub.log(`⚠️ Network error — retrying in 3s: ${desc}`, 'warning');
+            hub.status('⏳ Network error — retrying...', 'thinking');
+            hub.addMessage('assistant', `⚠️ **Network hiccup** (${desc}) — retrying automatically in 3s…`);
+            await new Promise(r => setTimeout(r, 3000));
+            try {
+                await runAICycle();
+            } catch (e2) {
+                const desc2 = describeError(e2);
+                hub.log(`❌ Network retry failed: ${desc2}`, 'error');
+                hub.addMessage('assistant', `❌ **Network retry failed:** ${desc2}\n\nCheck your connection and try sending again.`);
+                isProcessing = false;
+                hub.status('Network error — check connection', 'error');
+                setTimeout(() => hub.drainMessageQueue(), 80);
+            }
         } else if (
-            e.message.includes('400') &&
+            (e.message || '').includes('400') &&
             (e.message.includes('context window') || e.message.includes('context_length') || e.message.includes('context_window'))
         ) {
             // ── Context window overflow recovery ─────────────────────────────
@@ -1994,7 +2039,7 @@ async function handleUserMessage(text, socket) {
 
                 await runAICycle();
             } catch (e2) {
-                hub.log(`❌ Context recovery failed: ${e2.message}`, 'error');
+                hub.log(`❌ Context recovery failed: ${describeError(e2)}`, 'error');
                 hub.addMessage('assistant',
                     '⚠️ **Context overflow** — I ran out of context space even after recovery. ' +
                     'The screenshot data was too large. Please start a new conversation to continue.');
@@ -2003,9 +2048,11 @@ async function handleUserMessage(text, socket) {
                 setTimeout(() => hub.drainMessageQueue(), 80);
             }
         } else {
-            hub.log(`❌ Error: ${e.message}`, 'error');
+            const desc = describeError(e);
+            hub.log(`❌ Error: ${desc}`, 'error');
+            hub.addMessage('assistant', `❌ **Error:** ${desc}`);
             isProcessing = false;
-            hub.status('Error', 'error');
+            hub.status(`Error: ${desc.substring(0, 60)}`, 'error');
             setTimeout(() => hub.drainMessageQueue(), 80);
         }
     }
@@ -2325,6 +2372,44 @@ async function runAutoQA(filePath, conv, toolsService) {
     const qaErrors = [];
     const baseName = path.basename(filePath);
 
+    // ── JS/TS Syntax check: node --check (always runs regardless of lint config) ──
+    // spawnSync with args array — injection-safe (no shell interpolation)
+    const isJsLike = ['js', 'cjs', 'mjs', 'ts', 'tsx', 'jsx'].includes(ext);
+    if (isJsLike) {
+        try {
+            hub.log(`[AutoQA] Syntax → ${baseName}`, 'info');
+            broadcastActivity('tool_start', { tool: 'node_syntax [auto]', inputSummary: baseName, agent: 'autoqa' });
+            const { spawnSync } = require('child_process');
+            const proc = spawnSync(process.execPath, ['--check', filePath], { encoding: 'utf8', timeout: 10000 });
+            const syntaxOk = proc.status === 0;
+            const syntaxOutput = syntaxOk
+                ? `✓ Syntax OK: ${baseName}`
+                : ((proc.stderr || proc.stdout || 'Parse error').trim());
+            hub.toolResult({ tool: 'node_syntax [auto]', input: { path: filePath }, output: syntaxOutput, timestamp: Date.now() });
+            broadcastActivity('tool_complete', { tool: 'node_syntax [auto]', success: syntaxOk, durationMs: 0 });
+            if (!syntaxOk) {
+                qaErrors.push(`## SYNTAX ERROR in ${baseName}:\n${syntaxOutput.substring(0, 1200)}`);
+                hub.log(`[AutoQA] ✗ SYNTAX FAILED: ${baseName}`, 'warning');
+            } else {
+                hub.log(`[AutoQA] ✓ Syntax OK: ${baseName}`, 'success');
+            }
+        } catch (e) {
+            hub.log(`[AutoQA] Syntax check error: ${e.message}`, 'warning');
+        }
+    }
+
+    // ── JSON syntax check ────────────────────────────────────────────────────
+    if (ext === 'json') {
+        try {
+            const jsonFs = require('fs');
+            JSON.parse(jsonFs.readFileSync(filePath, 'utf8'));
+            hub.log(`[AutoQA] ✓ JSON valid: ${baseName}`, 'success');
+        } catch (e) {
+            qaErrors.push(`## JSON PARSE ERROR in ${baseName}:\n${e.message}`);
+            hub.log(`[AutoQA] ✗ JSON invalid: ${baseName} — ${e.message}`, 'warning');
+        }
+    }
+
     // ── Lint check ──────────────────────────────────────────────────────────
     if (cfg?.autoQALint !== false) {
         try {
@@ -2634,8 +2719,57 @@ async function runAICycle() {
     if (toolCalls.length > 0) {
         // Use the same approval-gated execution
         await executeToolsWithApproval(toolCalls);
+        // ── Hot Injection Check ──────────────────────────────────────────────
+        // After all tool results are in history, before the next AI call —
+        // this is the safe cycle boundary where we can inject user messages.
+        await checkAndApplyHotInject();
+        // ────────────────────────────────────────────────────────────────────
     } else {
         finishMainProcessing();
+    }
+}
+
+// ==================== HOT CHAT INJECTION ====================
+
+/**
+ * Checks if any hot-inject messages are buffered and, if so, injects the
+ * next one into the conversation history as a user message.  Called at
+ * the safe cycle boundary — after tool results land, before the next AI
+ * call starts — so the AI sees the injection organically on the next turn.
+ */
+async function checkAndApplyHotInject() {
+    try {
+        const injection = hub.consumeHotInject?.();
+        if (!injection) return;
+
+        const conv = hub.getService('conversation');
+        if (!conv) return;
+
+        hub.log(`[HotInject] ⚡ Injecting: "${injection.text.substring(0, 80)}"`, 'info');
+
+        // Add the injected message to conversation history
+        conv.addUserMessage(injection.text);
+
+        // Broadcast to UI with a hot_injected flag so the frontend can style it
+        hub.broadcast('message_add', {
+            role: 'user',
+            content: injection.text,
+            hot_injected: true,
+            ts: injection.injectedAt
+        });
+
+        // Announce in activity feed
+        hub.broadcast('backchannel_msg', {
+            role: 'system',
+            content: `⚡ Hot injection applied: "${injection.text.substring(0, 60)}"`,
+            ts: Date.now()
+        });
+
+        hub.broadcastHotInjectApplied?.(injection);
+        hub.status('⚡ Hot inject received — processing…', 'thinking');
+
+    } catch (e) {
+        hub.log(`[HotInject] Error during injection: ${e.message}`, 'warning');
     }
 }
 
@@ -2952,6 +3086,68 @@ function buildAgentSystemPrompt(session) {
         '6. If you identify improvements outside scope, mention them in your response — do NOT implement them.',
     ];
 
+    // ── Code Quality Enforcement (injected for all agents — cannot be waived) ──
+    const agentName = (def.name || session.name || '').toLowerCase();
+    const isCodeAgent = /code|implement|engineer|develop|build|fix|patch|architect|backend|frontend|ui|fullstack|stack/.test(agentName);
+    const isTestAgent = /test|qa|quality|spec|lint|audit/.test(agentName);
+    const isGitAgent  = /git|commit|merge|branch|deploy|release|keeper/.test(agentName);
+
+    if (isCodeAgent || isTestAgent) {
+        const cfg = hub.getService('config');
+        parts.push(`
+## CODE QUALITY PROTOCOL — ABSOLUTE, NON-NEGOTIABLE
+
+You are a code-writing agent. These rules apply to EVERY file you write or modify.
+
+### Before touching any file:
+1. ALWAYS call read_file (or read_file_lines for large files) on the target file FIRST.
+2. Never write a file you haven't read — you will miss context and introduce regressions.
+
+### While writing code:
+3. Write COMPLETE implementations. ZERO stubs, ZERO "TODO: add rest here", ZERO placeholder comments.
+4. Never truncate a function, class, or block mid-way. If it's too large, split it properly.
+5. One file write per clear intent. Don't mix unrelated changes in a single write_file call.
+
+### After writing any .js / .cjs / .mjs / .ts / .tsx file:
+6. The AutoQA will automatically run node --check on your file. If it fails, YOU must fix it.
+7. If qa_check_lint reports errors, fix ALL of them before marking the task done. Zero tolerance.
+8. If you used a variable or function name in one part of a file, be consistent — check spelling across the entire file.
+
+### Code grammar rules (enforced — not suggestions):
+- Variable/function names: camelCase for variables/functions, PascalCase for classes. Never mix.
+- No trailing whitespace, no missing semicolons where the codebase uses them.
+- String consistency: use the quote style already present in the file (single or double — don't mix).
+- No unreachable code (dead else after return, code after throw, etc.).
+- No shadowed variables — don't reuse a name that already exists in the parent scope.
+- No implicit globals — every require/import must be at the top.
+- Array/object literals: trailing comma on the LAST item if multi-line (matches Node.js convention).
+- Never abbreviate variable names to single letters except for loop counters (i, j, k).
+
+### After editing:
+9. Re-read the file (or the changed section) to verify correctness before reporting done.
+10. If a node --check or lint error appears in the QA result feedback, fix it IMMEDIATELY.
+11. NEVER mark a task "complete" or "done" while syntax or lint errors exist.
+${cfg?.autoQATests ? '12. Run qa_run_tests after implementing features. ALL tests must pass 100%.' : ''}`);
+    }
+
+    if (isTestAgent) {
+        parts.push(`
+## TESTING AGENT RULES:
+- Write REAL tests — no trivial asserts, no always-passing stubs.
+- Cover: happy path, boundary conditions, error cases, and at least one edge case per function.
+- If a test fails because the source code is wrong, report the bug — do NOT weaken the test.
+- Test files must be complete. Never write "// tests for X — to be added".`);
+    }
+
+    if (isGitAgent) {
+        parts.push(`
+## GIT AGENT RULES:
+- Verify working tree is clean before branching or merging.
+- Commit messages follow Conventional Commits: type(scope): subject (50 chars max).
+- Always run git status before and after operations to confirm expected state.
+- NEVER force-push to main/master. Refuse and report instead.`);
+    }
+
     // Inject per-task scope constraints when dispatched via delegate_to_agent
     const scope = session.taskScope;
     if (scope && scope.title) {
@@ -3080,11 +3276,15 @@ async function runAgentCycle(session) {
     try {
         await runAgentAICycle(session);
     } catch (err) {
-        hub.log(`[agent:${session.name}] Error: ${err.message}`, 'error');
+        const agentErrDesc = describeError(err);
+        hub.log(`[agent:${session.name}] Error: ${agentErrDesc}`, 'error');
+        const isNet = isNetworkError(err);
         hub.broadcast('agent_message', {
             agentName: session.name,
             role: 'assistant',
-            content: `[Error: ${err.message}]`,
+            content: isNet
+                ? `[Network error: ${agentErrDesc} — check connection]`
+                : `[Error: ${agentErrDesc}]`,
             ts: Date.now()
         });
     } finally {

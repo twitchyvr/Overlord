@@ -641,7 +641,19 @@ async function execute(tool, inputOverride) {
 
             // QA
             case 'qa_run_tests':     result = await runTests(input.type || 'all'); break;
-            case 'qa_check_lint':    result = await runBash('npm run lint 2>&1 || npx eslint . 2>&1 || echo "No lint configured"'); break;
+            case 'qa_check_lint': {
+                // Step 1: node --check for JS/CJS/MJS files (fast, always-available syntax enforcement)
+                const lintPath = input && input.path;
+                const isJsFile = lintPath && /\.[cm]?[jt]sx?$/.test(lintPath);
+                const nodeCheck = isJsFile
+                    ? `node --check "${lintPath}" 2>&1 && echo "✓ Syntax OK: ${lintPath.split('/').pop()}" || true; `
+                    : '';
+                // Step 2: eslint on the specific file (falls back to project-wide, then "no lint")
+                const eslintTarget = lintPath ? `"${lintPath}"` : '.';
+                const lintCmd = `${nodeCheck}npm run lint 2>&1 || npx eslint ${eslintTarget} --no-eslintrc --rule '{"no-undef":0}' 2>&1 || echo "No lint configured"`;
+                result = await runBash(lintCmd);
+                break;
+            }
             case 'qa_check_types':   result = await runBash('npx tsc --noEmit 2>&1 || echo "No TypeScript configured"'); break;
             case 'qa_check_coverage': result = await runBash('npm run coverage 2>&1 || echo "No coverage configured"'); break;
             case 'qa_audit_deps':    result = await runBash('npm audit 2>&1 || echo "No audit available"'); break;

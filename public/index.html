@@ -1315,6 +1315,21 @@
 
         /* Plan message — cyan left border to distinguish from normal responses */
         .message.assistant.plan-message { border-left:3px solid var(--accent-cyan); }
+        /* Hot-injected user message — amber left border + subtle glow */
+        .message.user.hot-injected {
+            border-left: 3px solid #ffaa00;
+            background: rgba(255, 170, 0, 0.06);
+        }
+        .message.user.hot-injected .role {
+            color: #ffaa00 !important;
+            font-weight: 700;
+        }
+        /* Hot inject button hover state */
+        #btn-hot-inject:hover {
+            background: rgba(255,170,0,0.22) !important;
+            border-color: rgba(255,170,0,0.7) !important;
+            transform: scale(1.04);
+        }
 
         /* AI-set badge in settings modal */
         .ai-set-badge { font-size:9px; background:rgba(168,85,247,.18); border:1px solid rgba(168,85,247,.35); border-radius:3px; padding:1px 4px; color:var(--plasma); margin-left:4px; vertical-align:middle; }
@@ -2124,6 +2139,36 @@
         .tc-lbl { font-size: 8px; font-weight: 700; letter-spacing: 0.08em; color: var(--text-muted); text-transform: uppercase; margin-top: 4px; }
         .tc-lbl:first-child { margin-top: 0; }
         .tc pre { margin: 0; font-size: 9px; line-height: 1.5; color: rgba(200,168,255,0.55); white-space: pre-wrap; word-break: break-all; max-height: 120px; overflow-y: auto; background: rgba(0,0,0,0.2); border-radius: 3px; padding: 4px 6px; }
+        /* ── delegate_to_agent magical agent name ── */
+        @keyframes tc-agent-aurora {
+            0%   { background-position: 0%   50%; }
+            50%  { background-position: 100% 50%; }
+            100% { background-position: 0%   50%; }
+        }
+        @keyframes tc-agent-float {
+            0%, 100% { transform: translateY(0px); }
+            33%       { transform: translateY(-1.2px) rotate(-0.4deg); }
+            66%       { transform: translateY(0.6px)  rotate(0.3deg); }
+        }
+        @keyframes tc-agent-sparkle {
+            0%, 100% { opacity: 0.7; text-shadow: 0 0 4px rgba(168,85,247,0.5); }
+            50%       { opacity: 1;   text-shadow: 0 0 10px rgba(168,85,247,0.9), 0 0 20px rgba(0,212,255,0.5); }
+        }
+        .tc-agent-magic {
+            display: inline-block;
+            font-family: 'SF Mono', 'Menlo', monospace;
+            font-size: 9px; font-weight: 700; letter-spacing: 0.04em;
+            background: linear-gradient(90deg, #00d4ff 0%, #a855f7 30%, #f59e0b 55%, #a855f7 75%, #00d4ff 100%);
+            background-size: 300% 100%;
+            -webkit-background-clip: text; background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: tc-agent-aurora 2.8s ease-in-out infinite,
+                       tc-agent-float   2.1s ease-in-out infinite,
+                       tc-agent-sparkle 2.4s ease-in-out infinite;
+        }
+        .tc-delegate { border-color: rgba(168,85,247,0.28) !important; }
+        .tc-delegate > summary { background: linear-gradient(90deg, rgba(168,85,247,0.05), rgba(0,212,255,0.04)); }
+        .tc-delegate .tc-icon { opacity: 1; filter: hue-rotate(200deg) brightness(1.4); }
 
         .log-entry { padding: 2px 0; font-size: 11px; font-family: 'SF Mono', 'Menlo', monospace; word-break: break-word; color: var(--text-secondary); }
         /* Inline Image Pill in Input */
@@ -2334,41 +2379,45 @@
 
             /* ── 4. INPUT AREA — slimmed down ──────────────────────────────────
                Context bar hidden (path/project not critical while typing).
-               Toolbar collapses: hide non-essential buttons, keep image + overflow + mode.
+               Toolbar: hide rarely-used buttons, keep milestones + image + overflow + mode.
             ────────────────────────────────────────────────────────────────── */
-            .input-area { padding: 6px 8px 0; }
+            .input-area { padding: 6px 8px 6px; }
 
             /* Context bar — hidden on mobile, saves ~26px */
             #input-context-bar { display: none; }
 
-            /* Toolbar row: compressed, only essential buttons visible */
+            /* Toolbar row: compressed, horizontally scrollable if needed */
             .input-toolbar {
-                gap: 5px; margin-bottom: 5px;
-                flex-wrap: nowrap; overflow: visible;
+                gap: 4px; margin-bottom: 6px;
+                flex-wrap: nowrap;
+                overflow-x: auto; overflow-y: visible;
                 align-items: center;
+                -webkit-overflow-scrolling: touch;
+                scrollbar-width: none;
             }
+            .input-toolbar::-webkit-scrollbar { display: none; }
             .toolbar-btn {
-                width: 36px; height: 36px; padding: 0;
-                font-size: 16px; border-radius: 9px; flex-shrink: 0;
+                width: 38px; height: 38px; padding: 0;
+                font-size: 17px; border-radius: 10px; flex-shrink: 0;
                 display: flex; align-items: center; justify-content: center;
             }
-            /* Hide non-essential toolbar buttons (they're in the tab bar or overflow) */
-            /* Keep: image attach (#6), overflow (#7) */
+            /* Hide rarely-used buttons on mobile — accessible via overflow (⋯) menu */
             .input-toolbar > .toolbar-btn:nth-child(1),  /* ? help */
             .input-toolbar > .toolbar-btn:nth-child(2),  /* 👥 agents */
             .input-toolbar > .toolbar-btn:nth-child(3),  /* 📋 kanban */
-            .input-toolbar > .toolbar-btn:nth-child(4),  /* 📁 projects */
-            .input-toolbar > .toolbar-btn:nth-child(5) { /* 🚀 milestones */
+            .input-toolbar > .toolbar-btn:nth-child(4) { /* 📁 projects */
                 display: none;
             }
+            /* 🚀 milestones (#5) and 📷 image (#6) stay visible — primary actions */
 
             /* Long-Run: hide label, keep tiny toggle */
             .long-run-label { display: none; }
             .long-run-wrap { gap: 4px; flex-shrink: 0; }
 
-            /* Mode selector: more compact */
+            /* Mode selector: compact — fits on small screen */
             .chat-mode-selector { border-radius: 7px; overflow: hidden; flex-shrink: 0; }
-            .chat-mode-btn { padding: 6px 9px; font-size: 10px; letter-spacing: 0; }
+            .chat-mode-btn { padding: 5px 7px; font-size: 9px; letter-spacing: 0; }
+            /* Abbreviate mode labels on mobile via pseudo-trick is not possible; rely on short natural labels */
 
             /* Textarea: 16px minimum to prevent iOS zoom-on-focus */
             #user-input {
@@ -2378,7 +2427,7 @@
                 line-height: 1.5;
             }
             /* Send button: good tap target */
-            #btn-send { padding: 10px 16px; font-size: 13px; min-height: 44px; min-width: 72px; border-radius: 10px; }
+            #btn-send { padding: 10px 14px; font-size: 13px; min-height: 44px; min-width: 64px; border-radius: 10px; }
 
             /* Message queue: compact */
             .msg-queue-panel { max-height: 110px; }
@@ -2395,13 +2444,33 @@
                 border-top: 1px solid var(--border);
                 flex-shrink: 0;
                 background: var(--bg-secondary);
-            }
-            .mobile-nav-items {
+                /* Account for iOS home indicator / safe area */
                 padding-bottom: env(safe-area-inset-bottom, 0px);
             }
-            .mobile-nav-item { min-height: 52px; font-size: 10px; gap: 2px; padding: 5px 2px; }
-            .mobile-nav-item .icon { font-size: 22px; line-height: 1; }
+            .mobile-nav-items {
+                display: flex;
+                padding-bottom: 0; /* safe area now on .mobile-nav itself */
+            }
+            .mobile-nav-item { min-height: 50px; font-size: 10px; gap: 2px; padding: 5px 2px; }
+            .mobile-nav-item .icon { font-size: 21px; line-height: 1; }
             .mobile-nav-item.active { color: var(--electric); border-top-color: var(--electric); }
+
+            /* ── 5b. PANEL CONTENT — full-height on mobile, no bottom cutoff ─── */
+            /* Active panel fills the right-panel overlay entirely */
+            .right-panel > .panel.mobile-panel-active {
+                display: flex; flex: 1; min-height: 0; flex-direction: column;
+                overflow: hidden;
+            }
+            .right-panel > .panel.mobile-panel-active .panel-content {
+                flex: 1; overflow-y: auto; min-height: 0;
+                /* Extra breathing room at scroll bottom */
+                padding-bottom: 12px !important;
+            }
+            /* Panel log: extra padding so last log lines are never clipped */
+            .right-panel > .panel-log.mobile-panel-active .panel-content,
+            #panel-log.mobile-panel-active .panel-content {
+                padding-bottom: 16px !important;
+            }
 
             /* ── 6. MISC ──────────────────────────────────────────────────────── */
             ::-webkit-scrollbar { width: 3px; }
@@ -2420,8 +2489,161 @@
             .message { font-size: 14px; }
         }
 
+        /* ══════════════════════════════════════════════════════════════════════
+           MOBILE LANDSCAPE — side-by-side dual-pane layout
+           Triggers when width ≤768px AND orientation is landscape
+           (covers iPhone SE landscape, small Androids, etc.)
+           For larger phones in landscape (>768px), a compact-height block below
+           keeps things usable.
+        ══════════════════════════════════════════════════════════════════════ */
+        @media (max-width: 768px) and (orientation: landscape) {
+            /* ── Switch from tab-based stacking to side-by-side ── */
+            .content {
+                position: static !important;
+                flex-direction: row !important;
+            }
+
+            /* Chat takes left 56% — always visible in landscape */
+            .chat-panel {
+                position: relative !important;
+                inset: auto !important;
+                display: flex !important;
+                flex: 1 1 56%;
+                min-width: 0;
+                padding-bottom: 0 !important;
+            }
+            /* Force visible even if a previous tab-switch hid it */
+            .chat-panel.mobile-hidden { display: flex !important; }
+
+            /* Right panel: right 44% — always visible */
+            .right-panel {
+                position: relative !important;
+                inset: auto !important;
+                display: flex !important;
+                flex-direction: column !important;
+                width: 44% !important;
+                min-width: 150px !important;
+                max-width: 44% !important;
+                overflow-y: auto;
+                overflow-x: hidden;
+                border-left: 1px solid var(--border);
+            }
+
+            /* All sub-panels show as header-only (collapsed) */
+            .right-panel > .panel {
+                display: flex !important;
+                flex-direction: column;
+                flex: 0 0 28px;        /* header only */
+                min-height: 28px;
+            }
+            .right-panel > .panel .panel-content {
+                display: none !important; /* collapsed content */
+            }
+            /* Active panel expands and shows content */
+            .right-panel > .panel.mobile-panel-active {
+                flex: 1 1 auto !important;
+            }
+            .right-panel > .panel.mobile-panel-active .panel-content {
+                display: flex !important;
+                flex-direction: column;
+            }
+
+            /* Show panel dividers between sections */
+            .panel-divider { display: block !important; }
+
+            /* ── Hide the tab bar — both panes always visible ── */
+            .mobile-nav { display: none !important; }
+
+            /* ── Ultra-compact status bar ── */
+            .status-bar {
+                height: 32px !important;
+                min-height: 32px !important;
+                padding: 0 6px !important;
+            }
+            .logo { font-size: 10px !important; letter-spacing: 0.1em; }
+            #status { font-size: 9px !important; max-width: 70px; }
+            #latency-hud { display: none !important; }
+            .sys-toggle-btn { display: none !important; }
+            #sys-info-pills { display: none !important; }
+
+            /* ── Compact input area ── */
+            .input-area { padding: 3px 6px env(safe-area-inset-bottom, 2px) !important; }
+            .input-toolbar { margin-bottom: 2px !important; gap: 3px !important; }
+            .toolbar-btn {
+                width: 28px !important; height: 28px !important;
+                font-size: 13px !important; border-radius: 6px;
+            }
+            #user-input {
+                min-height: 34px !important;
+                max-height: 72px !important;
+                font-size: 15px !important;
+                padding: 6px 10px !important;
+            }
+            #btn-send {
+                min-height: 34px !important;
+                padding: 6px 12px !important;
+                font-size: 12px !important;
+            }
+
+            /* ── Compact messages ── */
+            .chat-messages { padding: 4px 8px !important; gap: 5px !important; }
+            .message {
+                font-size: 13px !important;
+                padding: 7px 10px !important;
+                max-width: 95% !important;
+            }
+
+            /* ── Compact right-panel headers ── */
+            .panel-header {
+                height: 26px !important;
+                min-height: 26px !important;
+                flex: 0 0 26px !important;
+                font-size: 9px !important;
+                padding: 0 6px !important;
+            }
+            .panel-content { padding: 4px 6px !important; font-size: 11px !important; }
+        }
+
+        /* ══════════════════════════════════════════════════════════════════════
+           ALL DEVICES IN LANDSCAPE (any width, short viewport height ≤450px)
+           Keeps desktop-sized phones (iPhone 14 landscape = 844×390) usable too.
+        ══════════════════════════════════════════════════════════════════════ */
+        @media (max-height: 450px) {
+            .status-bar { height: 32px; min-height: 32px; }
+            .input-area { padding-top: 3px; padding-bottom: env(safe-area-inset-bottom, 3px); }
+            #user-input { min-height: 34px; max-height: 72px; }
+            #btn-send { min-height: 34px; }
+            .input-toolbar { margin-bottom: 2px; }
+            .chat-messages { padding: 4px 10px; gap: 5px; }
+            .message { font-size: 13px; padding: 7px 10px; }
+            .panel-header { height: 28px; min-height: 28px; flex: 0 0 28px; }
+            /* Clip the plan-approval bar so it doesn't swamp the viewport */
+            #plan-approval-bar { padding: 4px 8px; font-size: 11px; }
+            #plan-approval-bar button { min-height: 30px; padding: 3px 10px; font-size: 11px; }
+        }
+
+        /* ══════════════════════════════════════════════════════════════════════
+           PORTRAIT MOBILE — safe area + keyboard handling improvements
+        ══════════════════════════════════════════════════════════════════════ */
+        @media (max-width: 768px) and (orientation: portrait) {
+            /* Mobile nav accounts for home indicator on notched iPhones */
+            .mobile-nav-items {
+                padding-bottom: env(safe-area-inset-bottom, 4px);
+            }
+        }
+
         /* ==================== ACTIVITY FEED ==================== */
         .activity-feed { display: flex; flex-direction: column; gap: 2px; max-height: 200px; overflow-y: auto; }
+        /* When activity panel is full-screen active tab on mobile, let feed scroll freely */
+        @media (max-width: 768px) {
+            .right-panel > .panel.mobile-panel-active .activity-feed {
+                max-height: none;
+                flex: 1;
+                overflow-y: auto;
+            }
+            /* Cap neural section so activity feed gets most of the space */
+            .right-panel > .panel.mobile-panel-active .neural-section { max-height: 150px; overflow: hidden; }
+        }
         .activity-item {
             display: flex;
             align-items: flex-start;
@@ -3064,6 +3286,7 @@
                                 <div class="toolbar-overflow-item" onclick="toggleTheme();closeToolbarOverflow()">🌓 Toggle Theme</div>
                                 <div class="toolbar-overflow-item" id="btn-notif" onclick="showSettings();closeToolbarOverflow()">🔔 Notifications</div>
                                 <div class="toolbar-overflow-item" onclick="showSocketInspectorFilter();closeToolbarOverflow()">🔍 Filter Events</div>
+                                <div class="toolbar-overflow-item" id="btn-logout" onclick="doLogout();closeToolbarOverflow()" style="display:none;border-top:1px solid rgba(255,255,255,0.06);margin-top:4px;padding-top:8px;color:var(--accent-red,#f85149);">🚪 Sign Out</div>
                             </div>
                         </div>
                         <div style="flex:1"></div>
@@ -3115,6 +3338,7 @@
                         <div id="send-area" style="display:flex;align-items:center;gap:4px;flex-shrink:0;position:relative;z-index:1;">
                             <div class="thinking-ring" id="thinking-ring"></div>
                             <button id="btn-voice" class="voice-btn" title="Voice input (click to start, click again to stop)">🎤</button>
+                            <button id="btn-hot-inject" title="Hot inject — pops your message into the AI's context at the next cycle gap" style="display:none;background:rgba(255,170,0,0.12);border:1px solid rgba(255,170,0,0.45);color:#ffaa00;border-radius:8px;padding:6px 10px;font-size:11px;font-weight:700;cursor:pointer;letter-spacing:0.03em;transition:all 0.2s;white-space:nowrap;">⚡ Hot</button>
                             <button id="btn-send">Send</button>
                         </div>
                     </div>
@@ -3304,10 +3528,9 @@
                     <span class="icon">📜</span>
                     <span>Log</span>
                 </div>
-                <div class="mobile-nav-item" data-panel="telemetry" onclick="openTelemetry();showMobilePanel('chat',event)" style="position:relative;">
+                <div class="mobile-nav-item" data-panel="project" onclick="showMobilePanel('project', event)" style="position:relative;">
                     <span class="icon">📊</span>
-                    <span>Stats</span>
-                    <span class="tp-badge" id="tp-mobile-badge" style="display:none;top:2px;right:6px;"></span>
+                    <span>Project</span>
                 </div>
             </div>
         </div>
@@ -4294,7 +4517,7 @@
         // ── Panel registrations ────────────────────────────────────────────
         // These run once at startup. Any panel that depends on a socket event
         // registers here so it's always kept in sync automatically.
-        UIEngine.register('tasks-panel', 'tasks_update', () => {
+        UIEngine.register('tasks-panel', ['tasks_update', 'roadmap_update'], () => {
             renderTasks();
             if (typeof renderBurndown === 'function') renderBurndown();
             if (typeof renderDashboard === 'function') renderDashboard();
@@ -5639,6 +5862,19 @@
             else if (state === 'error') _logoEl.classList.add('logo-error');
         }
 
+        // ── Auth helpers ──────────────────────────────────────────────────────
+        async function doLogout() {
+            try {
+                await fetch('/api/auth/logout', { method: 'POST' });
+            } catch (_) {}
+            window.location.href = '/login.html';
+        }
+        // Show/hide sign-out button based on whether auth is enabled
+        fetch('/api/auth/status').then(r => r.json()).then(s => {
+            const logoutBtn = document.getElementById('btn-logout');
+            if (logoutBtn && s.enabled && s.authenticated) logoutBtn.style.display = '';
+        }).catch(() => {});
+
         socket.on('connect', () => {
             log('Connected', 'success');
             _setLogoState('connected');
@@ -5677,6 +5913,10 @@
         socket.on('connect_error', (err) => {
             log('Connection error: ' + err.message, 'error');
             _setLogoState('error');
+            // If the session expired, redirect to login
+            if (err.message === 'Unauthorized') {
+                setTimeout(() => { window.location.href = '/login.html'; }, 800);
+            }
         });
         
         socket.on('init', (data) => {
@@ -5754,6 +5994,8 @@
                 btn.title = 'Send message';
                 btn.style.opacity = '';
             }
+            // Keep hot inject button visibility in sync
+            if (typeof updateHotInjectBtn === 'function') updateHotInjectBtn();
         }
         
         socket.on('message_add', (msg) => {
@@ -5786,7 +6028,7 @@
             if (last && last.classList.contains('assistant') && lastContent === newContent) {
                 return; // Skip duplicate
             }
-            addMessage(msg.role, msg.content, [], msg.isPlan);
+            addMessage(msg.role, msg.content, [], msg.isPlan, msg.hot_injected);
             // Track session message counts
             if (msg.role === 'user')      { _stats.userMsgs++; _updateStatCounters(); }
             if (msg.role === 'assistant') { _stats.aiMsgs++;   _updateStatCounters(); }
@@ -5843,12 +6085,20 @@
         
         socket.on('roadmap_update', (items) => {
             window._roadmapItems = items || [];
+            // Always keep _msList in sync — it's just a filtered view of roadmap items
+            if (typeof _msList !== 'undefined') {
+                _msList = (items || []).filter(r => r.type === 'milestone');
+            }
             UIEngine.dispatch('roadmap_update', items);
             renderBurndown();
             // Refresh milestone manager if open
-            if (typeof _msList !== 'undefined' && document.getElementById('ms-overlay') && document.getElementById('ms-overlay').classList.contains('open')) {
-                _msList = (items || []).filter(r => r.type === 'milestone');
+            if (document.getElementById('ms-overlay') && document.getElementById('ms-overlay').classList.contains('open')) {
                 renderMilestoneList();
+                // Re-render detail if one is selected
+                if (typeof _msSelected !== 'undefined' && _msSelected) {
+                    const selMs = _msList.find(m => m.id === _msSelected);
+                    if (selMs && typeof renderMilestoneDetail === 'function') renderMilestoneDetail(selMs);
+                }
             }
         });
         socket.on('team_update', (agents) => {
@@ -5858,6 +6108,14 @@
         socket.on('tasks_update', (taskList) => {
             tasks = taskList || [];
             UIEngine.dispatch('tasks_update', taskList);
+            // Keep milestone manager task counts live when it's open
+            if (document.getElementById('ms-overlay') && document.getElementById('ms-overlay').classList.contains('open')) {
+                if (typeof renderMilestoneList === 'function') renderMilestoneList();
+                if (typeof _msSelected !== 'undefined' && _msSelected && typeof renderMilestoneDetail === 'function') {
+                    const selMs = (_msList || []).find(m => m.id === _msSelected);
+                    if (selMs) renderMilestoneDetail(selMs);
+                }
+            }
             // Recovery guard: if plan_pending tasks exist but the approval bar was missed
             // (e.g. plan_ready fired before client joined the conversation room), show it now.
             const _pendingPlanCount = tasks.filter(t => t.status === 'plan_pending').length;
@@ -6568,7 +6826,7 @@
         socket.on('working_dir_update', (path) => setWorkingDirectory(path));
         
         // UI Functions
-        function addMessage(role, content, images = [], isPlan = false) {
+        function addMessage(role, content, images = [], isPlan = false, hotInjected = false) {
             let text = '';
             
             if (typeof content === 'string') {
@@ -6584,7 +6842,10 @@
             const div = document.createElement('div');
             div.className = 'message ' + role;
             
-            let roleLabel = role === 'user' ? '👤 USER' : role === 'assistant' ? 'Assistant 🤖' : role;
+            let roleLabel = role === 'user'
+                ? (hotInjected ? '⚡ HOT INJECT' : '👤 USER')
+                : role === 'assistant' ? 'Assistant 🤖' : role;
+            if (hotInjected) div.classList.add('hot-injected');
             
             // Strip plan JSON blocks — replace with a clean task list card
             text = cleanPlanJSON(text);
@@ -6665,12 +6926,39 @@
             renderDashboard();
         }
 
+        // ── Shared milestone progress utility (single source of truth) ──────────
+        // ALL views (dashboard, milestone manager, kanban, PM chat) must use this.
+        function _getMilestoneProgress(ms) {
+            const msTasks = tasks.filter(t => t.milestoneId === ms.id);
+            const total = msTasks.length;
+            const done = msTasks.filter(t =>
+                t.completed === true || t.status === 'completed' || t.status === 'done'
+            ).length;
+            const inProgress = msTasks.filter(t =>
+                t.status === 'in_progress' || t.status === 'working' || t.status === 'running'
+            ).length;
+            const blocked = msTasks.filter(t =>
+                t.status === 'blocked' || t.status === 'skipped'
+            ).length;
+            const pct = total > 0 ? Math.round((done / total) * 100) : 0;
+            return { total, done, inProgress, blocked, pending: Math.max(0, total - done - inProgress - blocked), pct, tasks: msTasks };
+        }
+
+        // ── Get the active milestone consistently everywhere ──────────────────
+        function _getActiveMilestone() {
+            const milestones = (window._roadmapItems || []).filter(r => r.type === 'milestone');
+            return milestones.find(m => m.status === 'active' && !m.done)
+                || milestones.find(m => !m.done)
+                || milestones[milestones.length - 1]
+                || null;
+        }
+
         function renderDashboard() {
             const allItems = window._roadmapItems || [];
             const milestones = allItems.filter(r => r.type === 'milestone');
 
-            // -- Active milestone card --
-            const activeMilestone = milestones.find(m => m.status === 'active' && !m.done) || milestones.find(m => !m.done) || milestones[milestones.length - 1];
+            // -- Active milestone card — uses shared utility for consistent numbers --
+            const activeMilestone = _getActiveMilestone();
             const msNameEl = document.getElementById('dash-ms-name');
             const msColorEl = document.getElementById('dash-ms-color');
             const msDaysEl = document.getElementById('dash-ms-days');
@@ -6678,16 +6966,13 @@
             const kpiRowEl = document.getElementById('dash-kpi-row');
 
             if (activeMilestone) {
-                const msTasks = tasks.filter(t => t.milestoneId === activeMilestone.id);
-                const total = msTasks.length;
-                const done = msTasks.filter(t => t.completed || t.status === 'completed' || t.status === 'done').length;
-                const inProgress = msTasks.filter(t => t.status === 'in_progress' || t.status === 'working').length;
-                const pct = total > 0 ? Math.round((done / total) * 100) : 0;
-                const activeAgents = new Set(msTasks.flatMap(t => Array.isArray(t.assignee) ? t.assignee : (t.assignee ? [t.assignee] : []))).size;
+                const prog = _getMilestoneProgress(activeMilestone);
+                const { total, done, inProgress, pct } = prog;
+                const activeAgents = new Set(prog.tasks.flatMap(t => Array.isArray(t.assignee) ? t.assignee : (t.assignee ? [t.assignee] : []))).size;
 
                 if (msNameEl) msNameEl.textContent = activeMilestone.text || activeMilestone.name || 'Active Milestone';
                 if (msColorEl) msColorEl.style.background = activeMilestone.color || '#6366f1';
-                if (msDaysEl) msDaysEl.textContent = activeMilestone.done ? '✅ Done' : (total > 0 ? pct + '% complete' : '');
+                if (msDaysEl) msDaysEl.textContent = activeMilestone.done ? '✅ Done' : (total > 0 ? pct + '% complete' : 'No tasks');
                 if (msProgressEl) msProgressEl.style.width = pct + '%';
 
                 if (kpiRowEl) {
@@ -6708,14 +6993,33 @@
                     '</div>';
                 }
             } else {
-                if (msNameEl) msNameEl.textContent = 'No milestones yet';
-                if (kpiRowEl) {
-                    // Show global task stats
-                    const done = tasks.filter(t => t.completed || t.status === 'completed').length;
+                if (msNameEl) msNameEl.textContent = 'All Tasks';
+                if (msColorEl) msColorEl.style.background = 'var(--accent-cyan)';
+                if (msProgressEl) {
+                    const done = tasks.filter(t => t.completed || t.status === 'completed' || t.status === 'done').length;
                     const total = tasks.length;
-                    kpiRowEl.innerHTML = '<div style="flex:1;text-align:center;padding:4px 2px;">' +
-                        '<div style="font-size:14px;font-weight:800;color:#10b981;">' + done + '/' + total + '</div>' +
-                        '<div style="font-size:9px;color:var(--text-muted);">Tasks Done</div></div>';
+                    const pct = total > 0 ? Math.round((done / total) * 100) : 0;
+                    msProgressEl.style.width = pct + '%';
+                    if (msDaysEl) msDaysEl.textContent = total > 0 ? pct + '% complete' : '';
+                }
+                if (kpiRowEl) {
+                    // Show global task KPIs
+                    const done = tasks.filter(t => t.completed || t.status === 'completed' || t.status === 'done').length;
+                    const inProg = tasks.filter(t => t.status === 'in_progress' || t.status === 'working').length;
+                    const total = tasks.length;
+                    const blocked = tasks.filter(t => t.status === 'blocked' || t.status === 'skipped').length;
+                    const kpis = [
+                        { label: 'Done', value: done + '/' + total, color: '#10b981' },
+                        { label: 'Active', value: inProg, color: '#6366f1' },
+                        { label: 'Blocked', value: blocked, color: '#f59e0b' },
+                        { label: 'Todo', value: total - done - inProg - blocked, color: '#3b82f6' }
+                    ];
+                    kpiRowEl.innerHTML = kpis.map((k, i) =>
+                        '<div style="flex:1;text-align:center;padding:4px 2px;' + (i < kpis.length - 1 ? 'border-right:1px solid var(--border);' : '') + '">' +
+                        '<div style="font-size:14px;font-weight:800;color:' + k.color + ';">' + k.value + '</div>' +
+                        '<div style="font-size:9px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.04em;">' + k.label + '</div>' +
+                        '</div>'
+                    ).join('');
                 }
             }
 
@@ -6847,18 +7151,20 @@
             _appendPmMessage('user', text);
             _pmChatHistory.push({ role: 'user', content: text });
 
-            // Build project context summary
-            const allItems = window._roadmapItems || [];
-            const milestones = allItems.filter(r => r.type === 'milestone');
+            // Build project context — uses same shared utility as dashboard/milestone manager
+            const milestones = (window._roadmapItems || []).filter(r => r.type === 'milestone');
             const totalTasks = tasks.length;
-            const doneTasks = tasks.filter(t => t.completed || t.status === 'completed').length;
-            const activeMilestone = milestones.find(m => m.status === 'active' && !m.done) || milestones.find(m => !m.done);
+            const doneTasks = tasks.filter(t => t.completed === true || t.status === 'completed' || t.status === 'done').length;
+            const activeMilestone = _getActiveMilestone();
+            const activeProg = activeMilestone ? _getMilestoneProgress(activeMilestone) : null;
             const agentNames = (window._teamAgents || []).map(a => a.name).join(', ');
 
             const systemCtx = 'You are a Project Manager AI assistant embedded in the OVERLORD AI orchestration platform. ' +
                 'Answer concisely in 1-3 sentences. Current project state: ' +
                 'Tasks: ' + doneTasks + '/' + totalTasks + ' done. ' +
-                (activeMilestone ? 'Active milestone: "' + (activeMilestone.text || activeMilestone.name) + '". ' : '') +
+                (activeMilestone && activeProg
+                    ? 'Active milestone: "' + (activeMilestone.text || activeMilestone.name) + '" — ' + activeProg.done + '/' + activeProg.total + ' tasks (' + activeProg.pct + '% complete). '
+                    : '') +
                 'Total milestones: ' + milestones.length + ' (' + milestones.filter(m=>m.done).length + ' complete). ' +
                 'Team agents: ' + (agentNames || 'none') + '. ' +
                 'Be direct, helpful, and data-driven. If asked to create tasks or milestones, say you cannot do it directly but the user can use the + buttons.';
@@ -7591,6 +7897,27 @@
 
             header.addEventListener('click', (e) => {
                 if (e.target.tagName === 'BUTTON' || e.target.closest('button')) return;
+
+                // ── Landscape mobile: tap header → make that panel the active one ──
+                // (instead of toggling collapse, which isn't useful in landscape side-pane)
+                const isLandscapeMobile = window.innerWidth <= 768 && window.innerHeight <= 500 && window.innerWidth > window.innerHeight;
+                if (isLandscapeMobile) {
+                    const rightPanel = document.getElementById('right-panel');
+                    if (rightPanel && rightPanel.contains(panel)) {
+                        // Map panel id → the tab name
+                        const panelTabMap = {
+                            'panel-roadmap': 'project', 'panel-team': 'team',
+                            'panel-activity': 'activity', 'panel-tasks': 'tasks',
+                            'panel-tools': 'activity', 'panel-log': 'log'
+                        };
+                        const tabName = panelTabMap[panel.id];
+                        if (tabName && typeof showMobilePanel === 'function') {
+                            showMobilePanel(tabName, e);
+                        }
+                        return;
+                    }
+                }
+
                 panel.classList.toggle('collapsed');
                 applyPanelAriaState(panel);
                 savePanelStates();
@@ -8165,8 +8492,64 @@
         }
         
         elements.btnSend.onclick = send;
-        elements.input.onkeydown = function(e) { if (e.key === 'Enter' && e.ctrlKey) { e.preventDefault(); send(); }};        
+        elements.input.onkeydown = function(e) { if (e.key === 'Enter' && e.ctrlKey) { e.preventDefault(); send(); }};
         elements.btnCancel.onclick = function() { socket.emit('cancel'); };
+
+        // ── Hot Chat Injection ────────────────────────────────────────────────
+        // Sends the message at the NEXT cycle boundary instead of queuing it
+        // at the back of the regular queue.  The AI sees it as a mid-task aside.
+        let _hotInjectCount = 0;
+
+        function hotInjectSend() {
+            let text = elements.input.value.trim();
+            if (!text) return;
+            elements.input.value = '';
+            socket.emit('hot_inject', text, (ack) => {
+                if (ack && ack.status === 'hot_queued') {
+                    log(`⚡ Hot inject queued — will be injected at next cycle gap`, 'info');
+                } else if (ack && ack.status === 'immediate') {
+                    log('⚡ Hot inject sent immediately (AI was idle)', 'info');
+                }
+            });
+        }
+
+        const btnHot = document.getElementById('btn-hot-inject');
+        if (btnHot) {
+            btnHot.onclick = hotInjectSend;
+            // Also allow Alt+Enter as a hot-inject shortcut
+        }
+        elements.input.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && e.altKey) { e.preventDefault(); hotInjectSend(); }
+        });
+
+        // Show/hide hot inject button based on processing state
+        function updateHotInjectBtn() {
+            const btn = document.getElementById('btn-hot-inject');
+            if (!btn) return;
+            if (isProcessing) {
+                btn.style.display = '';
+                btn.textContent = _hotInjectCount > 0 ? `⚡ Hot (${_hotInjectCount})` : '⚡ Hot';
+            } else {
+                btn.style.display = 'none';
+                _hotInjectCount = 0;
+            }
+        }
+
+        // Track pending hot inject count
+        socket.on('hot_inject_pending', (data) => {
+            _hotInjectCount = data.count || 0;
+            updateHotInjectBtn();
+            if (data.preview && data.count > 0) {
+                log(`⚡ Hot inject pending (${data.count}): "${data.preview}"`, 'info');
+            }
+        });
+
+        socket.on('hot_inject_applied', (data) => {
+            _hotInjectCount = Math.max(0, _hotInjectCount - 1);
+            updateHotInjectBtn();
+            log(`⚡ Hot injection applied to AI context`, 'success');
+        });
+        // ─────────────────────────────────────────────────────────────────────
         
         function showHelp() {
             const el = document.getElementById('help-overlay');
@@ -8832,13 +9215,15 @@
 
         function createToolChipEl(chip) {
             const el = document.createElement('details');
-            el.className = 'tc';
+            const isDelegate = chip.name === 'delegate_to_agent';
+            el.className = 'tc' + (isDelegate ? ' tc-delegate' : '');
             const safeId = (chip.id || '').replace(/[^a-zA-Z0-9_-]/g, '_');
             if (chip.id) el.dataset.tcId = chip.id;
             const sum = document.createElement('summary');
+            const icon = isDelegate ? '\u2728' : '\u2699\ufe0f'; // ✨ for delegate, ⚙️ otherwise
             sum.innerHTML =
                 '<span class="tc-chevron">\u25b8</span>' +
-                '<span class="tc-icon">\u2699\ufe0f</span>' +
+                '<span class="tc-icon">' + icon + '</span>' +
                 '<span class="tc-name">' + escapeHtml(chip.name || '') + '</span>' +
                 '<span class="tc-param" id="tcp-' + safeId + '"></span>' +
                 '<span class="tc-dur"   id="tcd-' + safeId + '"></span>' +
@@ -8891,7 +9276,14 @@
 
         function _applyToolChip(safeId, name, input, output, durationMs, success) {
             const paramEl = document.getElementById('tcp-' + safeId);
-            if (paramEl && input) paramEl.textContent = ' \u00b7 ' + toolParamSummary(name, input);
+            if (paramEl && input) {
+                if (name === 'delegate_to_agent') {
+                    const agentName = escapeHtml(toolParamSummary(name, input));
+                    paramEl.innerHTML = ' \u00b7 <span class="tc-agent-magic">' + agentName + '</span>';
+                } else {
+                    paramEl.textContent = ' \u00b7 ' + toolParamSummary(name, input);
+                }
+            }
             const dotEl = document.getElementById('tcdot-' + safeId);
             if (dotEl) dotEl.className = 'tc-dot ' + (output != null ? (success ? 'ok' : 'err') : 'run');
             const durEl = document.getElementById('tcd-' + safeId);
@@ -9232,17 +9624,17 @@
             }
             listEl.innerHTML = '';
             _msList.forEach(ms => {
-                const msTasks = tasks.filter(t => t.milestoneId === ms.id);
-                const total = msTasks.length;
-                const done = msTasks.filter(t => t.completed || t.status === 'completed').length;
+                // Use shared utility — same numbers as dashboard and PM chat
+                const prog = _getMilestoneProgress(ms);
+                const { total, done, pct: pctNum } = prog;
                 const card = document.createElement('div');
                 card.className = 'ms-card' + (ms.id === _msSelected ? ' selected' : '');
                 card.style.borderLeftColor = ms.color || '#58a6ff';
                 card.onclick = () => msSelectMilestone(ms.id);
                 // Progress ring SVG (small, 32px)
-                const pct = total > 0 ? done / total : 0;
+                const pctFrac = total > 0 ? done / total : 0;
                 const r = 12, circ = 2 * Math.PI * r;
-                const dash = pct * circ;
+                const dash = pctFrac * circ;
                 const ringColor = ms.status === 'completed' ? '#3fb950' : (ms.status === 'active' ? '#00d4ff' : '#444');
                 const ringHtml = `<svg class="ms-ring" width="32" height="32" viewBox="0 0 32 32">
                     <circle cx="16" cy="16" r="${r}" fill="none" stroke="rgba(255,255,255,0.07)" stroke-width="2.5"/>
@@ -9293,9 +9685,9 @@
             _msSelected = ms.id;
             const detail = document.getElementById('ms-detail-area');
             if (!detail) return;
-            const allTasks = tasks;
-            const assigned = allTasks.filter(t => t.milestoneId === ms.id);
-            const unassigned = allTasks.filter(t => !t.milestoneId);
+            const prog = _getMilestoneProgress(ms); // shared utility — same numbers everywhere
+            const assigned = prog.tasks; // tasks belonging to this milestone
+            const unassigned = tasks.filter(t => !t.milestoneId);
             const MS_COLORS = ['#58a6ff','#3fb950','#f0ad4e','#f85149','#a855f7','#00d4ff','#e34ba9','#ff7b72'];
 
             const colorSwatches = MS_COLORS.map(c =>
@@ -9328,7 +9720,7 @@
                 ).join('')
                 : '<div style="color:var(--text-muted);font-size:11px;padding:8px;">All tasks are assigned.</div>';
 
-            const pendingCount = assigned.filter(t => !t.completed && t.status !== 'completed' && t.status !== 'skipped').length;
+            const pendingCount = prog.pending + prog.inProgress; // workable tasks (pending + in-progress)
             detail.innerHTML = `
                 <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px;">
                     <div style="font-size:14px;font-weight:700;color:var(--text-primary);">${escapeHtml(ms.text||'Untitled')}</div>
@@ -10247,6 +10639,7 @@
             tools:    'panel-activity', // legacy alias
             log:      'panel-log',
             roadmap:  'panel-roadmap',
+            project:  'panel-roadmap', // Dashboard / KPI tab
         };
 
         let _mobileActiveTab = 'chat';
@@ -10296,6 +10689,10 @@
                     target.classList.add('mobile-panel-active');
                     // Also expand it if collapsed
                     target.classList.remove('collapsed');
+                    // Refresh dashboard when switching to Project tab
+                    if ((panelName === 'project' || panelName === 'roadmap') && typeof renderDashboard === 'function') {
+                        setTimeout(renderDashboard, 50);
+                    }
                 } else {
                     // Fallback: show first available panel
                     const first = rightPanel.querySelector('.panel');

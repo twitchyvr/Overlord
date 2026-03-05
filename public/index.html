@@ -827,7 +827,7 @@
         .content { display: flex; flex: 1; overflow: hidden; gap: 1px; }
         
         /* Chat Panel */
-        .chat-panel { flex: 1; display: flex; flex-direction: column; background: var(--bg-dark); min-width: 0; overflow: hidden; }
+        .chat-panel { flex: 1; display: flex; flex-direction: column; background: var(--bg-dark); min-width: 0; overflow: hidden; position: relative; }
         .chat-messages { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 16px; }
         
         .message { max-width: 85%; padding: 12px 16px; border-radius: 12px; line-height: 1.5; width: fit-content; }
@@ -1353,6 +1353,101 @@
         .toast-close:hover { opacity:1; }
         @keyframes toast-in { from { opacity:0; transform:translateX(20px); } to { opacity:1; transform:none; } }
         @keyframes toast-out { from { opacity:1; } to { opacity:0; transform:translateX(20px); } }
+
+        /* ── Feature 1: JSON syntax highlighting ───────────────────────────── */
+        .json-key  { color: #38bdf8; }
+        .json-str  { color: #4ade80; }
+        .json-num  { color: #fb923c; }
+        .json-bool { color: #c084fc; }
+        .json-null { color: #f87171; }
+
+        /* ── Feature 2: Expandable pre (fade + see-more) ────────────────────── */
+        .expandable-pre {
+            position: relative;
+            max-height: 160px;
+            overflow: hidden;
+            mask-image: linear-gradient(to bottom, black 55%, transparent 100%);
+            -webkit-mask-image: linear-gradient(to bottom, black 55%, transparent 100%);
+        }
+        .expandable-pre.expanded {
+            max-height: none;
+            mask-image: none;
+            -webkit-mask-image: none;
+        }
+        .see-more-btn {
+            display: block;
+            width: 100%;
+            margin-top: 3px;
+            padding: 3px 0;
+            background: none;
+            border: none;
+            color: var(--electric);
+            font-size: 9px;
+            font-family: 'SF Mono', 'Menlo', monospace;
+            cursor: pointer;
+            text-align: center;
+            opacity: 0.65;
+            letter-spacing: 0.05em;
+            transition: opacity 0.15s;
+        }
+        .see-more-btn:hover { opacity: 1; }
+        /* Container is just a block wrapper — no clipping */
+        .expandable-pre-container { display: block; }
+        /* Override existing .tc pre / .tool-output pre max-height — .expandable-pre controls clipping */
+        .tc .expandable-pre pre,
+        .tool-output .expandable-pre pre { max-height: none; overflow: visible; }
+
+        /* ── Feature 3: Rich agent-thought toast ────────────────────────────── */
+        @keyframes aurora-border {
+            0%,100% { border-color: rgba(168,85,247,0.7); }
+            33%      { border-color: rgba(0,212,255,0.7); }
+            66%      { border-color: rgba(245,158,11,0.5); }
+        }
+        .toast-agent {
+            border-width: 1px;
+            border-style: solid;
+            cursor: pointer;
+            max-width: 360px;
+            min-width: 240px;
+            padding: 12px 16px;
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 0;
+            animation: toast-in .22s ease-out, aurora-border 2.8s ease-in-out infinite;
+        }
+        .toast-agent-row { display: flex; align-items: center; width: 100%; gap: 8px; }
+        .toast-agent-title   { font-weight: 700; font-size: 12px; color: var(--text-primary); flex: 1; }
+        .toast-agent-preview { font-size: 10.5px; color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; margin-top: 3px; }
+        .toast-agent-link    { font-size: 10px; color: var(--electric); margin-top: 4px; opacity: 0.8; }
+
+        /* ── Feature 4: Scroll-to-bottom floating button ────────────────────── */
+        #scroll-to-bottom-btn {
+            display: none;
+            position: absolute;
+            bottom: 76px;
+            right: 18px;
+            z-index: 800;
+            align-items: center;
+            gap: 5px;
+            padding: 6px 14px;
+            border-radius: 20px;
+            border: 1px solid rgba(0,212,255,0.35);
+            background: var(--glass-bg-raised, rgba(10,6,22,0.92));
+            color: var(--electric);
+            font-size: 11px;
+            font-weight: 600;
+            cursor: pointer;
+            box-shadow: 0 0 12px rgba(0,212,255,0.15), 0 4px 16px rgba(0,0,0,.5);
+            backdrop-filter: var(--blur-sm, blur(8px));
+            -webkit-backdrop-filter: var(--blur-sm, blur(8px));
+            animation: toast-in .22s ease-out;
+            white-space: nowrap;
+            pointer-events: all;
+        }
+        #scroll-to-bottom-btn:hover {
+            border-color: rgba(0,212,255,0.7);
+            box-shadow: 0 0 20px rgba(0,212,255,0.3), 0 4px 16px rgba(0,0,0,.5);
+        }
 
         /* Plan Approval Bar */
         #plan-approval-bar { display:none;align-items:center;gap:8px;padding:7px 12px;background:rgba(88,166,255,.08);border:1px solid var(--accent-cyan);border-radius:6px;margin-bottom:6px;font-size:12px; }
@@ -3248,6 +3343,8 @@
         <div class="content">
             <div class="chat-panel">
                 <div class="chat-messages" id="messages"></div>
+                <!-- Feature 4: scroll-to-bottom floating button, shown when user is scrolled up -->
+                <button id="scroll-to-bottom-btn" onclick="scrollChatToBottom()" title="New messages — click to scroll down">&#8595; New messages</button>
                 <div class="input-area">
                     <!-- Context bar: working dir, project, active plan indicator -->
                     <div id="input-context-bar">
@@ -4546,6 +4643,31 @@
         let pendingImagePath = null;
         let attachedImages = [];
         let imageDataStore = {};
+
+        // ── Feature 4: Smart scroll lock ─────────────────────────────────────
+        // true = auto-scroll to bottom; false = user scrolled up, preserve position
+        let _chatScrollLocked = true;
+        const _chatScrollThreshold = 80; // px from bottom counts as "at bottom"
+
+        // Attach scroll listener once elements are available
+        if (elements.messages) {
+            elements.messages.addEventListener('scroll', function() {
+                const el = elements.messages;
+                const distFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
+                _chatScrollLocked = distFromBottom < _chatScrollThreshold;
+                const btn = document.getElementById('scroll-to-bottom-btn');
+                if (btn) btn.style.display = _chatScrollLocked ? 'none' : 'flex';
+            });
+        }
+
+        function scrollChatToBottom() {
+            if (!elements.messages) return;
+            elements.messages.scrollTo({ top: elements.messages.scrollHeight, behavior: 'smooth' });
+            _chatScrollLocked = true;
+            const btn = document.getElementById('scroll-to-bottom-btn');
+            if (btn) btn.style.display = 'none';
+        }
+
         console.log("Page loaded, checking image functionality...");
 
         // ==================== Voice Input (Speech Recognition) ====================
@@ -5760,6 +5882,84 @@
                 .replace(/'/g, '&#39;');
         }
 
+        // ── Feature 1+2: JSON highlighting + expandable pre ──────────────────
+        // renderJsonPre(str) → safe HTML string (all user data runs through escapeHtml)
+        function renderJsonPre(str) {
+            if (!str) return '';
+            const raw = str.trim();
+            if (raw[0] !== '{' && raw[0] !== '[') return escapeHtml(str);
+            let parsed;
+            try {
+                parsed = JSON.parse(raw);
+            } catch(e) {
+                try {
+                    // Lightweight repair: remove trailing commas, close unclosed brackets
+                    let r = raw
+                        .replace(/,\s*([}\]])/g, '$1')
+                        .replace(/,\s*$/, '');
+                    const stack = [];
+                    const closes = { '{': '}', '[': ']' };
+                    for (const ch of r) {
+                        if (ch === '{' || ch === '[') stack.push(ch);
+                        else if (ch === '}' || ch === ']') stack.pop();
+                    }
+                    while (stack.length) r += closes[stack.pop()];
+                    parsed = JSON.parse(r);
+                } catch(e2) {
+                    return escapeHtml(str);
+                }
+            }
+            return _colorizeJson(parsed, 0);
+        }
+
+        function _colorizeJson(val, depth) {
+            if (depth > 8) return '<span class="json-str">' + escapeHtml(JSON.stringify(val)) + '</span>';
+            if (val === null)             return '<span class="json-null">null</span>';
+            if (typeof val === 'boolean') return '<span class="json-bool">' + val + '</span>';
+            if (typeof val === 'number')  return '<span class="json-num">' + val + '</span>';
+            if (typeof val === 'string')  return '<span class="json-str">&quot;' + escapeHtml(val) + '&quot;</span>';
+            const ind = '  '.repeat(depth + 1), cind = '  '.repeat(depth);
+            if (Array.isArray(val)) {
+                if (!val.length) return '[]';
+                return '[\n' + val.map(v => ind + _colorizeJson(v, depth + 1)).join(',\n') + '\n' + cind + ']';
+            }
+            const keys = Object.keys(val);
+            if (!keys.length) return '{}';
+            return '{\n' + keys.map(k =>
+                ind + '<span class="json-key">&quot;' + escapeHtml(k) + '&quot;</span>: ' + _colorizeJson(val[k], depth + 1)
+            ).join(',\n') + '\n' + cind + '}';
+        }
+
+        // _makeExpandablePre(safeHtml) → container with fade + see-more button.
+        // safeHtml must be output of renderJsonPre (all user data escaped via escapeHtml).
+        // Structure: .expandable-pre-container > .expandable-pre (masked) + button.see-more-btn
+        // The button is a SIBLING of the masked div so mask-image never hides it.
+        function _makeExpandablePre(safeHtml) {
+            const container = document.createElement('div');
+            container.className = 'expandable-pre-container';
+
+            const masked = document.createElement('div');
+            masked.className = 'expandable-pre';
+            const pre = document.createElement('pre');
+            // insertAdjacentHTML is used here intentionally; safeHtml is the output of
+            // renderJsonPre / _colorizeJson which escapes ALL user-supplied content with
+            // escapeHtml() — keys, string values, and fallback paths all go through it.
+            pre.insertAdjacentHTML('afterbegin', safeHtml);
+            masked.appendChild(pre);
+
+            const btn = document.createElement('button');
+            btn.className = 'see-more-btn';
+            btn.textContent = '\u2193 see more';
+            btn.onclick = function() {
+                const expanded = masked.classList.toggle('expanded');
+                this.textContent = expanded ? '\u2191 see less' : '\u2193 see more';
+            };
+
+            container.appendChild(masked);
+            container.appendChild(btn);
+            return container;
+        }
+
         // ── Message copy ───────────────────────────────────────────────────────
         function copyMessage(btn, format) {
             const msgDiv = btn.closest('.message');
@@ -6015,8 +6215,14 @@
                     catch (e) { contentEl.innerHTML = escapeHtml(newContent); }
                 }
                 // Smooth scroll after stream completes (rAF lets DOM repaint first)
+                // Feature 4: only auto-scroll if user is at/near bottom
                 requestAnimationFrame(() => {
-                    elements.messages.scrollTo({ top: elements.messages.scrollHeight, behavior: 'smooth' });
+                    if (_chatScrollLocked) {
+                        elements.messages.scrollTo({ top: elements.messages.scrollHeight, behavior: 'smooth' });
+                    } else {
+                        const _sb = document.getElementById('scroll-to-bottom-btn');
+                        if (_sb) _sb.style.display = 'flex';
+                    }
                 });
                 if (msg.role === 'assistant' && !document.hasFocus()) {
                     notifyUser('OVERLORD', newContent.replace(/[#*`>\-]/g, '').trim().substring(0, 80) || 'AI response ready');
@@ -6050,7 +6256,13 @@
                 contentEl.className = 'content';
                 el.appendChild(contentEl);
                 elements.messages.appendChild(el);
-                elements.messages.scrollTop = elements.messages.scrollHeight;
+                // Feature 4: only auto-scroll if user is at/near bottom
+                if (_chatScrollLocked) {
+                    elements.messages.scrollTop = elements.messages.scrollHeight;
+                } else {
+                    const _sb = document.getElementById('scroll-to-bottom-btn');
+                    if (_sb) _sb.style.display = 'flex';
+                }
             }
         });
 
@@ -6077,10 +6289,16 @@
                 } catch (e) {
                     contentEl.innerHTML = escapeHtml(text);
                 }
-                elements.messages.scrollTop = elements.messages.scrollHeight;
+                // Feature 4: only auto-scroll if user is at/near bottom
+                if (_chatScrollLocked) {
+                    elements.messages.scrollTop = elements.messages.scrollHeight;
+                } else {
+                    const _sb = document.getElementById('scroll-to-bottom-btn');
+                    if (_sb) _sb.style.display = 'flex';
+                }
             }
         });
-        
+
         // Note: escapeHtmlPreserveLinks is defined globally after escapeHtml function
         
         socket.on('roadmap_update', (items) => {
@@ -6686,7 +6904,8 @@
                 el.appendChild(contentEl);
                 elements.messages.appendChild(el);
                 lastMsg = el;
-                elements.messages.scrollTop = elements.messages.scrollHeight;
+                // Feature 4: only auto-scroll if user is at/near bottom
+                if (_chatScrollLocked) elements.messages.scrollTop = elements.messages.scrollHeight;
             }
 
             let bubble = lastMsg.querySelector('.thoughts-bubble');
@@ -6747,6 +6966,28 @@
                     if (metaEl) metaEl.textContent = 'Thinking… ' + secs + 's';
                 }, 100);
                 _thinkingTimers.set(bId, timerId);
+
+                // Feature 3: proactive toast so user knows thinking started
+                const _thoughtPreview = (thought || '')
+                    .replace(/\x00CHIP:[^\x00]*\x00/g, '')
+                    .trim()
+                    .substring(0, 80);
+                showRichToast({
+                    title: '💭 Agent thinking\u2026',
+                    preview: _thoughtPreview || undefined,
+                    linkText: '\u2192 Click to expand thoughts',
+                    duration: 7000,
+                    onClick: function() {
+                        if (!bubble.classList.contains('tb-open')) {
+                            bubble.classList.add('tb-open');
+                            const chevron = bubble.querySelector('.tb-chevron');
+                            if (chevron) chevron.style.transform = 'rotate(90deg)';
+                            const body = bubble.querySelector('.tb-body');
+                            if (body) { body.style.display = 'block'; body.scrollTop = body.scrollHeight; }
+                        }
+                        bubble.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                    }
+                });
             }
 
             // Accumulate raw thought text (chips stored as \x00CHIP:{...}\x00 sentinels)
@@ -6896,7 +7137,13 @@
             }
             div.setAttribute('data-stream-complete', '1');
             elements.messages.appendChild(div);
-            elements.messages.scrollTo({ top: elements.messages.scrollHeight, behavior: 'smooth' });
+            // Feature 4: only auto-scroll if user is at/near bottom
+            if (_chatScrollLocked) {
+                elements.messages.scrollTo({ top: elements.messages.scrollHeight, behavior: 'smooth' });
+            } else {
+                const _sb = document.getElementById('scroll-to-bottom-btn');
+                if (_sb) _sb.style.display = 'flex';
+            }
         }
 
         // ==================== PROJECT DASHBOARD ====================
@@ -7510,11 +7757,29 @@
             toolDiv.className = 'tool-entry ' + (isError ? 'error' : 'success');
 
             const time = new Date(data.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-            let output = data.output || '';
-            if (typeof output === 'string' && output.length > 200) output = output.substring(0, 200) + '...';
+            // Feature 1+2: no hard truncation; JSON-highlighted + expandable
+            const outputStr = typeof data.output === 'object'
+                ? JSON.stringify(data.output, null, 2)
+                : String(data.output || '');
 
             const icon = isError ? '✗' : '✓';
-            toolDiv.innerHTML = '<div class="tool-header"><span class="tool-time">' + time + '</span><span class="tool-name">' + icon + ' ' + escapeHtml(data.tool) + '</span></div><div class="tool-output">' + escapeHtml(output) + '</div>';
+            const headerDiv = document.createElement('div');
+            headerDiv.className = 'tool-header';
+            const timeSpan = document.createElement('span');
+            timeSpan.className = 'tool-time';
+            timeSpan.textContent = time;
+            const nameSpan = document.createElement('span');
+            nameSpan.className = 'tool-name';
+            nameSpan.textContent = icon + ' ' + data.tool;
+            headerDiv.appendChild(timeSpan);
+            headerDiv.appendChild(nameSpan);
+
+            const outputDiv = document.createElement('div');
+            outputDiv.className = 'tool-output';
+            outputDiv.appendChild(_makeExpandablePre(renderJsonPre(outputStr)));
+
+            toolDiv.appendChild(headerDiv);
+            toolDiv.appendChild(outputDiv);
 
             elements.tools.appendChild(toolDiv);
             elements.tools.scrollTo({ top: elements.tools.scrollHeight, behavior: 'smooth' });
@@ -8085,6 +8350,61 @@
             setTimeout(() => toast.parentNode && toast.parentNode.removeChild(toast), 200);
         }
 
+        // ── Feature 3: Rich toast for agent thoughts / delegation ─────────────
+        // opts: { title, preview, linkText, onClick, duration }
+        // All content set via textContent — no HTML injection.
+        function showRichToast(opts) {
+            const container = document.getElementById('toast-container');
+            if (!container) return;
+
+            const toast = document.createElement('div');
+            toast.className = 'toast toast-agent';
+
+            const row = document.createElement('div');
+            row.className = 'toast-agent-row';
+
+            const titleEl = document.createElement('span');
+            titleEl.className = 'toast-agent-title';
+            titleEl.textContent = opts.title || '';
+            row.appendChild(titleEl);
+
+            const closeBtn = document.createElement('button');
+            closeBtn.className = 'toast-close';
+            closeBtn.textContent = '\u2715';
+            closeBtn.onclick = function(e) { e.stopPropagation(); removeToast(toast); };
+            row.appendChild(closeBtn);
+            toast.appendChild(row);
+
+            if (opts.preview) {
+                const prevEl = document.createElement('div');
+                prevEl.className = 'toast-agent-preview';
+                prevEl.textContent = opts.preview;
+                toast.appendChild(prevEl);
+            }
+            if (opts.linkText) {
+                const lnkEl = document.createElement('div');
+                lnkEl.className = 'toast-agent-link';
+                lnkEl.textContent = opts.linkText;
+                toast.appendChild(lnkEl);
+            }
+
+            if (opts.onClick) {
+                toast.addEventListener('click', function(e) {
+                    if (e.target === closeBtn) return;
+                    opts.onClick();
+                    removeToast(toast);
+                });
+            }
+
+            container.appendChild(toast);
+            const dur = (opts.duration != null) ? opts.duration : 7000;
+            if (dur > 0) setTimeout(() => removeToast(toast), dur);
+            return toast;
+        }
+
+        // Dedupe guard: one delegation toast per unique toolId
+        let _lastDelegateToolId = null;
+
         // ── Reminder toast ────────────────────────────────────────────────────
         socket.on('reminder_due', (d) => {
             const toast = showToast(d.text || 'Reminder', 'reminder', 0); // persistent until dismissed
@@ -8106,7 +8426,7 @@
                 case 'set_status':  if (elements.status) { elements.status.textContent = params.message || ''; } break;
                 case 'open_url':    if (params.url) window.open(params.url, '_blank'); break;
                 case 'set_mode':    if (params.mode) setChatMode(params.mode); break;
-                case 'scroll_to_bottom': elements.messages && (elements.messages.scrollTop = elements.messages.scrollHeight); break;
+                case 'scroll_to_bottom': scrollChatToBottom(); break;
             }
         });
 
@@ -9291,20 +9611,46 @@
             const bodyEl = document.getElementById('tcbody-' + safeId);
             if (!bodyEl) return false; // not in DOM yet
             if (output != null) {
-                const inputStr = input ? JSON.stringify(input, null, 2).substring(0, 600) : '';
-                bodyEl.innerHTML =
-                    (inputStr ? '<span class="tc-lbl">Input</span><pre>' + escapeHtml(inputStr) + '</pre>' : '') +
-                    '<span class="tc-lbl">Output</span><pre>' + escapeHtml(String(output).substring(0, 400)) + '</pre>';
+                // Feature 1+2: JSON-highlighted + expandable, no truncation
+                bodyEl.innerHTML = '';
+                const inputStr = input ? JSON.stringify(input, null, 2) : '';
+                if (inputStr) {
+                    const inLbl = document.createElement('span');
+                    inLbl.className = 'tc-lbl'; inLbl.textContent = 'Input';
+                    bodyEl.appendChild(inLbl);
+                    bodyEl.appendChild(_makeExpandablePre(renderJsonPre(inputStr)));
+                }
+                const outLbl = document.createElement('span');
+                outLbl.className = 'tc-lbl'; outLbl.textContent = 'Output';
+                bodyEl.appendChild(outLbl);
+                bodyEl.appendChild(_makeExpandablePre(renderJsonPre(String(output))));
             } else if (input) {
-                bodyEl.innerHTML =
-                    '<span class="tc-lbl">Input</span><pre>' + escapeHtml(JSON.stringify(input, null, 2).substring(0, 600)) + '</pre>' +
-                    '<span class="tc-lbl" style="opacity:0.4;">Running\u2026</span>';
+                bodyEl.innerHTML = '';
+                const inputStr = JSON.stringify(input, null, 2);
+                const inLbl = document.createElement('span');
+                inLbl.className = 'tc-lbl'; inLbl.textContent = 'Input';
+                bodyEl.appendChild(inLbl);
+                bodyEl.appendChild(_makeExpandablePre(renderJsonPre(inputStr)));
+                const runLbl = document.createElement('span');
+                runLbl.className = 'tc-lbl'; runLbl.style.opacity = '0.4';
+                runLbl.textContent = 'Running\u2026';
+                bodyEl.appendChild(runLbl);
             }
             return true;
         }
 
         function updateToolChip(toolId, name, input, output, durationMs, success) {
             if (!toolId) return;
+            // Feature 3: delegation toast — fires once per unique toolId when tool starts
+            if (name === 'delegate_to_agent' && output == null && input && _lastDelegateToolId !== toolId) {
+                _lastDelegateToolId = toolId;
+                const agentName = toolParamSummary('delegate_to_agent', input) || 'agent';
+                showRichToast({
+                    title: '\u2728 Delegating to ' + agentName,
+                    preview: 'Handing off task to sub-agent\u2026',
+                    duration: 6000
+                });
+            }
             const safeId = toolId.replace(/[^a-zA-Z0-9_-]/g, '_');
             // Try immediately; if the chip element isn't in the DOM yet (neural_thought race),
             // retry up to 3 times with short delays before giving up.

@@ -144,7 +144,20 @@ async function init(h) {
         clearHistory: clearHistoryForNewChat,
         replaceHistory: replaceHistory,
         archiveCurrentAndNew: archiveAndStartNew,
-        loadProjectData: loadProjectData
+        loadProjectData: loadProjectData,
+        // ── Hierarchy helpers ──
+        getChildren: getChildren,
+        getDescendants: getDescendants,
+        getAncestors: getAncestors,
+        getBreadcrumb: getBreadcrumb,
+        getTaskTree: getTaskTree,
+        migrateTasksHierarchy: migrateTasksHierarchy,
+        // ── Mini-Agent pattern: AI context summarization ──
+        summarizeAndCompact: summarizeAndCompact,
+        // ── Mini-Agent pattern: Session Notes (persistent agent memory) ──
+        saveSessionNote: saveSessionNote,
+        recallSessionNotes: recallSessionNotes,
+        getCurrentId: () => conversationId
     });
     
     hub.log('Conversation module loaded', 'success');
@@ -179,7 +192,10 @@ function loadConversationById(convId) {
             });
             workingDir = data.workingDir || workingDir;
             tasks = data.tasks || [];
-            
+
+            // Migrate flat tasks to include hierarchy fields (parentId, depth, path)
+            migrateTasksHierarchy();
+
             // FIX: Sanitize history after loading to remove orphaned tool_results
             // This prevents "tool_result references unknown id" errors
             const tokenMgr = hub?.getService('tokenManager');
@@ -266,10 +282,27 @@ function getTasks() {
 
 function addTask(task) {
     if (!tasks) tasks = [];
+    // ── Hierarchy fields ────────────────────────────────────────────────
+    // Ensure every task has hierarchy fields (backwards-compatible for flat tasks)
+    if (!task.parentId) task.parentId = null;
+    if (task.depth === undefined) task.depth = 0;
+    if (!task.path) task.path = '/' + task.id;
+    // If a parentId was provided, calculate depth + path from parent
+    if (task.parentId) {
+        const parent = tasks.find(t => t.id === task.parentId);
+        if (parent) {
+            task.depth = (parent.depth || 0) + 1;
+            task.path = (parent.path || '/' + parent.id) + '/' + task.id;
+            if (task.depth > 10) {
+                hub.log('Task nesting exceeds 10 levels — rejected', 'warning');
+                return;
+            }
+        }
+    }
     tasks.push(task);
     hub.broadcastAll('tasks_update', tasks);
     saveConversation();
-    hub.log('Task added: ' + task.title, 'info');
+    hub.log('Task added: ' + task.title + (task.parentId ? ' (child of ' + task.parentId + ', depth ' + task.depth + ')' : ''), 'info');
 }
 
 function toggleTask(taskId) {
@@ -281,11 +314,51 @@ function toggleTask(taskId) {
     }
 }
 
-function deleteTask(taskId) {
-    tasks = tasks.filter(t => t.id !== taskId);
+function deleteTask(taskId, cascade = true) {
+    if (cascade) {
+        // Collect all descendants using materialized path prefix
+        const target = tasks.find(t => t.id === taskId);
+        const prefix = target ? (target.path || '/' + taskId) + '/' : null;
+        const idsToRemove = new Set([taskId]);
+        if (prefix) {
+            tasks.forEach(t => {
+                if (t.path && t.path.startsWith(prefix)) idsToRemove.add(t.id);
+            });
+        }
+        const removed = idsToRemove.size;
+        tasks = tasks.filter(t => !idsToRemove.has(t.id));
+        hub.log('Task deleted: ' + taskId + (removed > 1 ? ' (+ ' + (removed - 1) + ' children)' : ''), 'info');
+    } else {
+        // Orphan children → promote to root
+        tasks.forEach(t => {
+            if (t.parentId === taskId) {
+                t.parentId = null;
+                t.depth = 0;
+                _recalcPath(t);
+            }
+        });
+        tasks = tasks.filter(t => t.id !== taskId);
+        hub.log('Task deleted: ' + taskId + ' (children promoted to root)', 'info');
+    }
     hub.broadcastAll('tasks_update', tasks);
     saveConversation();
-    hub.log('Task deleted: ' + taskId, 'info');
+}
+
+// Recalculate path + depth for a task and all its descendants
+function _recalcPath(task) {
+    if (!task) return;
+    if (task.parentId) {
+        const parent = tasks.find(t => t.id === task.parentId);
+        if (parent) {
+            task.depth = (parent.depth || 0) + 1;
+            task.path = (parent.path || '/' + parent.id) + '/' + task.id;
+        }
+    } else {
+        task.depth = 0;
+        task.path = '/' + task.id;
+    }
+    // Recurse into children
+    tasks.filter(t => t.parentId === task.id).forEach(child => _recalcPath(child));
 }
 
 function reorderTasks(orderedIds) {
@@ -320,11 +393,151 @@ function updateTask(taskId, updates) {
         if (updates.dependsOn !== undefined) task.dependsOn = updates.dependsOn; // array of taskIds
         if (updates.milestoneId !== undefined) task.milestoneId = updates.milestoneId;
         if (updates.notes !== undefined) task.notes = updates.notes;
+        // ── Hierarchy update: reparenting ────────────────────────────────
+        if (updates.parentId !== undefined && updates.parentId !== task.parentId) {
+            const newParentId = updates.parentId;
+            // Validate: can't parent to self
+            if (newParentId === taskId) {
+                hub.log('Cannot parent task to itself', 'warning');
+            }
+            // Validate: can't parent to own descendant (would create cycle)
+            else if (newParentId && _isDescendantOf(newParentId, taskId)) {
+                hub.log('Cannot parent task to its own descendant (cycle)', 'warning');
+            }
+            // Validate: depth limit
+            else if (newParentId) {
+                const newParent = tasks.find(t => t.id === newParentId);
+                const newDepth = newParent ? (newParent.depth || 0) + 1 : 0;
+                const maxChildDepth = _getMaxDescendantDepth(taskId) - (task.depth || 0);
+                if (newDepth + maxChildDepth > 10) {
+                    hub.log('Reparenting would exceed 10-level depth limit', 'warning');
+                } else {
+                    task.parentId = newParentId;
+                    _recalcPath(task);
+                }
+            } else {
+                task.parentId = null;
+                _recalcPath(task);
+            }
+        }
         hub.broadcastAll('tasks_update', tasks);
         saveConversation();
         hub.log('Task updated: ' + task.title, 'info');
         // Auto-complete milestone when all assigned tasks finish
         _checkMilestoneComplete(task.milestoneId);
+        // Auto-recalculate parent progress when child status changes
+        if (task.parentId && (updates.status !== undefined || updates.completed !== undefined)) {
+            _recalcParentProgress(task.parentId);
+        }
+    }
+}
+
+// ==================== TASK HIERARCHY HELPERS ====================
+
+/** Check if candidateId is a descendant of ancestorId */
+function _isDescendantOf(candidateId, ancestorId) {
+    const ancestor = tasks.find(t => t.id === ancestorId);
+    if (!ancestor) return false;
+    const prefix = (ancestor.path || '/' + ancestorId) + '/';
+    const candidate = tasks.find(t => t.id === candidateId);
+    return candidate && candidate.path && candidate.path.startsWith(prefix);
+}
+
+/** Get the maximum depth of any descendant of taskId */
+function _getMaxDescendantDepth(taskId) {
+    const task = tasks.find(t => t.id === taskId);
+    if (!task) return 0;
+    const prefix = (task.path || '/' + taskId) + '/';
+    let maxDepth = task.depth || 0;
+    tasks.forEach(t => {
+        if (t.path && t.path.startsWith(prefix)) {
+            maxDepth = Math.max(maxDepth, t.depth || 0);
+        }
+    });
+    return maxDepth;
+}
+
+/** Get all direct children of a task */
+function getChildren(taskId) {
+    return tasks.filter(t => t.parentId === taskId);
+}
+
+/** Get all descendants of a task (using materialized path) */
+function getDescendants(taskId) {
+    const task = tasks.find(t => t.id === taskId);
+    if (!task) return [];
+    const prefix = (task.path || '/' + taskId) + '/';
+    return tasks.filter(t => t.path && t.path.startsWith(prefix));
+}
+
+/** Get all ancestors of a task (walk up parentId chain) */
+function getAncestors(taskId) {
+    const ancestors = [];
+    let current = tasks.find(t => t.id === taskId);
+    while (current && current.parentId) {
+        const parent = tasks.find(t => t.id === current.parentId);
+        if (parent) {
+            ancestors.unshift(parent); // root-first order
+            current = parent;
+        } else {
+            break;
+        }
+    }
+    return ancestors;
+}
+
+/** Get the breadcrumb path for a task as an array of {id, title} */
+function getBreadcrumb(taskId) {
+    const ancestors = getAncestors(taskId);
+    const task = tasks.find(t => t.id === taskId);
+    return [...ancestors, task].filter(Boolean).map(t => ({ id: t.id, title: t.title }));
+}
+
+/** Build a tree structure from the flat tasks array */
+function getTaskTree() {
+    const map = {};
+    const roots = [];
+    // First pass: create map entries
+    tasks.forEach(t => {
+        map[t.id] = { ...t, children: [] };
+    });
+    // Second pass: link parents and children
+    tasks.forEach(t => {
+        if (t.parentId && map[t.parentId]) {
+            map[t.parentId].children.push(map[t.id]);
+        } else {
+            roots.push(map[t.id]);
+        }
+    });
+    return roots;
+}
+
+/** Recalculate parent progress when a child changes status */
+function _recalcParentProgress(parentId) {
+    const parent = tasks.find(t => t.id === parentId);
+    if (!parent) return;
+    const children = tasks.filter(t => t.parentId === parentId);
+    if (children.length === 0) return;
+    const doneCount = children.filter(c => c.completed || c.status === 'completed').length;
+    // Store progress on parent (0-100)
+    parent.childProgress = Math.round((doneCount / children.length) * 100);
+    parent.childCount = children.length;
+    parent.childDone = doneCount;
+    // If parent has a parent, recurse
+    if (parent.parentId) _recalcParentProgress(parent.parentId);
+}
+
+/** Migrate flat tasks to have hierarchy fields (backward compat) */
+function migrateTasksHierarchy() {
+    let migrated = 0;
+    tasks.forEach(t => {
+        if (t.parentId === undefined) { t.parentId = null; migrated++; }
+        if (t.depth === undefined) { t.depth = 0; }
+        if (!t.path) { t.path = '/' + t.id; }
+    });
+    if (migrated > 0) {
+        hub.log('Migrated ' + migrated + ' tasks with hierarchy fields', 'info');
+        saveConversation();
     }
 }
 
@@ -463,9 +676,9 @@ function newConversation() {
         { type: 'task', text: 'Orchestration Ready', done: true }
     ];
     hub.roadmapUpdate(roadmap);
-    hub.broadcast('conversation_new', { id: conversationId, messages: [], roadmap: roadmap });
-    hub.broadcast('working_dir_update', workingDir); // CRITICAL: Always broadcast working dir
-    hub.broadcast('context_warning', { percentUsed: 0, percentLeft: 100, status: 'normal' });
+    hub.broadcastAll('conversation_new', { id: conversationId, messages: [], roadmap: roadmap });
+    hub.broadcastAll('working_dir_update', workingDir); // CRITICAL: Always broadcast working dir
+    hub.broadcastAll('context_warning', { percentUsed: 0, percentLeft: 100, status: 'normal' });
     hub.log('Started new conversation with working dir: ' + workingDir, 'success');
 }
 
@@ -488,9 +701,9 @@ function archiveAndStartNew() {
         { type: 'task', text: 'Orchestration Ready', done: true }
     ];
     hub.roadmapUpdate(roadmap);
-    hub.broadcast('conversation_new', { id: conversationId, messages: [], roadmap: roadmap });
-    hub.broadcast('working_dir_update', workingDir); // CRITICAL: Always broadcast working dir
-    hub.broadcast('context_warning', { percentUsed: 0, percentLeft: 100, status: 'normal' });
+    hub.broadcastAll('conversation_new', { id: conversationId, messages: [], roadmap: roadmap });
+    hub.broadcastAll('working_dir_update', workingDir); // CRITICAL: Always broadcast working dir
+    hub.broadcastAll('context_warning', { percentUsed: 0, percentLeft: 100, status: 'normal' });
     hub.log('Archived conversation and started new with working dir: ' + workingDir, 'success');
 }
 
@@ -568,6 +781,136 @@ function sanitizeHistory(h) {
     }
     
     return clean;
+}
+
+// ==================== AI-POWERED CONTEXT SUMMARIZATION ====================
+// Inspired by Mini-Agent's _summarize_messages() — uses LLM to compress
+// old conversation history instead of mechanical truncation.
+// Falls back to mechanical truncation if AI summarization fails.
+
+async function summarizeAndCompact(targetHistory) {
+    const usage = calculateContextUsage();
+    if (usage.status === 'normal') return targetHistory || history; // No action needed
+
+    const hist = targetHistory || history;
+    if (hist.length < 5) return hist; // Too few messages to summarize
+
+    // 1. Identify messages to summarize (oldest portion, excluding system)
+    const recentCount = Math.ceil(hist.length * 0.6); // Keep 60% recent
+    const toSummarize = hist.slice(0, hist.length - recentCount);
+    const toKeep = hist.slice(hist.length - recentCount);
+
+    if (toSummarize.length < 3) {
+        // Too few messages to warrant summarization
+        return hist;
+    }
+
+    // 2. Build summary prompt from the messages to compress
+    const summaryContent = toSummarize.map(m => {
+        const content = typeof m.content === 'string'
+            ? m.content.substring(0, 500)
+            : JSON.stringify(m.content).substring(0, 500);
+        return `[${m.role}]: ${content}`;
+    }).join('\n');
+
+    const summaryPrompt = `Summarize the following conversation segment concisely. ` +
+        `Focus on: what tasks were discussed, what tools were called, key decisions made, and important results. ` +
+        `Be brief but preserve all critical context that would be needed to continue the conversation:\n\n${summaryContent}`;
+
+    // 3. Call AI for summary (using quickComplete — lightweight non-streaming)
+    const ai = hub.getService('ai');
+    if (!ai?.quickComplete) {
+        hub.log('[Context] quickComplete unavailable — skipping AI summarization', 'warn');
+        return hist;
+    }
+
+    try {
+        const summary = await ai.quickComplete(summaryPrompt, { maxTokens: 500 });
+
+        if (!summary || summary.length < 20) {
+            hub.log('[Context] AI summary too short — skipping', 'warn');
+            return hist;
+        }
+
+        // 4. Replace old messages with a single summary message
+        const summaryMessage = {
+            role: 'user',
+            content: `[CONVERSATION SUMMARY — ${toSummarize.length} messages compacted by AI]\n${summary}`
+        };
+
+        const compacted = [summaryMessage, ...toKeep];
+
+        // Record compaction stats
+        const tracker = hub?.getService('contextTracker');
+        if (tracker?.recordCompaction) {
+            tracker.recordCompaction({
+                messagesBefore: hist.length,
+                messagesAfter: compacted.length,
+                reason: 'ai_summarization',
+                summarizedCount: toSummarize.length
+            });
+        }
+
+        hub.log(`[Context] AI-summarized ${toSummarize.length} messages → 1 summary block`, 'info');
+        return compacted;
+    } catch (err) {
+        hub.log(`[Context] AI summarization failed: ${err.message} — returning original history`, 'warn');
+        return hist;
+    }
+}
+
+// ==================== SESSION NOTES (PERSISTENT AGENT MEMORY) ====================
+// Inspired by Mini-Agent's SessionNoteTool — agents can save notes that
+// persist across sessions, providing long-term memory for patterns,
+// preferences, and learnings.
+
+const SESSION_NOTES_FILE = '.overlord/session-notes.json';
+
+async function saveSessionNote(note) {
+    const notesPath = path.join(config.baseDir, SESSION_NOTES_FILE);
+    const dir = path.dirname(notesPath);
+    if (!fs.existsSync(dir)) {
+        fs.mkdirSync(dir, { recursive: true });
+    }
+
+    let notes = [];
+    try {
+        if (fs.existsSync(notesPath)) {
+            notes = JSON.parse(fs.readFileSync(notesPath, 'utf-8'));
+        }
+    } catch (e) {
+        hub.log('[SessionNotes] Error reading notes file: ' + e.message, 'warn');
+        notes = [];
+    }
+
+    notes.push(note);
+
+    // Keep last 200 notes max
+    if (notes.length > 200) notes = notes.slice(-200);
+
+    try {
+        fs.writeFileSync(notesPath, JSON.stringify(notes, null, 2));
+        hub.log(`[SessionNotes] Saved note [${note.category}] by ${note.agent}`, 'info');
+    } catch (e) {
+        hub.log('[SessionNotes] Error saving: ' + e.message, 'error');
+    }
+}
+
+async function recallSessionNotes({ category, agent, limit = 10 } = {}) {
+    const notesPath = path.join(config.baseDir, SESSION_NOTES_FILE);
+    let notes = [];
+    try {
+        if (fs.existsSync(notesPath)) {
+            notes = JSON.parse(fs.readFileSync(notesPath, 'utf-8'));
+        }
+    } catch (e) {
+        return [];
+    }
+
+    if (category) notes = notes.filter(n => n.category === category);
+    if (agent) notes = notes.filter(n => n.agent === agent);
+
+    return notes.slice(-limit);
 }
 
 module.exports = { init };

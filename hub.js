@@ -583,6 +583,26 @@ class Hub extends EventEmitter {
                 }
             });
 
+            // ── Orchestration Manager panel controls ───────────────────────
+            socket.on('set_strategy',       (data)     => this.emit('set_strategy', data));
+            socket.on('set_overlay',        (data)     => this.emit('set_overlay', data));
+            socket.on('set_max_cycles',     (data)     => this.emit('set_max_cycles', data));
+            socket.on('set_max_agents',     (data)     => this.emit('set_max_agents', data));
+            socket.on('pause_agent',        (data, cb) => this.emit('pause_agent', { data, cb }));
+            socket.on('resume_agent',       (data, cb) => this.emit('resume_agent', { data, cb }));
+            socket.on('kill_agent',         (data, cb) => this.emit('kill_agent', { data, cb }));
+            socket.on('set_auto_qa',        (data)     => this.emit('set_auto_qa', data));
+            socket.on('clear_tool_history', ()         => this.emit('clear_tool_history'));
+            socket.on('get_orch_dashboard', (data, cb) => this.emit('get_orch_dashboard', { cb }));
+
+            // ── Mini-Agent pattern: AI summarization toggle + session notes ──
+            socket.on('set_ai_summarization', (data)     => this.emit('set_ai_summarization', data));
+            socket.on('get_session_notes',    (data, cb) => this.emit('get_session_notes', { data, cb }));
+
+            // ── Task recommendation approval/rejection ───────────────────────
+            socket.on('approve_recommendation', (data) => this.emit('approve_recommendation', data));
+            socket.on('reject_recommendation',  (data) => this.emit('reject_recommendation', data));
+
             // ── User input response (for ask_user tool) ──────────────────────
             socket.on('input_response', (data) => this.emit('input_response', data));
 
@@ -903,6 +923,55 @@ class Hub extends EventEmitter {
                 }
             });
 
+            // ── Chat Message Actions ─────────────────────────────────────────
+            socket.on('fork_conversation', (data, cb) => {
+                const conv = this.getService('conversation');
+                if (!conv) { if (typeof cb === 'function') cb({ success: false, error: 'No conversation service' }); return; }
+                try {
+                    const history = conv.getHistory();
+                    const msgIndex = data?.messageIndex;
+                    if (typeof msgIndex !== 'number' || msgIndex < 0 || msgIndex >= history.length) {
+                        if (typeof cb === 'function') cb({ success: false, error: 'Invalid message index' });
+                        return;
+                    }
+                    // Save current conversation first
+                    conv.save();
+                    // Slice history up to and including the target message
+                    const forkedHistory = history.slice(0, msgIndex + 1);
+                    // Create new conversation with forked history
+                    conv.new();
+                    const newId = conv.getId();
+                    conv.replaceHistory(forkedHistory);
+                    conv.save();
+                    this.log('[Hub] Forked conversation at message ' + msgIndex + ' → ' + newId, 'info');
+                    if (typeof cb === 'function') cb({ success: true, id: newId });
+                } catch (e) {
+                    this.log('[Hub] Fork error: ' + e.message, 'error');
+                    if (typeof cb === 'function') cb({ success: false, error: e.message });
+                }
+            });
+
+            socket.on('delete_message', (data, cb) => {
+                const conv = this.getService('conversation');
+                if (!conv) { if (typeof cb === 'function') cb({ success: false, error: 'No conversation service' }); return; }
+                try {
+                    const history = conv.getHistory();
+                    const msgIndex = data?.messageIndex;
+                    if (typeof msgIndex !== 'number' || msgIndex < 0 || msgIndex >= history.length) {
+                        if (typeof cb === 'function') cb({ success: false, error: 'Invalid message index' });
+                        return;
+                    }
+                    // Remove the message from history
+                    history.splice(msgIndex, 1);
+                    conv.save();
+                    this.log('[Hub] Deleted message at index ' + msgIndex, 'info');
+                    if (typeof cb === 'function') cb({ success: true });
+                } catch (e) {
+                    this.log('[Hub] Delete message error: ' + e.message, 'error');
+                    if (typeof cb === 'function') cb({ success: false, error: e.message });
+                }
+            });
+
             // Working directory management
             // NOTE: conv.setWorkingDirectory() already calls hub.broadcast('working_dir_update')
             // so we do NOT emit a second time here to avoid duplicate logs.
@@ -1173,6 +1242,13 @@ class Hub extends EventEmitter {
             socket.on('assign_task_to_milestone', (data, cb) => this.emit('socket:assign_task_to_milestone', { socket, data, cb }));
             socket.on('focus_task',               (data, cb) => this.emit('socket:focus_task',               { socket, data, cb }));
 
+            // ── Hierarchy task operations → tasks-engine ────────────────────────
+            socket.on('add_child_task',   (data, cb) => this.emit('socket:add_child_task',   { socket, data, cb }));
+            socket.on('reparent_task',    (data, cb) => this.emit('socket:reparent_task',    { socket, data, cb }));
+            socket.on('get_task_tree',    (data, cb) => this.emit('socket:get_task_tree',    { socket, data: data || {}, cb }));
+            socket.on('get_task_children',(data, cb) => this.emit('socket:get_task_children',{ socket, data, cb }));
+            socket.on('get_task_breadcrumb',(data, cb) => this.emit('socket:get_task_breadcrumb', { socket, data, cb }));
+
             // ── Orchestrate milestone: mark active + broadcast + let AI know ──────
             socket.on('orchestrate_milestone', (milestoneId, cb) => {
                 const conv = this.getService('conversation');
@@ -1220,6 +1296,42 @@ class Hub extends EventEmitter {
                 const result = projects.createProject(projectData);
                 this.broadcastAll('projects_updated', projects.listProjects());
                 if (typeof cb === 'function') cb({ success: true, ...result });
+            });
+
+            socket.on('ai_populate_project', async (data, cb) => {
+                const ai = this.getService('ai');
+                if (!ai) { if (typeof cb === 'function') cb({ error: 'AI service unavailable' }); return; }
+                if (!data || !data.description || !data.description.trim()) {
+                    if (typeof cb === 'function') cb({ error: 'No description provided' });
+                    return;
+                }
+                const prompt = `Extract project details from this description. Return ONLY valid JSON with these fields:
+{
+  "name": "short project name (2-4 words)",
+  "description": "1-2 sentence project description",
+  "workingDir": "absolute path to project directory (if mentioned, else empty string)",
+  "customInstructions": "coding guidelines, conventions, frameworks to use",
+  "projectMemory": "key facts to remember about this project",
+  "referenceDocumentation": "URLs or file paths to reference docs (if mentioned, else empty string)",
+  "requirements": "specific deliverables or acceptance criteria"
+}
+
+User description: "${data.description.replace(/"/g, '\\"')}"`;
+
+                try {
+                    const result = await ai.quickComplete(prompt, { maxTokens: 1000, temperature: 0.2 });
+                    const jsonMatch = result.match(/\{[\s\S]*\}/);
+                    if (!jsonMatch) {
+                        if (typeof cb === 'function') cb({ error: 'AI could not parse project description' });
+                        return;
+                    }
+                    const fields = JSON.parse(jsonMatch[0]);
+                    this.log('[AI] Project fields populated from description', 'success');
+                    if (typeof cb === 'function') cb({ success: true, fields });
+                } catch (e) {
+                    this.log('[AI] Project populate error: ' + e.message, 'warn');
+                    if (typeof cb === 'function') cb({ error: e.message });
+                }
             });
 
             socket.on('update_project', (updateData, cb) => {
@@ -1300,6 +1412,59 @@ class Hub extends EventEmitter {
             // ── Task reorder → tasks-engine ────────────────────────────────────
             socket.on('tasks_reorder', (data) => this.emit('socket:tasks_reorder', { socket, data }));
 
+            // ── AI Fill: Tool Weight Profiles ──────────────────────────────────
+            // Maps agent archetypes to weighted tool recommendations.
+            // The AI Fill prompt uses these to make intelligent tool selections.
+            const TOOL_WEIGHT_PROFILES = {
+                engineering: {
+                    always:  ['read_file','read_file_lines','write_file','patch_file','list_dir','bash','recall_notes','record_note'],
+                    likely:  ['append_file','web_search','system_info','get_working_dir','set_working_dir'],
+                    rarely:  ['powershell','understand_image']
+                },
+                qa: {
+                    always:  ['qa_run_tests','qa_check_lint','qa_check_types','qa_check_coverage','read_file','list_dir','bash','recall_notes','record_note'],
+                    likely:  ['write_file','patch_file','web_search'],
+                    rarely:  ['powershell']
+                },
+                devops: {
+                    always:  ['bash','read_file','write_file','list_dir','recall_notes','record_note','system_info'],
+                    likely:  ['patch_file','get_working_dir','qa_run_tests','powershell'],
+                    rarely:  ['understand_image']
+                },
+                management: {
+                    always:  ['recall_notes','record_note','list_agents','get_agent_info','read_file','list_dir','web_search'],
+                    likely:  ['get_working_dir','assign_task'],
+                    rarely:  ['bash','write_file']
+                },
+                security: {
+                    always:  ['read_file','read_file_lines','list_dir','bash','recall_notes','record_note'],
+                    likely:  ['qa_check_lint','qa_run_tests','web_search'],
+                    rarely:  ['write_file','patch_file']
+                },
+                design: {
+                    always:  ['read_file','write_file','patch_file','list_dir','understand_image','recall_notes','record_note','bash'],
+                    likely:  ['web_search','append_file'],
+                    rarely:  ['powershell']
+                },
+                default: {
+                    always:  ['read_file','list_dir','recall_notes','record_note'],
+                    likely:  ['bash','write_file','patch_file','web_search','get_working_dir'],
+                    rarely:  ['powershell','understand_image']
+                }
+            };
+
+            function matchToolProfile(hint) {
+                const text = [hint.name||'', hint.role||'', hint.description||'', hint.instructions||''].join(' ').toLowerCase();
+                if (/orchestrat|coordinat|conductor/.test(text))     return 'management';
+                if (/qa|test|quality|lint|audit/.test(text))          return 'qa';
+                if (/devops|infra|deploy|ci.?cd|pipeline/.test(text)) return 'devops';
+                if (/security|compliance|ciso|vuln/.test(text))       return 'security';
+                if (/pm|project.?manag|scrum|product/.test(text))     return 'management';
+                if (/design|ui|ux|css|visual|frontend/.test(text))    return 'design';
+                if (/engineer|develop|code|implement|backend|fullstack/.test(text)) return 'engineering';
+                return 'default';
+            }
+
             // ── AI Fill: generate improved agent field suggestions ──────────────
             socket.on('ai_fill_agent', async (data, ack) => {
                 if (typeof ack !== 'function') return;
@@ -1344,6 +1509,18 @@ class Hub extends EventEmitter {
                     tools: ['bash', 'read_file', 'write_file']
                 }, null, 2);
 
+                // Generate tool weight guidance based on agent archetype
+                const detectedProfile = matchToolProfile(hint);
+                const weights = TOOL_WEIGHT_PROFILES[detectedProfile] || TOOL_WEIGHT_PROFILES.default;
+                const toolGuidance = [
+                    `\nTOOL SELECTION GUIDANCE (agent profile detected: "${detectedProfile}"):`,
+                    `MUST include these tools: ${weights.always.join(', ')}`,
+                    `SHOULD include if relevant to role: ${weights.likely.join(', ')}`,
+                    `RARELY needed (only if specifically relevant): ${weights.rarely.join(', ')}`,
+                    'CRITICAL RULE: Almost ALL agents MUST have recall_notes and record_note for reading/writing project context. Only omit these for the most minimal readonly agents.',
+                    'CRITICAL RULE: Most development agents need bash, read_file, write_file, and list_dir at minimum.',
+                ].join('\n');
+
                 const systemOverride = [
                     'You are an agent configuration assistant for an AI orchestration platform called OVERLORD.',
                     'OUTPUT FORMAT: You MUST respond with ONLY a single raw JSON object. No markdown. No code fences. No prose. No explanation before or after.',
@@ -1351,6 +1528,7 @@ class Hub extends EventEmitter {
                     `Example of the exact output format required:\n${EXAMPLE_JSON}`,
                     `Security roles available: ${SECURITY_ROLES.join(', ')}`,
                     `Tools available: ${ALL_TOOLS.join(', ')}`,
+                    toolGuidance,
                     'Field rules: name=lowercase-slug, role=2-5 words, description=1-2 sentences, instructions=2-4 specific directive sentences, securityRole=one of the available values, tools=array of available tool names.',
                     lockedDesc,
                     'Only include unlocked fields in your JSON output.'

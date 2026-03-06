@@ -110,7 +110,7 @@ function init(h) {
         tools.registerTool({
             name: 'vault_list_notes',
             description: 'List all markdown notes in the configured Obsidian vault. Returns relative paths.',
-            parameters: {
+            input_schema: {
                 type: 'object',
                 properties: {
                     folder: {
@@ -132,7 +132,7 @@ function init(h) {
         tools.registerTool({
             name: 'vault_read_note',
             description: 'Read a markdown note from the Obsidian vault. Returns the full file content including YAML frontmatter.',
-            parameters: {
+            input_schema: {
                 type: 'object',
                 properties: {
                     notePath: {
@@ -159,7 +159,7 @@ function init(h) {
         tools.registerTool({
             name: 'vault_write_note',
             description: 'Create or update a markdown note in the Obsidian vault. Creates directories as needed.',
-            parameters: {
+            input_schema: {
                 type: 'object',
                 properties: {
                     notePath: {
@@ -192,7 +192,7 @@ function init(h) {
         tools.registerTool({
             name: 'vault_search',
             description: 'Search for notes in the Obsidian vault by keyword. Searches both filenames and content.',
-            parameters: {
+            input_schema: {
                 type: 'object',
                 properties: {
                     query: {

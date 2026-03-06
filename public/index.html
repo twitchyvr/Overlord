@@ -1461,8 +1461,21 @@
         .btn-primary:hover { background: #2ea043; }
         .btn:disabled { opacity: 0.5; cursor: not-allowed; }
         
+        /* Cancel/Stop AI button — clearly a stop action, not a close button */
+        #btn-cancel:not(:disabled) {
+            color: var(--accent-red, #f85149);
+            border-color: rgba(248,81,73,0.5);
+            background: rgba(248,81,73,0.08);
+        }
+        #btn-cancel:not(:disabled):hover {
+            background: rgba(248,81,73,0.18);
+            border-color: rgba(248,81,73,0.8);
+        }
+
         /* Right Panel */
         .right-panel { width: 320px; flex-shrink: 0; display: flex; flex-direction: column; gap: 1px; overflow: hidden; min-width: 200px; max-width: 600px; position: relative; }
+        /* Solo/maximize mode: let the panel breathe — use most of the available width */
+        .right-panel.solo-active { width: min(900px, 82vw) !important; max-width: 82vw !important; transition: width 0.2s ease; }
         .panel { background: var(--bg-panel); display: flex; flex-direction: column; overflow: hidden; }
         .panel.collapsed { flex: 0 0 32px !important; }
         .panel.collapsed .panel-content { display: none; }
@@ -2198,7 +2211,7 @@
             border: 1px solid rgba(188,140,255,0.16);
             border-top: none;
             border-radius: 0 0 8px 8px;
-            max-height: 340px;
+            max-height: 60vh;
             overflow-y: auto;
             padding: 12px 14px;
             scrollbar-width: thin;
@@ -2392,6 +2405,14 @@
         @media (min-width: 769px) and (max-width: 1100px) {
             .right-panel { min-width: 200px; max-width: 240px; }
             .message { max-width: 88%; font-size: 14px; }
+        }
+
+        /* Mobile backdrop — tapping this returns to chat on mobile */
+        #mobile-panel-backdrop {
+            display: none;
+            position: fixed; inset: 0; z-index: 0;
+            background: rgba(0,0,0,0.45);
+            -webkit-tap-highlight-color: transparent;
         }
 
         /* ── Mobile (≤768px): full rebuild ── */
@@ -3337,7 +3358,7 @@
                     <div class="conv-list" id="conv-list"></div>
                 </div>
             </div>
-            <button class="btn" id="btn-cancel" disabled title="Cancel AI operation" style="padding:5px 10px;">✕</button>
+            <button class="btn" id="btn-cancel" disabled title="Stop AI (cancel current operation)" style="padding:5px 10px;letter-spacing:0.03em;">⏹ Stop</button>
         </div>
         
         <div class="content">
@@ -8076,6 +8097,7 @@
         let _soloPanel = null;
         function togglePanelSolo(panelId, btn) {
             const panel = document.getElementById(panelId);
+            const rp    = document.getElementById('right-panel');
             if (!panel) return;
             if (_soloPanel === panelId) {
                 // Restore: show all panels and dividers
@@ -8088,9 +8110,11 @@
                     b.textContent = '⤢';
                     b.title = 'Maximize';
                 });
+                // Restore right-panel width
+                if (rp) rp.classList.remove('solo-active');
                 loadPanelHeights();
             } else {
-                // Solo this panel
+                // Solo this panel — hide others, expand right panel to use most of screen
                 _soloPanel = panelId;
                 document.querySelectorAll('.panel[id]').forEach(el => {
                     el.style.display = el.id === panelId ? '' : 'none';
@@ -8100,6 +8124,8 @@
                 });
                 panel.style.flexBasis = '100%';
                 panel.style.display = 'flex';
+                // Expand right panel so the solo panel has much more horizontal space
+                if (rp) rp.classList.add('solo-active');
                 // Update the maximize button that was clicked
                 if (btn) { btn.textContent = '⤡'; btn.title = 'Restore'; }
             }
@@ -11014,10 +11040,14 @@
                 if (tapped) tapped.classList.add('active');
             }
 
+            // Show/hide the backdrop — visible whenever a non-chat panel is active
+            const backdrop = document.getElementById('mobile-panel-backdrop');
+
             if (panelName === 'chat') {
                 // Show chat, hide right panel
                 chatPanel.classList.remove('mobile-hidden');
                 rightPanel.classList.remove('mobile-visible');
+                if (backdrop) backdrop.style.display = 'none';
                 // Re-focus input after switching back
                 const inp = document.getElementById('user-input');
                 if (inp) setTimeout(() => inp.focus(), 50);
@@ -11025,6 +11055,7 @@
                 // Hide chat, show right panel with the correct section
                 chatPanel.classList.add('mobile-hidden');
                 rightPanel.classList.add('mobile-visible');
+                if (backdrop) backdrop.style.display = 'block';
 
                 // Deactivate all panel sections
                 rightPanel.querySelectorAll('.panel').forEach(p => {
@@ -12752,7 +12783,7 @@
     <div class="tool-inspector" id="tool-inspector">
         <div class="ti-header">
             <span class="ti-title">⚙ Tool Inspector</span>
-            <button class="ti-close" onclick="closeToolInspector()" title="Close">✕</button>
+            <button class="ti-close" onclick="closeToolInspector()" title="Close Tool Inspector">✕ Close</button>
         </div>
 
         <!-- Live current tool card -->
@@ -12929,6 +12960,9 @@
         <div class="fso-content" id="fso-content"></div>
         <div class="fso-bar"><div class="fso-bar-fill" id="fso-bar-fill"></div></div>
     </div>
+
+    <!-- Mobile panel backdrop — tapping outside a panel returns to chat -->
+    <div id="mobile-panel-backdrop" onclick="showMobilePanel('chat')"></div>
 
     <!-- Toast notification container -->
     <div id="toast-container"></div>

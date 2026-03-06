@@ -13,11 +13,17 @@
     min-width: 0; overflow: hidden; position: relative;
 }
 
-/* ── .bypass-active: ambient panel glow when in bypass mode ── */
+/* ── .bypass-active: magical aurora border around chat panel ──
+   Uses outline (not clipped by overflow:hidden) + box-shadow glow.
+   Three-step keyframe: red → amber-orange → deep red.                ── */
 .chat-panel.bypass-active {
-    box-shadow: inset 0 0 0 1px rgba(239,68,68,0.14),
-                0 0 60px rgba(239,68,68,0.05);
-    animation: bypass-panel-glow 4.5s ease-in-out infinite;
+    outline: 1.5px solid rgba(239,68,68,0.5);
+    outline-offset: -1px;
+    animation: bypass-border-aurora 5s ease-in-out infinite;
+}
+.chat-panel.bypass-active .chat-messages {
+    /* Subtle warm-red inner vignette — makes the space feel "hot" */
+    box-shadow: inset 0 0 80px rgba(239,68,68,0.035);
 }
 
 /* ═══════════════════════════════════════════════════════
@@ -26,43 +32,46 @@
    Shown/hidden via .visible class from _setActiveMode().
    ═══════════════════════════════════════════════════════ */
 .bypass-warning-bar {
-    display: none;                    /* hidden by default */
+    /* Always flex — height+opacity control visibility for smooth transitions */
+    display: flex;
     align-items: center;
     justify-content: center;
     gap: 10px;
-    padding: 7px 16px;
     flex-shrink: 0;
     position: relative;
     overflow: hidden;
-    background: linear-gradient(135deg, rgba(100,20,5,0.60), rgba(145,15,5,0.50));
-    border-bottom: 1px solid rgba(239,68,68,0.35);
-    backdrop-filter: blur(8px);
+    /* Constant background — deliberately quiet, not fighting for attention */
+    background-color: rgba(90, 15, 4, 0.50);
+    border-bottom: 1px solid rgba(239,68,68,0.22);
     font-size: 11px;
-    font-weight: 700;
-    letter-spacing: 0.08em;
-    color: #fca5a5;
+    font-weight: 600;
+    letter-spacing: 0.07em;
+    color: rgba(252,165,165,0.85);
     user-select: none;
-    animation: bypass-warning-aurora 3.5s ease-in-out infinite;
     z-index: 5;
+
+    /* Hidden state */
+    max-height: 0;
+    padding: 0 16px;
+    opacity: 0;
+    pointer-events: none;
+    transition: max-height 0.4s cubic-bezier(0.4, 0, 0.2, 1),
+                padding    0.4s cubic-bezier(0.4, 0, 0.2, 1),
+                opacity    0.35s ease;
 }
 .bypass-warning-bar.visible {
-    display: flex;
-}
-
-/* Moving shimmer overlay */
-.bypass-warning-bar::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(90deg, transparent 0%, rgba(239,68,68,0.07) 50%, transparent 100%);
-    animation: bypass-shimmer 5s ease-in-out infinite;
-    pointer-events: none;
+    max-height: 44px;
+    padding: 6px 16px;
+    opacity: 1;
+    pointer-events: auto;
+    /* Gentle breathing opacity only — no color pops */
+    animation: bypass-bar-breathe 4s ease-in-out infinite;
 }
 
 .bwb-icon {
-    font-size: 13px;
-    animation: bypass-icon-pulse 2.2s ease-in-out infinite;
+    font-size: 12px;
     flex-shrink: 0;
+    opacity: 0.8;
 }
 .bwb-text {
     text-transform: uppercase;
@@ -71,51 +80,48 @@
 }
 .bwb-exit-btn {
     flex-shrink: 0;
-    padding: 2px 10px;
-    background: rgba(239,68,68,0.2);
-    border: 1px solid rgba(239,68,68,0.4);
-    border-radius: 4px;
-    color: #fca5a5;
+    padding: 2px 9px;
+    background: transparent;
+    border: 1px solid rgba(239,68,68,0.30);
+    border-radius: 3px;
+    color: rgba(252,165,165,0.75);
     font-size: 10px;
-    font-weight: 700;
-    letter-spacing: 0.05em;
+    font-weight: 600;
+    letter-spacing: 0.04em;
     cursor: pointer;
-    transition: background 0.15s, border-color 0.15s, color 0.15s;
+    transition: background 0.2s, border-color 0.2s, color 0.2s;
     font-family: inherit;
 }
 .bwb-exit-btn:hover {
-    background: rgba(239,68,68,0.4);
-    border-color: rgba(239,68,68,0.7);
-    color: #fff;
+    background: rgba(239,68,68,0.18);
+    border-color: rgba(239,68,68,0.55);
+    color: #fca5a5;
 }
 
-@keyframes bypass-warning-aurora {
+/* Single gentle breathe — opacity only, no color jumping */
+@keyframes bypass-bar-breathe {
+    0%, 100% { opacity: 0.80; }
+    50%      { opacity: 1.00; }
+}
+/* Aurora border: slow, gentle breath between deep red and soft amber.
+   Only box-shadow opacity changes — outline-color stays near-constant.
+   The glow softly pulses rather than popping between hues.               */
+@keyframes bypass-border-aurora {
     0%, 100% {
-        border-bottom-color: rgba(239,68,68,0.40);
-        background: linear-gradient(135deg, rgba(100,20,5,0.60), rgba(145,15,5,0.50));
+        outline-color: rgba(239,68,68,0.38);
+        box-shadow: 0 0 12px rgba(239,68,68,0.10),
+                    0 0 40px rgba(239,68,68,0.04);
     }
-    38% {
-        border-bottom-color: rgba(251,146,60,0.55);
-        background: linear-gradient(135deg, rgba(125,38,5,0.65), rgba(165,40,5,0.55));
+    45% {
+        outline-color: rgba(245,100,40,0.45);
+        box-shadow: 0 0 20px rgba(245,100,40,0.15),
+                    0 0 55px rgba(245,100,40,0.06);
     }
-    72% {
-        border-bottom-color: rgba(239,68,68,0.30);
-        background: linear-gradient(135deg, rgba(95,16,5,0.55), rgba(135,14,5,0.45));
+    80% {
+        outline-color: rgba(220,38,38,0.30);
+        box-shadow: 0 0 10px rgba(220,38,38,0.08),
+                    0 0 35px rgba(220,38,38,0.03);
     }
-}
-@keyframes bypass-shimmer {
-    0%        { transform: translateX(-130%); opacity: 0; }
-    20%       { opacity: 1; }
-    80%       { opacity: 1; }
-    100%      { transform: translateX(130%); opacity: 0; }
-}
-@keyframes bypass-icon-pulse {
-    0%, 100% { opacity: 1;   transform: scale(1); }
-    50%      { opacity: 0.65; transform: scale(1.18); }
-}
-@keyframes bypass-panel-glow {
-    0%, 100% { box-shadow: inset 0 0 0 1px rgba(239,68,68,0.10), 0 0 40px rgba(239,68,68,0.03); }
-    50%      { box-shadow: inset 0 0 0 1px rgba(239,68,68,0.20), 0 0 65px rgba(239,68,68,0.08); }
 }
 
 .chat-messages {

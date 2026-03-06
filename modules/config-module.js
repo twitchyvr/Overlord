@@ -23,6 +23,8 @@ const PERSISTENT_KEYS = [
     'queueDrainMode', 'thinkingEnabled', 'planLength',
     'gitOpsEnabled', 'gitOpsTrigger', 'gitOpsCommitStyle', 'gitOpsPush', 'gitOpsMinChanges',
     'obsidianVaultPath',
+    'ttsEnabled', 'ttsMode', 'ttsVoice', 'ttsSpeed',
+    'thinkingBudget',
     '_aiSet'
 ];
 
@@ -129,6 +131,11 @@ function init(hub) {
         neverStripFeatures: process.env.NEVER_STRIP_FEATURES === 'true',         // Never strip requested features (default: OFF)
         // ── Strict Completion Mode: prevent agents simplifying/skipping work ─
         strictCompletion: process.env.STRICT_COMPLETION !== 'false',             // Cannot remove tests, must create tasks (default: ON)
+        // ── TTS Voice Modes ───────────────────────────────────────────────────
+        ttsEnabled: false,                                                       // Enable auto voice narration
+        ttsMode:    'off',    // 'off' | 'read-aloud' | 'quick-updates' | 'thinking-aloud'
+        ttsVoice:   'English_expressive_narrator',                               // Default system voice
+        ttsSpeed:   1.0,                                                         // Playback speed (0.5–2.0)
         // Cookbook reference path
         cookbookPath: path.join(baseDir, '..', 'docs', 'minimax-m2.5_official_docs', 'cookbook', 'COOKBOOK.md'),
         // Load cookbook content if exists

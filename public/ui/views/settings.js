@@ -26,16 +26,27 @@ const MODEL_OPTIONS = [
 ];
 
 const TTS_VOICES = [
-    { value: 'female-shaonv',       label: 'Female - Young Woman' },
-    { value: 'female-yujie',        label: 'Female - Elegant' },
-    { value: 'female-chengshu',     label: 'Female - Mature' },
-    { value: 'female-tianmei',      label: 'Female - Sweet' },
-    { value: 'male-qn-qingse',     label: 'Male - Qingse' },
-    { value: 'male-qn-jingying',   label: 'Male - Jingying' },
-    { value: 'presenter_male',     label: 'Presenter Male' },
-    { value: 'presenter_female',   label: 'Presenter Female' },
-    { value: 'smart_adam',          label: 'Adam (EN)' },
-    { value: 'smart_bella',        label: 'Bella (EN)' }
+    // Official MiniMax English System Voices
+    { value: 'English_expressive_narrator',    label: 'Expressive Narrator' },
+    { value: 'English_radiant_girl',           label: 'Radiant Girl' },
+    { value: 'English_magnetic_voiced_man',    label: 'Magnetic-voiced Man' },
+    { value: 'English_Upbeat_Woman',           label: 'Upbeat Woman' },
+    { value: 'English_Trustworth_Man',         label: 'Trustworthy Man' },
+    { value: 'English_CalmWoman',              label: 'Calm Woman' },
+    { value: 'English_Gentle-voiced_man',      label: 'Gentle-voiced Man' },
+    { value: 'English_Diligent_Man',           label: 'Diligent Man' },
+    { value: 'English_Graceful_Lady',          label: 'Graceful Lady' },
+    { value: 'English_PlayfulGirl',            label: 'Playful Girl' },
+    { value: 'English_ManWithDeepVoice',       label: 'Man With Deep Voice' },
+    { value: 'English_FriendlyPerson',         label: 'Friendly Guy' },
+    { value: 'English_CaptivatingStoryteller', label: 'Captivating Storyteller' },
+    { value: 'English_WiseScholar',            label: 'Wise Scholar' },
+    { value: 'English_ConfidentWoman',         label: 'Confident Woman' },
+    { value: 'English_PatientMan',             label: 'Patient Man' },
+    { value: 'English_Comedian',               label: 'Comedian' },
+    // Legacy voices (still supported)
+    { value: 'smart_adam',                     label: 'Adam (legacy)' },
+    { value: 'smart_bella',                    label: 'Bella (legacy)' }
 ];
 
 export class SettingsView extends Component {
@@ -133,7 +144,8 @@ export class SettingsView extends Component {
             general: this._renderGeneralTab(),
             ai:      this._renderAITab(),
             tools:   this._renderToolsTab(),
-            display: this._renderDisplayTab()
+            display: this._renderDisplayTab(),
+            gitops:  this._renderGitOpsTab()
         };
 
         Object.values(this._tabPanels).forEach(p => {
@@ -148,7 +160,8 @@ export class SettingsView extends Component {
                 { id: 'general', label: 'General' },
                 { id: 'ai',      label: 'AI' },
                 { id: 'tools',   label: 'Tools' },
-                { id: 'display', label: 'Display' }
+                { id: 'display', label: 'Display' },
+                { id: 'gitops',  label: '⚡ GitOps' }
             ],
             activeId: 'general',
             style: 'underline',
@@ -351,12 +364,166 @@ export class SettingsView extends Component {
             lrWrap
         ));
 
-        // TTS Voice
+        // ── Advanced Numeric Inputs (2-column grid) ───────────────────────
+        const makeNumField = (key, def, min, max, step) => {
+            const inp = h('input', {
+                type: 'number', class: 'settings-input-sm',
+                'data-field': key, value: String(def), min: String(min), max: String(max)
+            });
+            if (step) inp.step = String(step);
+            inp.addEventListener('change', () => {
+                const v = parseFloat(inp.value);
+                if (!isNaN(v)) this._emitUpdate({ [key]: v });
+            });
+            return inp;
+        };
+        const numGrid = h('div', { class: 'settings-num-grid' },
+            h('div', { class: 'settings-num-cell' },
+                h('label', { class: 'settings-num-label' }, 'Session Notes Lines'),
+                makeNumField('sessionNotesLines', 50, 1, 500),
+                h('span', { class: 'settings-num-hint' }, 'injected')
+            ),
+            h('div', { class: 'settings-num-cell' },
+                h('label', { class: 'settings-num-label' }, 'Timeline Lines'),
+                makeNumField('timelineLines', 20, 1, 200),
+                h('span', { class: 'settings-num-hint' }, 'injected')
+            ),
+            h('div', { class: 'settings-num-cell' },
+                h('label', { class: 'settings-num-label' }, 'Rate Limit Tokens'),
+                makeNumField('rateLimitTokens', 20, 1, 100),
+                h('span', { class: 'settings-num-hint' }, 'max burst')
+            ),
+            h('div', { class: 'settings-num-cell' },
+                h('label', { class: 'settings-num-label' }, 'Rate Refill / sec'),
+                makeNumField('rateLimitRefillRate', 4, 0.5, 20, 0.5),
+                h('span', { class: 'settings-num-hint' }, 'tokens/sec')
+            ),
+            h('div', { class: 'settings-num-cell' },
+                h('label', { class: 'settings-num-label' }, 'Message Queue'),
+                makeNumField('messageQueueSize', 3, 0, 20),
+                h('span', { class: 'settings-num-hint' }, 'buffered msgs')
+            ),
+            h('div', { class: 'settings-num-cell' },
+                h('label', { class: 'settings-num-label' }, 'Max Parallel Agents'),
+                makeNumField('maxParallelAgents', 3, 1, 8),
+                h('span', { class: 'settings-num-hint' }, 'at once')
+            )
+        );
+        panel.appendChild(this._section('Processing Limits',
+            'Fine-tune context injection, rate limiting, and parallelism.',
+            numGrid
+        ));
+
+        // ── AI Self-Correction ────────────────────────────────────────────────
+        const selfCorrWrap = this._toggleField('autoCreateIssues', 'Enable AI self-correction (auto-create GitHub issues on errors)', (v) => {
+            this._emitUpdate({ autoCreateIssues: v });
+        });
+        panel.appendChild(this._section('AI Self-Correction',
+            'AI creates GitHub issues for its own errors and retries until resolved.',
+            selfCorrWrap
+        ));
+
+        // ── Task Enforcement ──────────────────────────────────────────────────
+        const taskEnfWrap = this._toggleField('taskEnforcement', 'Enforce task creation (AI must use task tools)', (v) => {
+            this._emitUpdate({ taskEnforcement: v });
+        });
+        panel.appendChild(this._section('Task Enforcement',
+            'Require AI to create and complete tasks before reporting done.',
+            taskEnfWrap
+        ));
+
+        // ── Strict Completion Mode ────────────────────────────────────────────
+        const strictWrap = this._toggleField('strictCompletion', 'Strict completion mode — AI cannot skip or simplify work', (v) => {
+            this._emitUpdate({ strictCompletion: v });
+        });
+        panel.appendChild(this._section('Strict Completion Mode',
+            'Prevents the AI from removing tests, truncating output, or marking tasks done prematurely.',
+            strictWrap
+        ));
+
+        // ── Queue Drain Mode ──────────────────────────────────────────────────
+        const makeQueueRadio = (value, label) => {
+            const rb = h('input', { type: 'radio', name: 'queueDrainMode', value, 'data-field': 'queueDrainMode-' + value });
+            rb.addEventListener('change', () => { if (rb.checked) this._emitUpdate({ queueDrainMode: value }); });
+            return h('label', { class: 'radio-wrap' }, rb, h('span', {}, label));
+        };
+        const queueDrainWrap = h('div', { class: 'radio-group' },
+            makeQueueRadio('consolidated', 'Consolidated — merge queued messages into one request'),
+            makeQueueRadio('sequential',   'Sequential — process each queued message in turn')
+        );
+        panel.appendChild(this._section('Queue Drain Mode',
+            'How buffered messages are processed when the AI finishes a request.',
+            queueDrainWrap
+        ));
+
+        // ── Extended Thinking Mode ────────────────────────────────────────────
+        const thinkingBudgetInput = h('input', {
+            type: 'number', class: 'settings-input-sm',
+            'data-field': 'thinkingBudget',
+            value: '2048', min: '512', max: '65536', step: '512'
+        });
+        thinkingBudgetInput.addEventListener('change', () => {
+            const v = parseInt(thinkingBudgetInput.value, 10);
+            if (!isNaN(v) && v >= 512) this._emitUpdate({ thinkingBudget: v });
+        });
+        const thinkingWrap = this._toggleField('thinkingEnabled', 'Enable extended thinking', (v) => {
+            this._emitUpdate({ thinkingEnabled: v });
+            thinkingBudgetInput.disabled = !v;
+        });
+        const thinkingRow = h('div', { style: { display: 'flex', flexDirection: 'column', gap: '8px' } },
+            thinkingWrap,
+            h('div', { style: { display: 'flex', alignItems: 'center', gap: '8px' } },
+                h('label', { class: 'settings-num-label', style: { minWidth: '80px' } }, 'Token budget'),
+                thinkingBudgetInput,
+                h('span', { class: 'settings-num-hint' }, 'tokens (512–65536, step 512)')
+            )
+        );
+        panel.appendChild(this._section('Extended Thinking Mode',
+            'Enables chain-of-thought reasoning. Requires MiniMax-M2.5 model. Uses more tokens.',
+            thinkingRow
+        ));
+
+        // ── Plan Mode Length ──────────────────────────────────────────────────
+        const makePlanRadio = (value, label) => {
+            const rb = h('input', { type: 'radio', name: 'planLength', value, 'data-field': 'planLength-' + value });
+            rb.addEventListener('change', () => { if (rb.checked) this._emitUpdate({ planLength: value }); });
+            return h('label', { class: 'radio-wrap' }, rb, h('span', {}, label));
+        };
+        const planLengthWrap = h('div', { class: 'radio-group' },
+            makePlanRadio('short',     'Short — concise action list (faster, fewer tokens)'),
+            makePlanRadio('regular',   'Regular — balanced detail (recommended)'),
+            makePlanRadio('long',      'Long — full rationale and implementation notes'),
+            makePlanRadio('unlimited', 'Unlimited — no length constraints')
+        );
+        panel.appendChild(this._section('Plan Mode Length',
+            'Controls the verbosity of PLAN mode outputs.',
+            planLengthWrap
+        ));
+
+        // ── Reference Documentation ───────────────────────────────────────────
+        const refDocArea = h('textarea', {
+            class: 'settings-textarea settings-textarea-mono',
+            'data-field': 'referenceDocumentation',
+            placeholder: 'Paste API docs, architecture notes, or any reference material here...\nThis is injected into every AI request as reference context.',
+            rows: '8'
+        });
+        refDocArea.addEventListener('change', () => {
+            this._emitUpdate({ referenceDocumentation: refDocArea.value });
+        });
+        panel.appendChild(this._section('Reference Documentation',
+            'Injected into every AI request as additional context. Useful for API docs, architecture diagrams, or team conventions.',
+            refDocArea
+        ));
+
+        // ── TTS Voice (existing, updated) ─────────────────────────────────────
         const voiceSelect = h('select', { class: 'settings-select-full', 'data-field': 'ttsVoice' });
         TTS_VOICES.forEach(v => {
             voiceSelect.appendChild(h('option', { value: v.value }, v.label));
         });
-        const testBtn = Button.create('Test', {
+        voiceSelect.addEventListener('change', () => {
+            this._emitUpdate({ ttsVoice: voiceSelect.value });
+        });
+        const testBtn = Button.create('Test Voice', {
             variant: 'ghost', size: 'sm',
             onClick: () => {
                 if (this._socket) {
@@ -370,8 +537,136 @@ export class SettingsView extends Component {
             voiceSelect, testBtn
         );
         panel.appendChild(this._section('TTS Voice',
-            'Voice used for the speak tool. Audio saved to .overlord/audio/.',
+            'Voice used for the speak tool and auto-narration. Audio saved to .overlord/audio/.',
             voiceRow
+        ));
+
+        // ── Voice Narration Mode ──────────────────────────────────────────────
+        const ttsEnabledWrap = this._toggleField('ttsEnabled', 'Enable auto voice narration', (v) => {
+            this._emitUpdate({ ttsEnabled: v });
+            ttsModesWrap.style.display = v ? '' : 'none';
+        });
+
+        const makeTtsRadio = (value, labelText) => {
+            const rb = h('input', { type: 'radio', name: 'ttsMode', value, 'data-field': 'ttsMode-' + value });
+            rb.addEventListener('change', () => { if (rb.checked) this._emitUpdate({ ttsMode: value }); });
+            return h('label', { class: 'radio-wrap' }, rb, h('span', {}, labelText));
+        };
+
+        const ttsSpeedInput = h('input', {
+            type: 'number', class: 'settings-input-sm',
+            'data-field': 'ttsSpeed',
+            value: '1.0', min: '0.5', max: '2.0', step: '0.1'
+        });
+        ttsSpeedInput.addEventListener('change', () => {
+            const s = parseFloat(ttsSpeedInput.value);
+            if (!isNaN(s) && s >= 0.5 && s <= 2.0) this._emitUpdate({ ttsSpeed: s });
+        });
+
+        const ttsModesWrap = h('div', { style: { display: 'none', marginTop: '8px' } },
+            h('div', { class: 'radio-group' },
+                makeTtsRadio('read-aloud',    'Read Aloud — speaks AI responses verbatim (long responses are summarized)'),
+                makeTtsRadio('quick-updates', 'Quick Updates — brief 2–3 sentence summary of what was done'),
+                makeTtsRadio('thinking-aloud','Thinking Aloud — AI reflects on what it noticed and considered')
+            ),
+            h('div', { style: { display: 'flex', alignItems: 'center', gap: '8px', marginTop: '8px' } },
+                h('label', { class: 'settings-num-label', style: { minWidth: '50px' } }, 'Speed'),
+                ttsSpeedInput,
+                h('span', { class: 'settings-num-hint' }, '× normal speed (0.5–2.0)')
+            )
+        );
+
+        panel.appendChild(this._section('Voice Narration Mode',
+            'AI automatically speaks after each response completes. Voice and mode are applied together.',
+            ttsEnabledWrap, ttsModesWrap
+        ));
+
+        // ── Voice Clone ───────────────────────────────────────────────────────
+        const cloneStatusEl = h('div', { class: 'voice-clone-status', style: { fontSize: '11px', marginTop: '6px', color: 'var(--text-secondary)' } }, '');
+        const cloneFileInput = h('input', { type: 'file', accept: 'audio/mpeg,audio/mp4,audio/wav,audio/x-m4a,.mp3,.m4a,.wav', style: { fontSize: '11px' } });
+        const cloneVoiceIdInput = h('input', {
+            type: 'text', class: 'settings-input-sm',
+            placeholder: 'my-voice-001', style: { width: '140px' }
+        });
+        let _uploadedFileId = null;
+
+        const cloneBtn = Button.create('Clone Voice', {
+            variant: 'primary', size: 'sm', disabled: true,
+            onClick: async () => {
+                if (!_uploadedFileId || !cloneVoiceIdInput.value.trim()) {
+                    OverlordUI.setContent(cloneStatusEl, '⚠️ Upload a file and enter a Voice ID first.');
+                    return;
+                }
+                Button.setLoading(cloneBtn, true);
+                OverlordUI.setContent(cloneStatusEl, '⏳ Cloning voice…');
+                this._socket.emit('voice_clone_create', {
+                    fileId: _uploadedFileId,
+                    voiceId: cloneVoiceIdInput.value.trim()
+                });
+            }
+        });
+
+        const uploadBtn = Button.create('Upload Recording', {
+            variant: 'secondary', size: 'sm',
+            onClick: () => cloneFileInput.click()
+        });
+
+        cloneFileInput.addEventListener('change', async () => {
+            const file = cloneFileInput.files[0];
+            if (!file) return;
+            if (file.size > 30 * 1024 * 1024) {
+                OverlordUI.setContent(cloneStatusEl, '⚠️ File too large (max ~30MB).');
+                return;
+            }
+            OverlordUI.setContent(cloneStatusEl, '⏳ Uploading file…');
+            const reader = new FileReader();
+            reader.onload = () => {
+                const b64 = reader.result.split(',')[1];
+                this._socket.emit('voice_clone_upload', {
+                    filename: file.name,
+                    mimeType: file.type || 'audio/mpeg',
+                    data: b64
+                });
+            };
+            reader.readAsDataURL(file);
+        });
+
+        if (this._socket) {
+            this._socket.on('voice_clone_upload_result', (res) => {
+                if (res.success) {
+                    _uploadedFileId = res.fileId;
+                    cloneBtn.disabled = false;
+                    OverlordUI.setContent(cloneStatusEl, `✅ File uploaded (id: ${res.fileId.substring(0, 12)}…)`);
+                } else {
+                    OverlordUI.setContent(cloneStatusEl, '❌ Upload failed: ' + (res.error || 'unknown'));
+                }
+            });
+            this._socket.on('voice_clone_result', (res) => {
+                Button.setLoading(cloneBtn, false);
+                if (res.success) {
+                    OverlordUI.setContent(cloneStatusEl, `✅ Voice cloned! ID: ${res.voiceId}`);
+                    // Add cloned voice to the voice selector
+                    const opt = h('option', { value: res.voiceId }, `${res.voiceId} (cloned)`);
+                    voiceSelect.appendChild(opt);
+                    voiceSelect.value = res.voiceId;
+                    this._emitUpdate({ ttsVoice: res.voiceId });
+                } else {
+                    OverlordUI.setContent(cloneStatusEl, '❌ Clone failed: ' + (res.error || 'unknown'));
+                }
+            });
+        }
+
+        const cloneRow = h('div', { style: { display: 'flex', flexWrap: 'wrap', gap: '8px', alignItems: 'center' } },
+            uploadBtn,
+            h('span', { style: { fontSize: '11px', color: 'var(--text-muted)' } }, 'Voice ID:'),
+            cloneVoiceIdInput,
+            cloneBtn
+        );
+        panel.appendChild(this._section('Voice Clone (MiniMax)',
+            'Upload a voice recording (mp3/m4a/wav, 10s–5min) to create a cloned voice. The cloned voice ID is added to the voice selector above.',
+            cloneFileInput,
+            cloneRow,
+            cloneStatusEl
         ));
 
         return panel;
@@ -453,6 +748,105 @@ export class SettingsView extends Component {
         return panel;
     }
 
+    // ── GitOps Tab ───────────────────────────────────────────────
+
+    _renderGitOpsTab() {
+        const panel = h('div', { class: 'settings-tab-panel' });
+
+        // Master toggle
+        const gitopsSub = h('div', { id: 'gitops-sub', style: { display: 'none' } });
+
+        const masterWrap = this._toggleField('gitOpsEnabled', 'Enable GitOps Auto-Commit', (v) => {
+            this._emitUpdate({ gitOpsEnabled: v });
+            gitopsSub.style.display = v ? '' : 'none';
+        });
+        panel.appendChild(this._section('GitOps Auto-Commit',
+            'AI generates quality commit messages and commits automatically on configurable triggers.',
+            masterWrap
+        ));
+
+        // Commit Trigger radios
+        const makeTriggerRadio = (value, label) => {
+            const rb = h('input', { type: 'radio', name: 'gitOpsTrigger', value, 'data-field': 'gitOpsTrigger-' + value });
+            rb.addEventListener('change', () => {
+                if (rb.checked) {
+                    this._emitUpdate({ gitOpsTrigger: value });
+                    nFilesWrap.style.display = value === 'count' ? '' : 'none';
+                }
+            });
+            return h('label', { class: 'radio-wrap' }, rb, h('span', {}, label));
+        };
+
+        const nFilesInput = h('input', {
+            type: 'number', class: 'settings-input-sm',
+            'data-field': 'gitOpsMinChanges',
+            value: '3', min: '1', max: '50'
+        });
+        nFilesInput.addEventListener('change', () => {
+            const n = parseInt(nFilesInput.value, 10);
+            if (!isNaN(n) && n >= 1) this._emitUpdate({ gitOpsMinChanges: n });
+        });
+
+        const nFilesWrap = h('div', {
+            style: { display: 'none', paddingLeft: '20px', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '8px' }
+        },
+            h('span', { style: { fontSize: '11px' } }, 'Commit after'),
+            nFilesInput,
+            h('span', { style: { fontSize: '11px' } }, 'files changed')
+        );
+
+        const triggerWrap = h('div', {},
+            h('div', { class: 'radio-group' },
+                makeTriggerRadio('every',     'After every file change (debounced 3 s)'),
+                makeTriggerRadio('task',      'After each task completes (recommended)'),
+                makeTriggerRadio('milestone', 'After each milestone completes'),
+                makeTriggerRadio('count',     'After N changed files accumulate'),
+                makeTriggerRadio('manual',    'Manual only (use Commit & Push Now button)')
+            ),
+            nFilesWrap
+        );
+        gitopsSub.appendChild(this._section('Commit Trigger', null, triggerWrap));
+
+        // Commit Message Style
+        const styleSelect = h('select', { class: 'settings-select-full', 'data-field': 'gitOpsCommitStyle' },
+            h('option', { value: 'comprehensive' }, 'Comprehensive — full impact summary, file list, trigger context'),
+            h('option', { value: 'conventional' },  'Conventional Commits — type(scope): subject + file list'),
+            h('option', { value: 'brief' },          'Brief — one-line type(scope): summary')
+        );
+        styleSelect.addEventListener('change', () => {
+            this._emitUpdate({ gitOpsCommitStyle: styleSelect.value });
+        });
+        gitopsSub.appendChild(this._section('Commit Message Style', null, styleSelect));
+
+        // Push Behavior radios
+        const makePushRadio = (value, label) => {
+            const rb = h('input', { type: 'radio', name: 'gitOpsPush', value, 'data-field': 'gitOpsPush-' + value });
+            rb.addEventListener('change', () => { if (rb.checked) this._emitUpdate({ gitOpsPush: value }); });
+            return h('label', { class: 'radio-wrap' }, rb, h('span', {}, label));
+        };
+        const pushWrap = h('div', { class: 'radio-group' },
+            makePushRadio('always', 'Always push after commit'),
+            makePushRadio('ask',    'Ask before each push'),
+            makePushRadio('never',  'Never push (commit only)')
+        );
+        gitopsSub.appendChild(this._section('Push Behavior', null, pushWrap));
+
+        // Manual commit button
+        const commitNowBtn = Button.create('⚡ Commit & Push Now', {
+            variant: 'electric', size: 'md',
+            onClick: () => {
+                if (this._socket) this._socket.emit('gitops_commit_now');
+            }
+        });
+        gitopsSub.appendChild(this._section('Manual Trigger',
+            'Immediately commit and push all staged changes with an AI-generated message.',
+            commitNowBtn
+        ));
+
+        panel.appendChild(gitopsSub);
+        return panel;
+    }
+
     // ══════════════════════════════════════════════════════════════
     //  CONFIG APPLY / SAVE
     // ══════════════════════════════════════════════════════════════
@@ -504,6 +898,61 @@ export class SettingsView extends Component {
         const vaultEl = body.querySelector('[data-field="obsidianVaultPath"]');
         if (vaultEl && data.obsidianVaultPath !== undefined) vaultEl.value = data.obsidianVaultPath || '';
 
+        // ── New numeric inputs ──────────────────────────────────────────────
+        ['sessionNotesLines','timelineLines','rateLimitTokens','rateLimitRefillRate',
+         'messageQueueSize','maxParallelAgents','thinkingBudget','ttsSpeed'].forEach(key => {
+            const el = body.querySelector(`[data-field="${key}"]`);
+            if (el && data[key] != null) el.value = data[key];
+        });
+
+        // ── New toggles ─────────────────────────────────────────────────────
+        ['autoCreateIssues','taskEnforcement','strictCompletion','thinkingEnabled',
+         'gitOpsEnabled','ttsEnabled'].forEach(key => {
+            const el = body.querySelector(`[data-field="${key}"]`);
+            if (el) el.checked = !!data[key];
+        });
+
+        // ── Radio groups ────────────────────────────────────────────────────
+        ['queueDrainMode','planLength','gitOpsTrigger','gitOpsPush'].forEach(key => {
+            const val = data[key];
+            if (!val) return;
+            const rb = body.querySelector(`[name="${key}"][value="${val}"]`);
+            if (rb) rb.checked = true;
+        });
+
+        // gitOpsCommitStyle is a <select>
+        const commitStyleEl = body.querySelector('[data-field="gitOpsCommitStyle"]');
+        if (commitStyleEl && data.gitOpsCommitStyle) commitStyleEl.value = data.gitOpsCommitStyle;
+
+        // referenceDocumentation textarea
+        const refDocEl = body.querySelector('[data-field="referenceDocumentation"]');
+        if (refDocEl && data.referenceDocumentation != null) refDocEl.value = data.referenceDocumentation;
+
+        // ttsMode radio
+        if (data.ttsMode) {
+            const ttsRb = body.querySelector(`[name="ttsMode"][value="${data.ttsMode}"]`);
+            if (ttsRb) ttsRb.checked = true;
+        }
+
+        // TTS modes sub-panel visibility
+        const ttsModesEl = body.querySelector('[data-field="ttsEnabled"]');
+        const ttsModesWrapEl = ttsModesEl?.closest('.settings-section')?.querySelector('div[style]');
+        if (ttsModesWrapEl) ttsModesWrapEl.style.display = data.ttsEnabled ? '' : 'none';
+
+        // GitOps sub-section visibility
+        const gitopsSub = body.querySelector('#gitops-sub');
+        if (gitopsSub) gitopsSub.style.display = data.gitOpsEnabled !== false ? '' : 'none';
+
+        // gitOpsMinChanges count input visibility (when trigger='count')
+        const countWrap = body.querySelector('[data-field="gitOpsMinChanges"]')?.closest('div');
+        if (countWrap && data.gitOpsTrigger) {
+            countWrap.style.display = data.gitOpsTrigger === 'count' ? 'flex' : 'none';
+        }
+
+        // thinkingBudget input disabled state
+        const budgetEl = body.querySelector('[data-field="thinkingBudget"]');
+        if (budgetEl) budgetEl.disabled = !data.thinkingEnabled;
+
         // Render AI-set badges
         this._renderAiSetBadges(body);
     }
@@ -512,12 +961,46 @@ export class SettingsView extends Component {
         const body = Modal.getBody(MODAL_ID);
         if (!body || !this._socket) return;
 
-        const instrEl = body.querySelector('[data-field="customInstructions"]');
-        const memEl   = body.querySelector('[data-field="projectMemory"]');
+        const g = (field) => body.querySelector(`[data-field="${field}"]`);
+        const gv = (field) => g(field)?.value;
+        const gc = (field) => g(field)?.checked;
+        const gr = (name) => body.querySelector(`[name="${name}"]:checked`)?.value;
 
         const update = {};
-        if (instrEl) update.customInstructions = instrEl.value;
-        if (memEl)   update.projectMemory      = memEl.value;
+
+        // Text areas
+        if (g('customInstructions'))    update.customInstructions   = gv('customInstructions');
+        if (g('projectMemory'))         update.projectMemory        = gv('projectMemory');
+        if (g('referenceDocumentation'))update.referenceDocumentation = gv('referenceDocumentation') || '';
+        if (g('obsidianVaultPath'))     update.obsidianVaultPath    = gv('obsidianVaultPath') || '';
+
+        // Numeric inputs
+        ['sessionNotesLines','timelineLines','rateLimitTokens','rateLimitRefillRate',
+         'messageQueueSize','maxParallelAgents','thinkingBudget','ttsSpeed','gitOpsMinChanges'
+        ].forEach(key => {
+            const el = g(key);
+            if (el) {
+                const v = parseFloat(el.value);
+                if (!isNaN(v)) update[key] = v;
+            }
+        });
+
+        // Toggles
+        ['autoCreateIssues','taskEnforcement','strictCompletion','thinkingEnabled',
+         'gitOpsEnabled','ttsEnabled'].forEach(key => {
+            const el = g(key);
+            if (el) update[key] = el.checked;
+        });
+
+        // Radio groups
+        ['queueDrainMode','planLength','gitOpsTrigger','gitOpsPush','ttsMode'].forEach(name => {
+            const v = gr(name);
+            if (v) update[name] = v;
+        });
+
+        // Selects
+        if (g('ttsVoice'))        update.ttsVoice        = gv('ttsVoice');
+        if (g('gitOpsCommitStyle'))update.gitOpsCommitStyle = gv('gitOpsCommitStyle');
 
         this._socket.emit('update_config', update);
         this.close();
@@ -803,6 +1286,20 @@ export class SettingsView extends Component {
     /** Create a labelled toggle checkbox. */
     _toggle(name, label, onChange) {
         const cb = h('input', { type: 'checkbox', 'data-toggle': name });
+        cb.addEventListener('change', () => onChange(cb.checked));
+        return h('label', { class: 'toggle-wrap' },
+            cb,
+            h('span', { class: 'toggle-track' }),
+            h('span', { class: 'toggle-label' }, label)
+        );
+    }
+
+    /**
+     * Config-bound toggle — uses data-field (persisted via update_config).
+     * Unlike _toggle() which uses data-toggle (local prefs only).
+     */
+    _toggleField(field, label, onChange) {
+        const cb = h('input', { type: 'checkbox', 'data-field': field });
         cb.addEventListener('change', () => onChange(cb.checked));
         return h('label', { class: 'toggle-wrap' },
             cb,

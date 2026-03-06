@@ -722,6 +722,11 @@ class Hub extends EventEmitter {
                     if (data.gitOpsCommitStyle !== undefined && ['comprehensive','conventional','brief'].includes(data.gitOpsCommitStyle)) config.gitOpsCommitStyle = data.gitOpsCommitStyle;
                     if (data.gitOpsPush !== undefined && ['always','never','ask'].includes(data.gitOpsPush)) config.gitOpsPush = data.gitOpsPush;
                     if (data.gitOpsMinChanges !== undefined) { const n = parseInt(data.gitOpsMinChanges, 10); if (!isNaN(n) && n >= 1) config.gitOpsMinChanges = n; }
+                    // TTS voice narration settings
+                    if (data.ttsEnabled !== undefined) config.ttsEnabled = Boolean(data.ttsEnabled);
+                    if (data.ttsMode !== undefined && ['off','read-aloud','quick-updates','thinking-aloud'].includes(data.ttsMode)) config.ttsMode = data.ttsMode;
+                    if (data.ttsVoice !== undefined) config.ttsVoice = String(data.ttsVoice).trim().substring(0, 100);
+                    if (data.ttsSpeed !== undefined) { const s = parseFloat(data.ttsSpeed); if (!isNaN(s) && s >= 0.5 && s <= 2.0) config.ttsSpeed = s; }
                     // Also propagate behavior limits to orchestration module
                     const orch = this.getService('orchestration');
                     if (orch && orch._updateLimits) orch._updateLimits(config);
@@ -764,7 +769,11 @@ class Hub extends EventEmitter {
                         gitOpsTrigger: config.gitOpsTrigger || 'task',
                         gitOpsCommitStyle: config.gitOpsCommitStyle || 'comprehensive',
                         gitOpsPush: config.gitOpsPush || 'always',
-                        gitOpsMinChanges: config.gitOpsMinChanges || 3
+                        gitOpsMinChanges: config.gitOpsMinChanges || 3,
+                        ttsEnabled: config.ttsEnabled === true,
+                        ttsMode: config.ttsMode || 'off',
+                        ttsVoice: config.ttsVoice || 'English_expressive_narrator',
+                        ttsSpeed: config.ttsSpeed || 1.0
                     });
                 }
             });
@@ -814,7 +823,11 @@ class Hub extends EventEmitter {
                         gitOpsTrigger: config.gitOpsTrigger || 'task',
                         gitOpsCommitStyle: config.gitOpsCommitStyle || 'comprehensive',
                         gitOpsPush: config.gitOpsPush || 'always',
-                        gitOpsMinChanges: config.gitOpsMinChanges || 3
+                        gitOpsMinChanges: config.gitOpsMinChanges || 3,
+                        ttsEnabled: config.ttsEnabled === true,
+                        ttsMode: config.ttsMode || 'off',
+                        ttsVoice: config.ttsVoice || 'English_expressive_narrator',
+                        ttsSpeed: config.ttsSpeed || 1.0
                     });
                 }
             });
@@ -823,6 +836,10 @@ class Hub extends EventEmitter {
             socket.on('gitops_commit_now', () => {
                 this.emit('gitops_commit_now');
             });
+
+            // ── Voice Clone handlers ──────────────────────────────────────────
+            socket.on('voice_clone_create', (data) => this.emit('voice_clone_create', data, socket));
+            socket.on('voice_clone_upload', (data) => this.emit('voice_clone_upload', data, socket));
 
             // ── Agent session socket handlers ──
             socket.on('direct_message', ({ agentName, message }) => {

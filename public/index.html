@@ -2070,6 +2070,8 @@
                     <h3 style="margin:0;font-size:14px;font-weight:700;color:var(--electric);">${isNew ? '+ New Project' : escapeHtml(proj.name)}</h3>
                     ${!isNew && !isActive ? `<button onclick="projSwitchToProject('${proj.id}')" style="background:rgba(0,212,255,0.1);border:1px solid rgba(0,212,255,0.3);border-radius:6px;color:var(--electric);cursor:pointer;font-size:11px;font-weight:700;padding:4px 12px;">⚡ Switch to This Project</button>` : ''}
                     ${isActive ? '<span style="font-size:10px;background:rgba(63,185,80,0.15);color:var(--accent-green);border:1px solid rgba(63,185,80,0.3);border-radius:4px;padding:2px 8px;">ACTIVE</span>' : ''}
+                    <div style="flex:1;"></div>
+                    <button id="proj-ai-fill-btn" onclick="projAIFill()" style="background:linear-gradient(135deg,rgba(168,85,247,0.15),rgba(0,212,255,0.15));border:1px solid rgba(168,85,247,0.3);border-radius:6px;color:var(--plasma);cursor:pointer;font-size:11px;font-weight:700;padding:5px 14px;transition:all 0.2s;" title="Describe your project and let AI fill the fields">🤖 AI Fill</button>
                 </div>
                 <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px;">
                     <div>
@@ -2146,6 +2148,73 @@
                     ${!isNew && isActive ? '<span style="font-size:10px;color:var(--text-muted);align-self:center;">This is your active project — tasks &amp; roadmap reflect this project.</span>' : ''}
                 </div>
             `;
+        }
+
+        function projAIFill() {
+            const btn = document.getElementById('proj-ai-fill-btn');
+            // Use a modal textarea instead of prompt() for better UX
+            const overlay = document.createElement('div');
+            overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:10000;display:flex;align-items:center;justify-content:center;';
+            overlay.innerHTML = `
+                <div style="background:var(--bg-secondary);border:1px solid var(--border);border-radius:12px;padding:24px;max-width:500px;width:90%;">
+                    <h3 style="margin:0 0 12px;font-size:14px;color:var(--plasma);font-weight:700;">🤖 AI Project Fill</h3>
+                    <p style="margin:0 0 12px;font-size:12px;color:var(--text-secondary);">Describe your project in natural language. The AI will extract the fields automatically.</p>
+                    <textarea id="proj-ai-desc" rows="5" style="width:100%;box-sizing:border-box;background:var(--bg-input);border:1px solid var(--border);border-radius:8px;color:var(--text-primary);font-size:12px;padding:10px;resize:vertical;" placeholder="Example: A React e-commerce site using Next.js and Tailwind CSS, stored at ~/Projects/shopfront. It needs a product catalog, shopping cart, and checkout flow. Use TypeScript and follow Airbnb style guide."></textarea>
+                    <div style="display:flex;gap:8px;margin-top:14px;justify-content:flex-end;">
+                        <button id="proj-ai-cancel" style="background:none;border:1px solid var(--border);border-radius:6px;color:var(--text-secondary);cursor:pointer;font-size:12px;padding:6px 16px;">Cancel</button>
+                        <button id="proj-ai-go" style="background:linear-gradient(135deg,var(--plasma),var(--electric));border:none;border-radius:6px;color:#fff;cursor:pointer;font-size:12px;font-weight:700;padding:6px 20px;">✨ Generate</button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(overlay);
+
+            const textarea = overlay.querySelector('#proj-ai-desc');
+            const goBtn    = overlay.querySelector('#proj-ai-go');
+            const cancelBtn = overlay.querySelector('#proj-ai-cancel');
+            textarea.focus();
+
+            const close = () => { if (overlay.parentNode) overlay.remove(); };
+
+            cancelBtn.addEventListener('click', close);
+            overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
+
+            goBtn.addEventListener('click', () => {
+                const desc = textarea.value.trim();
+                if (!desc) return;
+
+                // Show loading state
+                goBtn.textContent = '⏳ Analyzing…';
+                goBtn.disabled = true;
+                textarea.disabled = true;
+
+                socket.emit('ai_populate_project', { description: desc }, (res) => {
+                    close();
+                    if (res && res.error) {
+                        console.error('[Overlord] AI populate error:', res.error);
+                        return;
+                    }
+                    if (res && res.fields) {
+                        const f = res.fields;
+                        const setVal = (id, val) => {
+                            const el = document.getElementById(id);
+                            if (el && val) {
+                                el.value = val;
+                                // Flash highlight to show what was filled
+                                el.style.transition = 'box-shadow 0.3s';
+                                el.style.boxShadow  = '0 0 8px rgba(168,85,247,0.5)';
+                                setTimeout(() => { el.style.boxShadow = ''; }, 1500);
+                            }
+                        };
+                        setVal('proj-field-name',         f.name);
+                        setVal('proj-field-desc',         f.description);
+                        setVal('proj-field-workingdir',   f.workingDir);
+                        setVal('proj-field-instructions', f.customInstructions);
+                        setVal('proj-field-memory',       f.projectMemory);
+                        setVal('proj-field-refdocs',      f.referenceDocumentation);
+                        setVal('proj-field-requirements', f.requirements);
+                    }
+                });
+            });
         }
 
         function projSaveProject() {
@@ -2300,7 +2369,7 @@
             openFolderBrowser, closeFolderBrowser, fbNavigate, fbConfirmSelect,
             // Project manager
             openProjectManager, closeProjectManager,
-            projSelectProject, projNewProject, projSaveProject,
+            projSelectProject, projNewProject, projSaveProject, projAIFill,
             projSwitchToProject, projDeleteProject, projLinkProject, projUnlinkProject,
             // Conversation selector
             loadConversation, startNewConversation, toggleConversations,

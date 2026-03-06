@@ -1,0 +1,168 @@
+/* ═══════════════════════════════════════════════════════════════════════
+   OVERLORD UI — Design Tokens
+   Unified CSS custom properties for both dark and light themes.
+   This is the single source of truth for all design tokens.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* ═══════════════════════════════════════════════════════
+   DARK THEME (default)
+   ═══════════════════════════════════════════════════════ */
+:root, html[data-theme="dark"] {
+    /* ── App chrome — true deep blacks ── */
+    --bg-dark:    #080b10;
+    --bg-panel:   #0d1117;
+    --bg-input:   #0a0d13;
+    --bg-hover:   #161c26;
+    --border-subtle: #161c26;
+    --border:     #1e2530;
+    --border-color: #1e2530;
+    --border-strong: #2d3748;
+
+    /* ── Text — high contrast ── */
+    --text-primary:   #f0f4f8;
+    --text-secondary: #94a3b8;
+    --text-muted:     #4a5568;
+
+    /* ── Accent palette ── */
+    --accent-cyan:    #38bdf8;
+    --accent-green:   #4ade80;
+    --accent-yellow:  #fbbf24;
+    --accent-red:     #f87171;
+    --accent-magenta: #c084fc;
+    --accent-primary: #38bdf8;
+    --accent-blue:    #38bdf8;
+    --code-bg:        #0d1117;
+
+    /* ── Aliases ── */
+    --bg-primary:   #0d1117;
+    --bg-secondary: #0a0d13;
+    --bg-tertiary:  #111827;
+
+    /* ── Spacing scale ── */
+    --space-1: 4px; --space-2: 8px; --space-3: 12px; --space-4: 16px;
+    --space-5: 24px; --space-6: 32px; --space-7: 40px; --space-8: 48px; --space-9: 64px;
+
+    /* ── Type scale ── */
+    --font-size-1: 12px; --font-size-2: 14px; --font-size-3: 16px;
+    --font-size-4: 18px; --font-size-5: 20px; --font-size-6: 24px;
+
+    /* ── Radii ── */
+    --radius-1: 3px; --radius-2: 6px; --radius-3: 8px; --radius-4: 12px; --radius-full: 9999px;
+
+    /* ── Focus ring ── */
+    --focus-ring: 0 0 0 2px var(--bg-dark), 0 0 0 4px var(--electric);
+
+    /* ── Electric neon identity tokens ── */
+    --electric:   #00d4ff;
+    --plasma:     #a855f7;
+    --neon-green: #00ff88;
+    --deep-space: #040608;
+    --charged:          rgba(0,212,255,0.07);
+    --charged-purple:   rgba(168,85,247,0.07);
+
+    /* ── Real glass — semi-transparent with blur ── */
+    --glass-bg:          rgba(8,12,18,0.72);
+    --glass-bg-raised:   rgba(12,18,28,0.82);
+    --glass-border:      rgba(255,255,255,0.08);
+    --glass-border-bright: rgba(0,212,255,0.4);
+    --glass-inner-glow:  linear-gradient(180deg, rgba(255,255,255,0.04) 0%, transparent 60%);
+    --glass-shadow:      0 16px 48px rgba(0,0,0,0.8), 0 1px 0 rgba(255,255,255,0.06) inset, 0 0 0 1px rgba(0,212,255,0.08);
+    --glass-shadow-sm:   0 4px 16px rgba(0,0,0,0.6), 0 1px 0 rgba(255,255,255,0.04) inset;
+    --blur-md: blur(24px) saturate(160%);
+    --blur-sm: blur(14px) saturate(140%);
+
+    /* ── Glow layers ── */
+    --glow-cyan:    0 0 8px rgba(0,212,255,0.7), 0 0 22px rgba(0,212,255,0.3);
+    --glow-cyan-sm: 0 0 5px rgba(0,212,255,0.55), 0 0 12px rgba(0,212,255,0.2);
+    --glow-green:   0 0 8px rgba(74,222,128,0.6), 0 0 20px rgba(74,222,128,0.2);
+    --glow-purple:  0 0 8px rgba(168,85,247,0.55), 0 0 20px rgba(168,85,247,0.2);
+
+    /* ── Toggle dimensions ── */
+    --toggle-w: 32px; --toggle-h: 18px; --toggle-knob: 14px;
+
+    /* ── Scanline overlay ── */
+    --scanline: repeating-linear-gradient(0deg, transparent 0px, transparent 3px, rgba(0,0,0,0.018) 3px, rgba(0,0,0,0.018) 4px);
+}
+
+/* ═══════════════════════════════════════════════════════
+   LIGHT THEME
+   ═══════════════════════════════════════════════════════ */
+html[data-theme="light"] {
+    --bg-dark:    #f1f5f9;
+    --bg-panel:   #ffffff;
+    --bg-input:   #f8fafc;
+    --bg-hover:   #e2e8f0;
+    --border-subtle: #e2e8f0;
+    --border:     #cbd5e1;
+    --border-color: #cbd5e1;
+    --border-strong: #94a3b8;
+
+    --text-primary:   #0f172a;
+    --text-secondary: #475569;
+    --text-muted:     #94a3b8;
+
+    --accent-cyan:    #0284c7;
+    --accent-green:   #16a34a;
+    --accent-yellow:  #d97706;
+    --accent-red:     #dc2626;
+    --accent-magenta: #9333ea;
+    --accent-primary: #0284c7;
+    --accent-blue:    #0284c7;
+    --code-bg:        #f1f5f9;
+
+    --bg-primary:   #ffffff;
+    --bg-secondary: #f8fafc;
+    --bg-tertiary:  #f1f5f9;
+
+    --electric:   #0284c7;
+    --plasma:     #9333ea;
+    --neon-green: #16a34a;
+    --deep-space: #f8fafc;
+    --charged:          rgba(2,132,199,0.07);
+    --charged-purple:   rgba(147,51,234,0.07);
+
+    --glass-bg:          rgba(255,255,255,0.82);
+    --glass-bg-raised:   rgba(255,255,255,0.94);
+    --glass-border:      rgba(0,0,0,0.1);
+    --glass-border-bright: rgba(2,132,199,0.4);
+    --glass-inner-glow:  linear-gradient(180deg, rgba(255,255,255,0.6) 0%, transparent 60%);
+    --glass-shadow:      0 8px 32px rgba(0,0,0,0.12), 0 1px 0 rgba(255,255,255,0.9) inset, 0 0 0 1px rgba(0,0,0,0.08);
+    --glass-shadow-sm:   0 2px 12px rgba(0,0,0,0.08), 0 1px 0 rgba(255,255,255,0.8) inset;
+    --blur-md: blur(24px) saturate(150%);
+    --blur-sm: blur(14px) saturate(130%);
+
+    --glow-cyan:    0 0 6px rgba(2,132,199,0.4), 0 0 16px rgba(2,132,199,0.15);
+    --glow-cyan-sm: 0 0 4px rgba(2,132,199,0.35), 0 0 10px rgba(2,132,199,0.12);
+    --glow-green:   0 0 6px rgba(22,163,74,0.4), 0 0 14px rgba(22,163,74,0.15);
+    --glow-purple:  0 0 6px rgba(147,51,234,0.4), 0 0 14px rgba(147,51,234,0.15);
+
+    --focus-ring: 0 0 0 2px var(--bg-panel), 0 0 0 4px var(--electric);
+    --scanline: none;
+}
+
+/* ── Light-mode element overrides ── */
+html[data-theme="light"] body {
+    background: var(--bg-dark);
+    color: var(--text-primary);
+}
+html[data-theme="light"] .panel-header::after { opacity: 0.12; }
+html[data-theme="light"] .chat-msg-ai { background: #f0f9ff; border-color: rgba(2,132,199,0.2); }
+html[data-theme="light"] #user-input { background: transparent; color: var(--text-primary); border-color: transparent; }
+html[data-theme="light"] .input-wrapper { background: #fff; border-color: rgba(0,0,0,0.12); }
+html[data-theme="light"] .input-wrapper:focus-within { border-color: var(--electric); box-shadow: 0 0 0 1px rgba(0,212,255,0.12); }
+html[data-theme="light"] .modal-overlay { background: rgba(15,23,42,0.5); }
+html[data-theme="light"] .kanban-card { background: #ffffff; }
+html[data-theme="light"] .ms-card { background: rgba(255,255,255,0.9); }
+
+/* Dark-mode form field fix for Agent Manager */
+html[data-theme="light"] #agent-manager-modal input,
+html[data-theme="light"] #agent-manager-modal textarea,
+html[data-theme="light"] #agent-manager-modal select {
+    color: #0f172a !important;
+    background: #ffffff !important;
+    border-color: rgba(0,0,0,0.15) !important;
+}
+html[data-theme="light"] #agent-manager-modal select option {
+    color: #0f172a;
+    background: #ffffff;
+}

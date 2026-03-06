@@ -1,0 +1,194 @@
+/* ═══════════════════════════════════════════════════════════════════════
+   OVERLORD UI — Effects
+   Aurora, plasma, glassmorphism, animations, keyframes.
+   All visual identity effects and reusable animation classes.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* ═══════════════════════════════════════════════════════
+   KEYFRAMES
+   ═══════════════════════════════════════════════════════ */
+
+@keyframes electric-arc { to { --arc: 360deg; } }
+
+@keyframes plasma-breathe {
+    0%, 100% { box-shadow: 0 0 6px rgba(0,212,255,0.28), 0 0 12px rgba(0,212,255,0.10); }
+    50%       { box-shadow: 0 0 12px rgba(0,212,255,0.6), 0 0 24px rgba(0,212,255,0.2), 0 0 48px rgba(0,212,255,0.07); }
+}
+
+@keyframes neon-flicker {
+    0%, 89%, 91%, 93%, 100% { opacity: 1; }
+    90%, 92% { opacity: 0.78; }
+}
+
+@keyframes materialize {
+    from { opacity: 0; filter: blur(3px); transform: translateY(5px) scale(0.99); }
+    to   { opacity: 1; filter: blur(0);   transform: translateY(0)  scale(1); }
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-4px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes auroraBreath {
+    0%, 100% { border-color: rgba(0,212,255,0.55);  box-shadow: 0 0 0 1px rgba(0,212,255,0.10), 0 0 28px rgba(0,212,255,0.07); }
+    40%       { border-color: rgba(168,85,247,0.60); box-shadow: 0 0 0 1px rgba(168,85,247,0.12), 0 0 36px rgba(168,85,247,0.10); }
+    70%       { border-color: rgba(0,212,255,0.42);  box-shadow: 0 0 0 1px rgba(0,212,255,0.08), 0 0 20px rgba(0,212,255,0.05); }
+}
+
+@keyframes plasmaSweep {
+    0%   { transform: translateX(-120%) skewX(-8deg); opacity: 0; }
+    15%  { opacity: 1; }
+    85%  { opacity: 1; }
+    100% { transform: translateX(220%) skewX(-8deg); opacity: 0; }
+}
+
+@keyframes aurora-border {
+    0%,100% { border-color: rgba(168,85,247,0.7); }
+    33%      { border-color: rgba(0,212,255,0.7); }
+    66%      { border-color: rgba(245,158,11,0.5); }
+}
+
+@keyframes toast-in  { from { opacity:0; transform:translateX(20px); } to { opacity:1; transform:none; } }
+@keyframes toast-out { from { opacity:1; } to { opacity:0; transform:translateX(20px); } }
+
+@keyframes bypass-pulse {
+    0%,100% { box-shadow: 0 0 6px rgba(239,68,68,0.3); }
+    50%     { box-shadow: 0 0 14px rgba(239,68,68,0.65); }
+}
+
+@keyframes logo-amber-pulse {
+    0%, 100% { color: #fbbf24; text-shadow: 0 0 8px rgba(251,191,36,0.55), 0 0 20px rgba(251,191,36,0.18); }
+    50%       { color: #fcd34d; text-shadow: 0 0 14px rgba(251,191,36,0.85), 0 0 30px rgba(251,191,36,0.35), 0 0 50px rgba(251,191,36,0.1); }
+}
+
+@keyframes logo-error-pulse {
+    0%, 100% { color: #f87171; text-shadow: 0 0 8px rgba(248,113,113,0.55), 0 0 20px rgba(248,113,113,0.18); }
+    50%       { color: #fca5a5; text-shadow: 0 0 14px rgba(248,113,113,0.85), 0 0 30px rgba(248,113,113,0.35), 0 0 50px rgba(248,113,113,0.1); }
+}
+
+@keyframes taskPulse {
+    0%, 100% { border-left-color: var(--accent-cyan); opacity: 1; }
+    50%      { border-left-color: var(--accent-magenta); opacity: 0.7; }
+}
+
+@keyframes agentPulse {
+    0%, 100% { box-shadow: 0 0 4px var(--accent-green); }
+    50%      { box-shadow: 0 0 8px var(--accent-green), 0 0 12px rgba(63,185,80,0.3); }
+}
+
+@keyframes neural-pulse {
+    0%,100% { border-color: rgba(168,85,247,.15); }
+    50%     { border-color: rgba(168,85,247,.4); }
+}
+
+@keyframes tbPulse {
+    0%,100% { opacity: 0.4; }
+    50%     { opacity: 1; }
+}
+
+@keyframes kanbanCardLand {
+    0%   { transform: scale(1.04); box-shadow: 0 0 14px rgba(0,212,255,0.3); }
+    100% { transform: scale(1); box-shadow: none; }
+}
+
+/* ── delegate_to_agent magical agent name animations ── */
+@keyframes tc-agent-aurora {
+    0%   { background-position: 0%   50%; }
+    50%  { background-position: 100% 50%; }
+    100% { background-position: 0%   50%; }
+}
+@keyframes tc-agent-float {
+    0%, 100% { transform: translateY(0px); }
+    33%       { transform: translateY(-1.2px) rotate(-0.4deg); }
+    66%       { transform: translateY(0.6px)  rotate(0.3deg); }
+}
+@keyframes tc-agent-sparkle {
+    0%, 100% { opacity: 0.7; text-shadow: 0 0 4px rgba(168,85,247,0.5); }
+    50%       { opacity: 1;   text-shadow: 0 0 10px rgba(168,85,247,0.9), 0 0 20px rgba(0,212,255,0.5); }
+}
+
+
+/* ═══════════════════════════════════════════════════════
+   GLASSMORPHISM — reusable glass classes
+   ═══════════════════════════════════════════════════════ */
+
+/* Global panel electric glass */
+.panel {
+    background: var(--glass-bg);
+    backdrop-filter: var(--blur-sm);
+    -webkit-backdrop-filter: var(--blur-sm);
+    border: 1px solid var(--glass-border);
+    position: relative;
+    isolation: isolate;
+}
+.panel::before {
+    content: ''; position: absolute; inset: 0; border-radius: inherit;
+    background: var(--glass-inner-glow); pointer-events: none; z-index: 0;
+}
+.panel-header { border-bottom: 1px solid var(--glass-border); position: relative; }
+.panel-header::after {
+    content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 1px;
+    background: linear-gradient(90deg, transparent 0%, var(--electric) 40%, transparent 100%);
+    opacity: 0.18; pointer-events: none;
+}
+.panel-header:hover::after { opacity: 0.42; transition: opacity 0.2s; }
+.panel-content { position: relative; z-index: 1; }
+
+/* ── Message materialize animation ── */
+.message { animation: materialize 0.22s ease-out both; }
+
+/* ── Thinking ring — electric arc style ── */
+.thinking-ring {
+    display: none;
+    width: 16px; height: 16px;
+    border: 2px solid transparent;
+    border-top-color: var(--electric);
+    border-right-color: rgba(0,212,255,0.3);
+    border-radius: 50%;
+    animation: spin 0.6s linear infinite;
+    flex-shrink: 0;
+    filter: drop-shadow(0 0 4px var(--electric));
+}
+.is-thinking .thinking-ring { display: block; }
+
+/* ── Expandable pre (fade + see-more) ── */
+.expandable-pre {
+    position: relative;
+    max-height: 160px;
+    overflow: hidden;
+    mask-image: linear-gradient(to bottom, black 55%, transparent 100%);
+    -webkit-mask-image: linear-gradient(to bottom, black 55%, transparent 100%);
+}
+.expandable-pre.expanded {
+    max-height: none;
+    mask-image: none;
+    -webkit-mask-image: none;
+}
+.see-more-btn {
+    display: block; width: 100%; margin-top: 3px; padding: 3px 0;
+    background: none; border: none; color: var(--electric);
+    font-size: 9px; font-family: 'SF Mono', 'Menlo', monospace;
+    cursor: pointer; text-align: center; opacity: 0.65;
+    letter-spacing: 0.05em; transition: opacity 0.15s;
+}
+.see-more-btn:hover { opacity: 1; }
+.expandable-pre-container { display: block; }
+.tc .expandable-pre pre,
+.tool-output .expandable-pre pre { max-height: none; overflow: visible; }
+
+/* ── Electric arc border effect (used on settings modal) ── */
+.electric-arc-border::after {
+    content: ''; position: absolute; inset: -1px; border-radius: inherit;
+    background: conic-gradient(
+        from var(--arc), transparent 0deg, transparent 240deg,
+        var(--electric) 270deg, rgba(168,85,247,0.85) 285deg,
+        var(--electric) 300deg, transparent 330deg
+    );
+    animation: electric-arc 9s linear infinite;
+    z-index: -1; opacity: 0.28;
+    -webkit-mask: linear-gradient(#fff,#fff) content-box, linear-gradient(#fff,#fff);
+    -webkit-mask-composite: xor; mask-composite: exclude; padding: 1px;
+}

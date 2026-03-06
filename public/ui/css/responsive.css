@@ -1,0 +1,306 @@
+/* ═══════════════════════════════════════════════════════════════════════
+   OVERLORD UI — Responsive Design
+   Mobile-first breakpoints with desktop enhancements.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* ═══════════════════════════════════════════════════════
+   MOBILE NAV (hidden on desktop)
+   ═══════════════════════════════════════════════════════ */
+
+.mobile-nav { display: none; background: var(--bg-secondary); flex-shrink: 0; }
+.mobile-nav-items {
+    display: flex; flex-direction: row;
+    justify-content: space-around; align-items: stretch;
+    padding: 4px 0 env(safe-area-inset-bottom, 4px);
+}
+.mobile-nav-item {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 3px; flex: 1; min-height: 48px;
+    padding: 6px 4px; cursor: pointer;
+    color: var(--text-muted); font-size: 10px; font-weight: 600;
+    letter-spacing: 0.03em; text-transform: uppercase;
+    border-top: 2px solid transparent;
+    transition: color 0.15s, border-color 0.15s;
+    -webkit-tap-highlight-color: transparent;
+}
+.mobile-nav-item:active { background: var(--bg-hover); }
+.mobile-nav-item.active { color: var(--electric); border-top-color: var(--electric); }
+.mobile-nav-item .icon { font-size: 18px; line-height: 1; }
+.mobile-panel-overlay { display: none; }
+
+
+/* ═══════════════════════════════════════════════════════
+   DESKTOP (≥769px)
+   ═══════════════════════════════════════════════════════ */
+
+@media (min-width: 769px) {
+    .right-panel { display: flex; }
+    .mobile-nav { display: none !important; }
+    .mobile-panel-overlay { display: none !important; }
+}
+
+
+/* ═══════════════════════════════════════════════════════
+   TABLET (769px – 1100px)
+   ═══════════════════════════════════════════════════════ */
+
+@media (min-width: 769px) and (max-width: 1100px) {
+    .right-panel { min-width: 200px; max-width: 240px; }
+    .message { max-width: 88%; font-size: 14px; }
+}
+
+
+/* ═══════════════════════════════════════════════════════
+   MOBILE PORTRAIT (≤768px)
+   Full panel-switching architecture with bottom tab bar
+   ═══════════════════════════════════════════════════════ */
+
+/* Mobile backdrop */
+#mobile-panel-backdrop {
+    display: none;
+    position: fixed; inset: 0; z-index: 0;
+    background: rgba(0,0,0,0.45);
+    -webkit-tap-highlight-color: transparent;
+}
+
+@media (max-width: 768px) {
+
+    /* ── 1. PANEL SWITCHING ARCHITECTURE ── */
+    .content { position: relative; }
+
+    .chat-panel {
+        position: absolute; inset: 0;
+        display: flex; flex-direction: column;
+        z-index: 1; transition: opacity 0.15s;
+    }
+    .chat-panel.mobile-hidden { display: none; }
+
+    .right-panel {
+        position: absolute; inset: 0;
+        display: none; flex-direction: column;
+        width: 100% !important;
+        min-width: 0 !important; max-width: none !important;
+        z-index: 1; overflow: hidden;
+    }
+    .right-panel.mobile-visible { display: flex; }
+
+    /* Only active panel shows */
+    .right-panel > .panel { display: none; flex-direction: column; }
+    .right-panel > .panel.mobile-panel-active { display: flex; flex: 1; min-height: 0; }
+    .panel-divider { display: none; }
+
+    /* ── 2. STATUS BAR — ultra compact ── */
+    .status-bar {
+        padding: 0 8px;
+        height: 40px; min-height: 40px; flex-shrink: 0;
+        gap: 6px; flex-wrap: nowrap; overflow: hidden;
+    }
+    .logo { font-size: 12px; letter-spacing: 0.12em; flex-shrink: 0; }
+    #status {
+        font-size: 10px; flex: 1; min-width: 0;
+        white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        max-width: 110px;
+    }
+    #ctx-fill-bar-wrap { gap: 3px; flex-shrink: 0; }
+    #ctx-fill-bar-wrap .ctx-bar { width: 36px; }
+    #ctx-usage { font-size: 9px; }
+    /* Hide verbose status chrome */
+    #latency-hud { display: none !important; }
+    .sys-toggle-btn { display: none !important; }
+    #sys-info-pills { display: none !important; }
+    #presence-indicator { display: none !important; }
+    /* Conv selector: icon only */
+    .conv-selector { flex-shrink: 0; }
+    .conv-current { padding: 3px 7px; font-size: 11px; gap: 3px; }
+    #conv-title { display: none; }
+    #btn-cancel { padding: 4px 10px; font-size: 11px; flex-shrink: 0; }
+
+    /* ── 3. MESSAGES ── */
+    .chat-messages { padding: 8px 10px 8px; gap: 10px; }
+    .message {
+        max-width: 92%; padding: 10px 13px;
+        border-radius: 16px; font-size: 15px; line-height: 1.55;
+    }
+    .message.user { border-bottom-right-radius: 4px; }
+    .message.assistant { border-bottom-left-radius: 4px; }
+    .message .role { font-size: 9px; margin-bottom: 4px; }
+    .message .content pre { font-size: 12px; padding: 10px; overflow-x: auto; }
+    .message .content code { font-size: 12px; }
+
+    /* ── 4. INPUT AREA ── */
+    .input-area { padding: 6px 8px 6px; }
+    #input-context-bar { display: none; }
+    .input-toolbar {
+        gap: 4px; margin-bottom: 6px;
+        flex-wrap: nowrap; overflow-x: auto; overflow-y: visible;
+        align-items: center;
+        -webkit-overflow-scrolling: touch; scrollbar-width: none;
+    }
+    .input-toolbar::-webkit-scrollbar { display: none; }
+    .toolbar-btn {
+        width: 38px; height: 38px; padding: 0;
+        font-size: 17px; border-radius: 10px; flex-shrink: 0;
+        display: flex; align-items: center; justify-content: center;
+    }
+    /* Hide rarely-used buttons */
+    .input-toolbar > .toolbar-btn:nth-child(1),
+    .input-toolbar > .toolbar-btn:nth-child(2),
+    .input-toolbar > .toolbar-btn:nth-child(3),
+    .input-toolbar > .toolbar-btn:nth-child(4) {
+        display: none;
+    }
+    .long-run-label { display: none; }
+    .long-run-wrap { gap: 4px; flex-shrink: 0; }
+    .chat-mode-selector { border-radius: 7px; overflow: hidden; flex-shrink: 0; }
+    .chat-mode-btn { padding: 5px 7px; font-size: 9px; letter-spacing: 0; }
+    /* Prevent iOS zoom-on-focus */
+    #user-input { font-size: 16px; padding: 10px 12px; min-height: 44px; line-height: 1.5; }
+    #btn-send { padding: 10px 14px; font-size: 13px; min-height: 44px; min-width: 64px; border-radius: 10px; }
+    .msg-queue-panel { max-height: 110px; }
+    .msg-queue-header { padding: 5px 10px; font-size: 10px; }
+    .msg-queue-item { padding: 4px 8px; font-size: 11px; }
+    #plan-approval-bar { padding: 6px 8px; gap: 6px; flex-wrap: wrap; }
+    #plan-approval-bar button { min-height: 36px; padding: 5px 14px; font-size: 12px; }
+
+    /* ── 5. MOBILE TAB BAR ── */
+    .mobile-nav {
+        display: block;
+        border-top: 1px solid var(--border);
+        flex-shrink: 0;
+        background: var(--bg-secondary);
+        padding-bottom: env(safe-area-inset-bottom, 0px);
+    }
+    .mobile-nav-items { display: flex; padding-bottom: 0; }
+    .mobile-nav-item { min-height: 50px; font-size: 10px; gap: 2px; padding: 5px 2px; }
+    .mobile-nav-item .icon { font-size: 21px; line-height: 1; }
+    .mobile-nav-item.active { color: var(--electric); border-top-color: var(--electric); }
+
+    /* ── 5b. PANEL CONTENT ── */
+    .right-panel > .panel.mobile-panel-active {
+        display: flex; flex: 1; min-height: 0; flex-direction: column; overflow: hidden;
+    }
+    .right-panel > .panel.mobile-panel-active .panel-content {
+        flex: 1; overflow-y: auto; min-height: 0; padding-bottom: 12px !important;
+    }
+    .right-panel > .panel-log.mobile-panel-active .panel-content,
+    #panel-log.mobile-panel-active .panel-content {
+        padding-bottom: 16px !important;
+    }
+
+    /* ── 6. MISC ── */
+    ::-webkit-scrollbar { width: 3px; }
+    .toolbar-overflow-menu { min-width: 172px; }
+    .toolbar-overflow-item { padding: 13px 16px; font-size: 13px; }
+    .settings-modal-box { width: 100vw !important; max-width: 100vw !important; border-radius: 0 !important; height: 100dvh !important; max-height: 100dvh !important; }
+
+    /* Activity feed mobile */
+    .right-panel > .panel.mobile-panel-active .activity-feed {
+        max-height: none; flex: 1; overflow-y: auto;
+    }
+    .right-panel > .panel.mobile-panel-active .neural-section { max-height: 150px; overflow: hidden; }
+    /* Hide desktop-only UI */
+    .toolbar-panel-toggles { display: none !important; }
+    .panel-btn-popout { display: none !important; }
+    #panel-configurator { display: none !important; }
+    #btn-popout-chat { display: none !important; }
+
+    /* Kanban columns */
+    .kanban-col { width: 220px; }
+}
+
+
+/* ═══════════════════════════════════════════════════════
+   EXTRA-SMALL PHONES (≤390px)
+   ═══════════════════════════════════════════════════════ */
+
+@media (max-width: 390px) {
+    .logo { font-size: 10px; }
+    #status { max-width: 80px; }
+    .chat-mode-btn { padding: 6px 7px; font-size: 9px; }
+    .toolbar-btn { width: 34px; height: 34px; font-size: 14px; }
+    .message { font-size: 14px; }
+}
+
+
+/* ═══════════════════════════════════════════════════════
+   MOBILE LANDSCAPE — side-by-side dual-pane
+   ═══════════════════════════════════════════════════════ */
+
+@media (max-width: 768px) and (orientation: landscape) {
+    .content { position: static !important; flex-direction: row !important; }
+    .chat-panel {
+        position: relative !important; inset: auto !important;
+        display: flex !important; flex: 1 1 56%; min-width: 0; padding-bottom: 0 !important;
+    }
+    .chat-panel.mobile-hidden { display: flex !important; }
+    .right-panel {
+        position: relative !important; inset: auto !important;
+        display: flex !important; flex-direction: column !important;
+        width: 44% !important; min-width: 150px !important; max-width: 44% !important;
+        overflow-y: auto; overflow-x: hidden;
+        border-left: 1px solid var(--border);
+    }
+    .right-panel > .panel {
+        display: flex !important; flex-direction: column;
+        flex: 0 0 28px; min-height: 28px;
+    }
+    .right-panel > .panel .panel-content { display: none !important; }
+    .right-panel > .panel.mobile-panel-active { flex: 1 1 auto !important; }
+    .right-panel > .panel.mobile-panel-active .panel-content {
+        display: flex !important; flex-direction: column;
+    }
+    .panel-divider { display: block !important; }
+    .mobile-nav { display: none !important; }
+
+    /* Ultra-compact status bar */
+    .status-bar { height: 32px !important; min-height: 32px !important; padding: 0 6px !important; }
+    .logo { font-size: 10px !important; letter-spacing: 0.1em; }
+    #status { font-size: 9px !important; max-width: 70px; }
+    #latency-hud { display: none !important; }
+    .sys-toggle-btn { display: none !important; }
+    #sys-info-pills { display: none !important; }
+
+    /* Compact input */
+    .input-area { padding: 3px 6px env(safe-area-inset-bottom, 2px) !important; }
+    .input-toolbar { margin-bottom: 2px !important; gap: 3px !important; }
+    .toolbar-btn { width: 28px !important; height: 28px !important; font-size: 13px !important; border-radius: 6px; }
+    #user-input { min-height: 34px !important; max-height: 72px !important; font-size: 15px !important; padding: 6px 10px !important; }
+    #btn-send { min-height: 34px !important; padding: 6px 12px !important; font-size: 12px !important; }
+
+    /* Compact messages */
+    .chat-messages { padding: 4px 8px !important; gap: 5px !important; }
+    .message { font-size: 13px !important; padding: 7px 10px !important; max-width: 95% !important; }
+
+    /* Compact panel headers */
+    .panel-header { height: 26px !important; min-height: 26px !important; flex: 0 0 26px !important; font-size: 9px !important; padding: 0 6px !important; }
+    .panel-content { padding: 4px 6px !important; font-size: 11px !important; }
+}
+
+
+/* ═══════════════════════════════════════════════════════
+   SHORT VIEWPORT (≤450px height, any width)
+   ═══════════════════════════════════════════════════════ */
+
+@media (max-height: 450px) {
+    .status-bar { height: 32px; min-height: 32px; }
+    .input-area { padding-top: 3px; padding-bottom: env(safe-area-inset-bottom, 3px); }
+    #user-input { min-height: 34px; max-height: 72px; }
+    #btn-send { min-height: 34px; }
+    .input-toolbar { margin-bottom: 2px; }
+    .chat-messages { padding: 4px 10px; gap: 5px; }
+    .message { font-size: 13px; padding: 7px 10px; }
+    .panel-header { height: 28px; min-height: 28px; flex: 0 0 28px; }
+    #plan-approval-bar { padding: 4px 8px; font-size: 11px; }
+    #plan-approval-bar button { min-height: 30px; padding: 3px 10px; font-size: 11px; }
+}
+
+
+/* ═══════════════════════════════════════════════════════
+   PORTRAIT MOBILE — safe area handling
+   ═══════════════════════════════════════════════════════ */
+
+@media (max-width: 768px) and (orientation: portrait) {
+    .mobile-nav-items {
+        padding-bottom: env(safe-area-inset-bottom, 4px);
+    }
+}

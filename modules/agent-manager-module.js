@@ -506,7 +506,7 @@ const DEFAULT_AGENTS = {
         role: 'Code Implementation Specialist',
         description: 'Implements features, creates files, and modifies code based on requirements.',
         group: 'development',
-        languages: ['JavaScript', 'TypeScript', 'Python', 'Go', 'Rust'],
+        languages: ['JavaScript', 'TypeScript', 'Python', 'Go', 'Rust', 'C++', 'C'],
         tools: ['read_file', 'write_file', 'patch_file', 'list_dir', 'bash'],
         autoAddTools: true,
         securityRole: 'developer',

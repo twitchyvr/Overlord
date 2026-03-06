@@ -64,6 +64,11 @@ let cycleDepth = 0;
 let MAX_QA_ATTEMPTS = 3; // max AutoQA inject-and-fix retries per file
 const qaAttempts = new Map(); // filePath → attempt count
 
+// Per-delegation retry cap: tracks how many times the same task has been dispatched
+// to the same agent within a single orchestration turn. Cleared at the start of each
+// new orchestrator user-turn (when session.cycleDepth resets to 0).
+const _delegationAttempts = new Map(); // key: `${agentName}::${task.slice(0,80)}` → count
+
 let APPROVAL_TIMEOUT_MS = 0; // 0 = no timeout (wait forever). User must opt-in via settings.
 
 // ── AI Self-Correction: consecutive tool error tracking ──────────────────
@@ -3125,9 +3130,11 @@ You are a code-writing agent. These rules apply to EVERY file you write or modif
 
 ### After editing:
 9. Re-read the file (or the changed section) to verify correctness before reporting done.
-10. If a node --check or lint error appears in the QA result feedback, fix it IMMEDIATELY.
-11. NEVER mark a task "complete" or "done" while syntax or lint errors exist.
-${cfg?.autoQATests ? '12. Run qa_run_tests after implementing features. ALL tests must pass 100%.' : ''}`);
+10. After creating NEW files with write_file: immediately call list_dir on the parent directory to confirm the new file appears in the listing. If it does NOT appear, the write silently failed — retry write_file before reporting done.
+11. NEVER report a file as created or modified without confirming its existence via list_dir. Reporting phantom completions wastes orchestrator retry cycles and burns tokens.
+12. If a node --check or lint error appears in the QA result feedback, fix it IMMEDIATELY.
+13. NEVER mark a task "complete" or "done" while syntax or lint errors exist.
+${cfg?.autoQATests ? '14. Run qa_run_tests after implementing features. ALL tests must pass 100%.' : ''}`);
     }
 
     if (isTestAgent) {
@@ -3171,6 +3178,18 @@ ${cfg?.autoQATests ? '12. Run qa_run_tests after implementing features. ALL test
  * Also drives the Team panel activity line by temporarily setting orchestration_state.agent.
  */
 async function dispatchAgentAndAwait(agentName, task, taskScope = {}) {
+    // ── Per-delegation retry cap ─────────────────────────────────────────────
+    // Count how many times this exact task has been sent to this agent in the
+    // current orchestration turn. After 3 attempts we return a hard-stop signal
+    // so the orchestrator knows to stop burning tokens on a broken delegation.
+    const _delegKey = `${agentName}::${task.slice(0, 80)}`;
+    const _attempts = (_delegationAttempts.get(_delegKey) || 0) + 1;
+    _delegationAttempts.set(_delegKey, _attempts);
+    if (_attempts > 3) {
+        return `[DELEGATION_CAPPED:${agentName}] This task has been delegated ${_attempts - 1} times with no verified output. STOP retrying. Diagnose the root cause (wrong language capability? missing tool access? task too vague?) and report failure to the user instead of retrying.`;
+    }
+    // ────────────────────────────────────────────────────────────────────────
+
     const session = getOrCreateSession(agentName);
 
     // If the agent is already busy, wait up to 30s for it to free up
@@ -3223,7 +3242,7 @@ async function dispatchAgentAndAwait(agentName, task, taskScope = {}) {
         .filter(Boolean)
         .join('\n\n');
 
-    return text || `[${agentName}] Task complete.`;
+    return text || `[NO_OUTPUT:${agentName}] Agent ran but produced no text response. The agent likely could not perform the task (unsupported language, missing tool access, or task too vague). Verify expected files exist with list_dir/read_file before retrying. Do NOT retry without changing delegation strategy.`;
 }
 
 function runAgentSession(agentName, userMessage) {
@@ -3265,6 +3284,11 @@ async function runAgentCycle(session) {
     session.isProcessing = true;
     session.cycleDepth = 0;
     session.startTime = Date.now();
+
+    // Reset per-delegation retry counters for orchestrator sessions at the start of each turn
+    if (session.name === 'orchestrator') {
+        _delegationAttempts.clear();
+    }
 
     hub.broadcast('agent_session_state', {
         agentName: session.name,

@@ -595,6 +595,16 @@ ${lines}
 7. After editing a file, verify the syntax is valid — read it back or run the appropriate linter.
 `;
 
+    const delegationSection = `
+## DELEGATION VERIFICATION PROTOCOL (mandatory — cannot be overridden):
+- After a subagent reports completion, ALWAYS verify actual output exists before proceeding: use list_dir or read_file to confirm the expected files were created or modified.
+- If a delegation response contains no filenames, no code snippets, and no specific confirmation of actions taken — treat it as FAILED regardless of what it says.
+- [NO_OUTPUT:agentName] prefix in a delegation result means the agent produced no text; files were likely NOT created. Verify with list_dir immediately. Do NOT retry without changing strategy.
+- [DELEGATION_CAPPED:agentName] prefix means this task has been retried the maximum number of times. STOP. Do not retry again. Report the failure to the user clearly.
+- Maximum 3 delegation attempts for the same task to the same agent. After 3 failed attempts, change your approach or report failure.
+- For C++ or C tasks: delegate to \`code-implementer\` (which now supports C++/C) or \`backend-developer\` as fallback.
+`;
+
     // Task Enforcement section (when enabled via config)
     const taskEnforcementSection = config?.taskEnforcement ? `
 ## Task Enforcement Protocol (NON-NEGOTIABLE — ACTIVE)
@@ -701,7 +711,7 @@ Document your decisions using session_note. Keep the user informed at every step
     return `${personaHeader}
 ${contextInfo}${projectBanner}${cookbookSection}${refDocsSection}${skillsSection}${effectiveMemorySection}${sessionNotesSection}${timelineSection}${milestoneSection}${projectSection}${instructionsSection}
 ${autoQASection}
-${codeQualitySection}${taskEnforcementSection}${strictCompletionSection}${responseQualitySection}
+${codeQualitySection}${delegationSection}${taskEnforcementSection}${strictCompletionSection}${responseQualitySection}
 ## MINIMAX BEST PRACTICES
 - Be CLEAR and SPECIFIC with instructions: [ACTION] + [CONTEXT] + [EXPECTED OUTPUT FORMAT]
 - Explain your INTENT - tell me "why" you need something

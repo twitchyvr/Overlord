@@ -831,11 +831,34 @@
                     </div>
                 </div>
                 <div id="approval-actions" style="display:flex;gap:8px;justify-content:flex-end;">
-                    <!-- Approve/Deny buttons added by ChatView module -->
+                    <button onclick="respondApproval(false)" style="padding:7px 18px;background:transparent;border:1px solid #ef4444;border-radius:4px;color:#ef4444;font-size:12px;font-weight:600;cursor:pointer;">✕ Deny</button>
+                    <button onclick="respondApproval(true)" style="padding:7px 18px;background:#10b981;border:none;border-radius:4px;color:#fff;font-size:12px;font-weight:600;cursor:pointer;">✓ Approve</button>
                 </div>
             </div>
         </div>
     </div>
+
+    <!-- Approval button handler — MUST be a regular (non-module) script so it's
+         available immediately when the static HTML buttons are clicked, before the
+         deferred module script at the bottom of the page finishes executing. -->
+    <script>
+        function respondApproval(approved) {
+            // Try the OverlordUI component registry first (set by module script)
+            var cv = window.OverlordUI && window.OverlordUI.getComponent && window.OverlordUI.getComponent('chat-view');
+            if (cv && cv.respondApproval) { cv.respondApproval(approved); return; }
+            // Fallback: emit directly on the socket (before module script has mounted ChatView)
+            var s = window._overlordSocket;
+            var modal = document.getElementById('approval-modal');
+            var toolId = modal && modal.dataset.toolId;
+            if (s && s.emit && toolId) {
+                s.emit('approval_response', { toolId: toolId, approved: approved });
+                if (modal) modal.style.display = 'none';
+                console.log('[Approval] ' + (approved ? 'Approved' : 'Denied') + ': ' + toolId);
+            } else {
+                console.warn('[Approval] Cannot respond — socket or toolId not available');
+            }
+        }
+    </script>
 
     <!-- Input Request Modal (ask_user tool) -->
     <div id="input-request-modal" style="display:none;position:fixed;inset:0;z-index:9000;background:rgba(0,0,0,.6);align-items:center;justify-content:center;">
@@ -920,6 +943,8 @@
             randomizationFactor: 0.3,
             timeout: 20000
         });
+        // Expose socket globally so the non-module approval script can use it
+        window._overlordSocket = socket;
         const store = createStore();
 
         // Initialize engine

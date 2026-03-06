@@ -140,7 +140,7 @@ export class SettingsView extends Component {
             p.style.display = 'none';
             panelHost.appendChild(p);
         });
-        this._tabPanels.general.style.display = '';
+        this._tabPanels.general.style.display = 'block';
 
         // Tabs component
         this._tabs = new Tabs(tabBar, {
@@ -154,7 +154,7 @@ export class SettingsView extends Component {
             style: 'underline',
             onChange: (id) => {
                 Object.entries(this._tabPanels).forEach(([key, panel]) => {
-                    panel.style.display = key === id ? '' : 'none';
+                    panel.style.display = key === id ? 'block' : 'none';
                 });
             }
         });

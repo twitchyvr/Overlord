@@ -352,7 +352,7 @@ async function init(h) {
     hub.on('set_strategy',       (data) => handleSetStrategy(data));
     hub.on('set_overlay',        (data) => handleSetOverlay(data));
     hub.on('set_max_cycles',     (data) => {
-        const val = data.value || 10;
+        const val = data.value ?? 10;  // ?? not || so that 0 (unlimited) is preserved
         MAX_CYCLES = val === 0 ? Infinity : Math.max(1, val);
         orchestrationState.maxCycles = MAX_CYCLES === Infinity ? 0 : MAX_CYCLES;
         broadcastOrchestratorDashboard();

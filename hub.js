@@ -1400,6 +1400,11 @@ User description: "${data.description.replace(/"/g, '\\"')}"`;
                 if (typeof cb === 'function') cb({ success: ok });
             });
 
+            // ── Obsidian vault integration ─────────────────────────────────────
+            socket.on('discover_vaults', () => this.emit('discover_vaults', socket));
+            socket.on('set_vault_path', (data) => this.emit('set_vault_path', data));
+            socket.on('clear_vault_path', () => this.emit('clear_vault_path'));
+
             // ── MCP Server management ─────────────────────────────────────────
             // Bridge socket events → hub EventEmitter so mcp-manager-module.js
             // handlers (which listen on hub.on('get_mcp_servers', ...)) are reached

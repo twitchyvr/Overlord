@@ -309,6 +309,15 @@ export function initSocketBridge(socket, store, engine) {
     });
 
     // ══════════════════════════════════════════════════════════════
+    //  OBSIDIAN VAULT
+    // ══════════════════════════════════════════════════════════════
+
+    socket.on('vaults_discovered', (vaults) => {
+        store.set('obsidian.vaults', vaults || []);
+        engine.dispatch('vaults_discovered', vaults);
+    });
+
+    // ══════════════════════════════════════════════════════════════
     //  CONTEXT & PROCESSING
     // ══════════════════════════════════════════════════════════════
 

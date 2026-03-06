@@ -1118,6 +1118,8 @@ export class ChatView extends Component {
                 JSON.stringify(data.input || {}).substring(0, 400));
         }
 
+        // Store toolId on the DOM so the global respondApproval fallback can read it
+        modal.dataset.toolId = data.toolId;
         modal.style.display = 'block';
         OverlordUI.dispatch('log', {
             message: 'Approval required for: ' + (data.toolName || data.toolId),
@@ -1127,7 +1129,7 @@ export class ChatView extends Component {
 
     _hideApprovalModal() {
         const modal = document.getElementById('approval-modal');
-        if (modal) modal.style.display = 'none';
+        if (modal) { modal.style.display = 'none'; delete modal.dataset.toolId; }
         this._approvalToolId = null;
     }
 

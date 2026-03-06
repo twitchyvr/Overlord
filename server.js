@@ -255,6 +255,7 @@ const moduleFiles = [
     './modules/minimax-tts-module',
     './modules/minimax-files-module',
     './modules/project-module',
+    './modules/obsidian-vault-module',
     './modules/conversation-module',
     './modules/tasks-engine',       // dedicated task socket handlers + service API
     './modules/git-module',

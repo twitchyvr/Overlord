@@ -1952,7 +1952,37 @@ async function init(h) {
             ).join('\n');
         });
 
-        hub.log('✅ Session Note tools registered (save_session_note, recall_session_notes)', 'info');
+        // request_tool_exception — allows any agent to request one-time access to a blocked tool
+        tools.registerTool({
+            name: 'request_tool_exception',
+            description: 'Request one-time permission to use a tool that is outside your permitted set. ' +
+                'The orchestrator will evaluate your justification and either approve, deny, or escalate to the user. ' +
+                'If approved, the tool will be executed on your behalf and the result returned to you. ' +
+                'Use this when your task genuinely requires a capability you do not normally have.',
+            input_schema: {
+                type: 'object',
+                properties: {
+                    tool: {
+                        type: 'string',
+                        description: 'The exact name of the tool you want to use (e.g. "web_search", "read_file")'
+                    },
+                    justification: {
+                        type: 'string',
+                        description: 'A clear explanation of why you need this tool for your current task. Be specific about what you are trying to accomplish and why this tool is necessary.'
+                    },
+                    tool_input: {
+                        type: 'object',
+                        description: 'The exact input you would pass to the tool if approved'
+                    }
+                },
+                required: ['tool', 'justification', 'tool_input']
+            }
+        }, async () => {
+            // Handler is never reached — executeAgentTools intercepts this before tools.execute()
+            return 'request_tool_exception is handled by the orchestrator directly.';
+        });
+
+        hub.log('✅ Session Note tools registered (save_session_note, recall_session_notes, request_tool_exception)', 'info');
     })();
 
     // ── Reminder check loop ───────────────────────────────────────────────────
@@ -2040,8 +2070,13 @@ function handleClientConnected(socket) {
     // ── Re-send any pending approval requests so the UI shows them after refresh ──
     if (pendingApprovalData.size > 0) {
         for (const [toolId, payload] of pendingApprovalData) {
-            hub.emitTo(socket, 'approval_request', payload);
-            hub.log(`🔄 Re-sent pending approval for ${payload.toolName || toolId} to reconnected client`, 'info');
+            if (payload.type === 'tool_exception') {
+                hub.emitTo(socket, 'tool_exception_request', payload);
+                hub.log(`🔄 Re-sent pending tool exception for ${payload.tool || toolId} to reconnected client`, 'info');
+            } else {
+                hub.emitTo(socket, 'approval_request', payload);
+                hub.log(`🔄 Re-sent pending approval for ${payload.toolName || toolId} to reconnected client`, 'info');
+            }
         }
     }
 }
@@ -4109,13 +4144,24 @@ async function executeAgentTools(session, toolCalls, agentSystem, tools) {
             continue;
         }
 
+        // ── TOOL EXCEPTION: agent requesting one-time access to a blocked tool ──
+        if (tool.name === 'request_tool_exception') {
+            hub.log(`🔐 [EXCEPTION] ${session.name} requesting exception for: ${tool.input?.tool || '?'}`, 'info');
+            const exceptionResult = await handleToolException(session, tool.input, tools);
+            session.history.push({
+                role: 'tool',
+                content: [{ type: 'tool_result', tool_use_id: tool.id, content: exceptionResult }]
+            });
+            continue;
+        }
+
         // ── GUARDRAIL: enforce permitted tool list from agent definition ──────
         if (permittedTools && !permittedTools.has(tool.name)) {
             hub.log(`⛔ [GUARDRAIL] ${session.name} attempted ${tool.name} — not in agent's permitted tools`, 'warning');
             session.history.push({
                 role: 'tool',
                 content: [{ type: 'tool_result', tool_use_id: tool.id,
-                    content: `⛔ GUARDRAIL: Tool "${tool.name}" is not in your permitted tool list. Stick to your authorized tools: ${[...permittedTools].join(', ')}` }]
+                    content: `⛔ GUARDRAIL: Tool "${tool.name}" is not in your permitted tool list. Stick to your authorized tools: ${[...permittedTools].join(', ')}. If you genuinely need this tool, use request_tool_exception with a clear justification.` }]
             });
             continue;
         }
@@ -4294,6 +4340,117 @@ function getAllAgentStates() {
         };
     }
     return result;
+}
+
+// ==================== TOOL EXCEPTION HANDLER ====================
+// Called from executeAgentTools when an agent uses request_tool_exception.
+// Evaluates the request with AI, then: APPROVE (execute immediately),
+// DENY (return refusal), or DEFER (show user a modal and wait).
+
+async function handleToolException(session, input, tools) {
+    const toolName   = input?.tool;
+    const justify    = input?.justification;
+    const toolInput  = input?.tool_input || {};
+
+    if (!toolName || !justify) {
+        return '⛔ request_tool_exception requires both "tool" and "justification" fields.';
+    }
+
+    const ai = hub.getService('ai');
+
+    // ── Step 1: AI Evaluation ───────────────────────────────────────────────
+    let verdict = 'DEFER';
+    let reason  = 'Could not evaluate automatically.';
+
+    if (ai && ai.quickComplete) {
+        const evalPrompt =
+            `You are the Overlord orchestrator reviewing a tool access request from agent "${session.name}".\n\n` +
+            `Requested tool: ${toolName}\n` +
+            `Agent's justification: ${justify}\n` +
+            `Intended input: ${JSON.stringify(toolInput, null, 2).substring(0, 400)}\n\n` +
+            `Evaluate this request. Consider:\n` +
+            `- Does the justification make sense for the agent's stated role?\n` +
+            `- Is there a security or safety risk in allowing this once?\n` +
+            `- Is this a reasonable one-time exception?\n\n` +
+            `Respond with EXACTLY one of these formats and nothing else:\n` +
+            `APPROVE: <one sentence why>\n` +
+            `DENY: <one sentence why>\n` +
+            `DEFER: <one sentence explaining your uncertainty for the user>`;
+
+        try {
+            const evalResult = await ai.quickComplete(evalPrompt, { maxTokens: 200, temperature: 0.1 });
+            const match = evalResult.match(/^(APPROVE|DENY|DEFER):\s*(.+)/m);
+            if (match) {
+                verdict = match[1];
+                reason  = match[2].trim();
+            }
+        } catch (e) {
+            hub.log(`[handleToolException] AI evaluation failed: ${e.message}`, 'warn');
+            verdict = 'DEFER';
+            reason  = 'AI evaluation failed — deferring to user.';
+        }
+    }
+
+    hub.log(
+        `🔐 [EXCEPTION] ${session.name} → ${toolName}: ${verdict} — ${reason}`,
+        verdict === 'APPROVE' ? 'success' : verdict === 'DENY' ? 'warn' : 'info'
+    );
+
+    // ── Step 2: DENY ────────────────────────────────────────────────────────
+    if (verdict === 'DENY') {
+        return `🚫 DENIED: ${reason}`;
+    }
+
+    // ── Step 3: APPROVE — execute the tool on the agent's behalf ───────────
+    if (verdict === 'APPROVE') {
+        try {
+            const syntheticTool = { name: toolName, id: 'exception_exec_' + Date.now(), input: toolInput };
+            const output = await tools.execute(syntheticTool);
+            const content = (typeof output === 'object' && output.content) ? output.content : String(output);
+            return `✅ APPROVED: ${reason}\n\nTool result:\n${content}`;
+        } catch (e) {
+            return `✅ APPROVED but execution failed: ${e.message}`;
+        }
+    }
+
+    // ── Step 4: DEFER — ask user via exception modal ────────────────────────
+    const approvalId = 'exception_' + Date.now();
+    const payload = {
+        id:                  approvalId,
+        toolId:              approvalId,   // key for waitForApproval / handleApprovalResponse
+        type:                'tool_exception',
+        agentName:           session.name,
+        tool:                toolName,
+        justification:       justify,
+        tool_input:          toolInput,
+        orchestratorThoughts: reason
+    };
+
+    pendingApprovalData.set(approvalId, payload);
+    hub.broadcastAll('tool_exception_request', payload);
+
+    try {
+        const userApproved = await waitForApproval(approvalId, 120000); // 2-min timeout
+        pendingApprovalData.delete(approvalId);
+
+        if (userApproved) {
+            hub.log(`🔐 [EXCEPTION] User approved: ${session.name} → ${toolName}`, 'success');
+            try {
+                const syntheticTool = { name: toolName, id: 'exception_exec_' + Date.now(), input: toolInput };
+                const output = await tools.execute(syntheticTool);
+                const content = (typeof output === 'object' && output.content) ? output.content : String(output);
+                return `✅ APPROVED by user.\n\nTool result:\n${content}`;
+            } catch (e) {
+                return `✅ Approved by user but execution failed: ${e.message}`;
+            }
+        } else {
+            hub.log(`🔐 [EXCEPTION] User denied: ${session.name} → ${toolName}`, 'warn');
+            return '🚫 DENIED by user.';
+        }
+    } catch (e) {
+        pendingApprovalData.delete(approvalId);
+        return '🚫 DENIED: Request timed out (no user response within 2 minutes).';
+    }
 }
 
 module.exports = { init };

@@ -3643,3 +3643,71 @@
     box-shadow: -4px 0 24px rgba(0,212,255,0.15);
 }
 #panel-rescue-btn.visible { display: flex; }
+
+/* ═══════════════════════════════════════════════════════════════════
+   TOOL EXCEPTION MODAL
+   ═══════════════════════════════════════════════════════════════════ */
+
+.exception-modal-body {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    padding: 4px 0;
+}
+
+.exception-row {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+}
+
+.exception-row.exception-block {
+    flex-direction: column;
+    gap: 5px;
+}
+
+.exception-label {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-muted);
+    min-width: 130px;
+    flex-shrink: 0;
+}
+
+.exception-value {
+    font-weight: 500;
+    color: var(--text-primary);
+}
+
+.exception-tool {
+    font-family: 'SFMono-Regular', 'Consolas', monospace;
+    font-size: 12px;
+    color: var(--accent, #00d4ff);
+    background: var(--bg-3, rgba(0,212,255,0.08));
+    padding: 2px 7px;
+    border-radius: 4px;
+    border: 1px solid rgba(0,212,255,0.2);
+}
+
+.exception-text {
+    margin: 0;
+    font-size: 13px;
+    line-height: 1.55;
+    color: var(--text-secondary);
+}
+
+.exception-assessment {
+    color: var(--text-warning, #f59e0b);
+    font-style: italic;
+}
+
+.exception-actions {
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+    padding-top: 10px;
+    margin-top: 2px;
+    border-top: 1px solid var(--border);
+}

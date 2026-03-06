@@ -37,8 +37,11 @@ export class TasksPanel extends PanelComponent {
         this._listEl = this.$('#tasks') || this.$('.panel-content');
 
         // Load persisted view preference
+        // NOTE: 'kanban' is a full-screen overlay — never restore it automatically on startup
+        // because that would pop open the Kanban board as soon as tasks load. Always start in list/tree.
         if (OverlordUI._store) {
-            this._view = OverlordUI._store.peek('tasks.view', 'list');
+            const savedView = OverlordUI._store.peek('tasks.view', 'list');
+            this._view = savedView === 'kanban' ? 'list' : savedView;
             const collapsed = OverlordUI._store.peek('tasks.treeCollapsed', []);
             this._treeCollapsed = new Set(collapsed);
         }

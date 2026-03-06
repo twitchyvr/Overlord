@@ -52,6 +52,16 @@ const SERVER_PRESETS = {
         required: false,
         enabled: false,
         builtin: true
+    },
+    obsidian: {
+        name: 'obsidian',
+        description: 'Obsidian Local REST API MCP: read/write/search vault notes via the Obsidian plugin',
+        command: 'npx',
+        args: ['-y', 'obsidian-local-rest-api-mcp-server'],
+        env: { OBSIDIAN_API_KEY: '', OBSIDIAN_API_URL: 'https://127.0.0.1:27124' },
+        required: false,
+        enabled: false,
+        builtin: true
     }
 };
 

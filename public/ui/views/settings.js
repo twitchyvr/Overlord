@@ -223,6 +223,92 @@ export class SettingsView extends Component {
             memArea
         ));
 
+        // ── Obsidian Vault Integration ──
+        const obsidianWrap = h('div', { class: 'obsidian-vault-section' });
+
+        const vaultPathInput = h('input', {
+            type: 'text',
+            class: 'settings-input-full',
+            'data-field': 'obsidianVaultPath',
+            placeholder: '/path/to/your/vault',
+            style: 'font-family:monospace;font-size:11px;'
+        });
+
+        const discoverBtn = Button.create('🔍 Discover Vaults', {
+            variant: 'ghost', size: 'sm',
+            onClick: () => {
+                if (!this._socket) return;
+                OverlordUI.setContent(discoverBtn, '⏳ Scanning…');
+                this._socket.emit('discover_vaults', (vaults) => {
+                    // fallback: listen for event if callback not supported
+                });
+            }
+        });
+
+        const saveVaultBtn = Button.create('💾 Set Vault', {
+            variant: 'primary', size: 'sm',
+            onClick: () => {
+                const vaultPath = vaultPathInput.value.trim();
+                if (!vaultPath) return;
+                if (this._socket) {
+                    this._socket.emit('set_vault_path', { path: vaultPath });
+                }
+            }
+        });
+
+        const clearVaultBtn = Button.create('✕ Clear', {
+            variant: 'ghost', size: 'sm',
+            onClick: () => {
+                vaultPathInput.value = '';
+                if (this._socket) {
+                    this._socket.emit('clear_vault_path');
+                }
+            }
+        });
+
+        const vaultResultsEl = h('div', {
+            'data-ref': 'vault-results',
+            style: 'margin-top:8px;font-size:11px;color:var(--text-secondary);'
+        });
+
+        // Listen for vault discovery results
+        if (this._socket) {
+            this._socket.on('vaults_discovered', (vaults) => {
+                OverlordUI.setContent(discoverBtn, '🔍 Discover Vaults');
+                if (!vaults || vaults.length === 0) {
+                    OverlordUI.setContent(vaultResultsEl, 'No Obsidian vaults found.');
+                    return;
+                }
+                vaultResultsEl.textContent = '';
+                vaults.forEach(v => {
+                    const row = h('div', {
+                        style: 'display:flex;align-items:center;gap:8px;padding:6px 10px;border-radius:6px;background:rgba(168,85,247,0.06);border:1px solid rgba(168,85,247,0.15);margin-bottom:4px;cursor:pointer;',
+                    },
+                        h('span', { style: 'font-size:14px;' }, '📗'),
+                        h('span', { style: 'font-weight:600;color:var(--text-primary);flex:1;' }, v.name),
+                        h('span', { style: 'font-size:10px;color:var(--text-muted);font-family:monospace;' }, v.path)
+                    );
+                    row.addEventListener('click', () => {
+                        vaultPathInput.value = v.path;
+                    });
+                    vaultResultsEl.appendChild(row);
+                });
+            });
+        }
+
+        const btnRow = h('div', { style: 'display:flex;gap:6px;margin-top:8px;' },
+            discoverBtn, saveVaultBtn, clearVaultBtn
+        );
+
+        obsidianWrap.appendChild(vaultPathInput);
+        obsidianWrap.appendChild(btnRow);
+        obsidianWrap.appendChild(vaultResultsEl);
+
+        panel.appendChild(this._section('Obsidian Vault',
+            'Connect to an Obsidian vault. AI will use vault tools (read, write, search notes) when you reference Obsidian.',
+            obsidianWrap
+        ));
+
         return panel;
     }
 
@@ -413,6 +499,10 @@ export class SettingsView extends Component {
         // TTS Voice
         const voiceEl = body.querySelector('[data-field="ttsVoice"]');
         if (voiceEl && data.ttsVoice) voiceEl.value = data.ttsVoice;
+
+        // Obsidian Vault Path
+        const vaultEl = body.querySelector('[data-field="obsidianVaultPath"]');
+        if (vaultEl && data.obsidianVaultPath !== undefined) vaultEl.value = data.obsidianVaultPath || '';
 
         // Render AI-set badges
         this._renderAiSetBadges(body);

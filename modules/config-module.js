@@ -22,6 +22,7 @@ const PERSISTENT_KEYS = [
     'autoModelSwitch', 'pmModel',
     'queueDrainMode', 'thinkingEnabled', 'planLength',
     'gitOpsEnabled', 'gitOpsTrigger', 'gitOpsCommitStyle', 'gitOpsPush', 'gitOpsMinChanges',
+    'obsidianVaultPath',
     '_aiSet'
 ];
 

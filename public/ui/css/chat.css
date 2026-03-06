@@ -12,6 +12,118 @@
     background: linear-gradient(180deg, #060a10 0%, #07090e 100%);
     min-width: 0; overflow: hidden; position: relative;
 }
+
+/* ── .bypass-active: magical aurora border around chat panel ──
+   Uses outline (not clipped by overflow:hidden) + box-shadow glow.
+   Three-step keyframe: red → amber-orange → deep red.                ── */
+.chat-panel.bypass-active {
+    outline: 1.5px solid rgba(239,68,68,0.5);
+    outline-offset: -1px;
+    animation: bypass-border-aurora 5s ease-in-out infinite;
+}
+.chat-panel.bypass-active .chat-messages {
+    /* Subtle warm-red inner vignette — makes the space feel "hot" */
+    box-shadow: inset 0 0 80px rgba(239,68,68,0.035);
+}
+
+/* ═══════════════════════════════════════════════════════
+   BYPASS MODE WARNING BAR
+   Rendered as first flex child of .chat-panel.
+   Shown/hidden via .visible class from _setActiveMode().
+   ═══════════════════════════════════════════════════════ */
+.bypass-warning-bar {
+    /* Always flex — height+opacity control visibility for smooth transitions */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    flex-shrink: 0;
+    position: relative;
+    overflow: hidden;
+    /* Constant background — deliberately quiet, not fighting for attention */
+    background-color: rgba(90, 15, 4, 0.50);
+    border-bottom: 1px solid rgba(239,68,68,0.22);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.07em;
+    color: rgba(252,165,165,0.85);
+    user-select: none;
+    z-index: 5;
+
+    /* Hidden state */
+    max-height: 0;
+    padding: 0 16px;
+    opacity: 0;
+    pointer-events: none;
+    transition: max-height 0.4s cubic-bezier(0.4, 0, 0.2, 1),
+                padding    0.4s cubic-bezier(0.4, 0, 0.2, 1),
+                opacity    0.35s ease;
+}
+.bypass-warning-bar.visible {
+    max-height: 44px;
+    padding: 6px 16px;
+    opacity: 1;
+    pointer-events: auto;
+    /* Gentle breathing opacity only — no color pops */
+    animation: bypass-bar-breathe 4s ease-in-out infinite;
+}
+
+.bwb-icon {
+    font-size: 12px;
+    flex-shrink: 0;
+    opacity: 0.8;
+}
+.bwb-text {
+    text-transform: uppercase;
+    flex: 1;
+    text-align: center;
+}
+.bwb-exit-btn {
+    flex-shrink: 0;
+    padding: 2px 9px;
+    background: transparent;
+    border: 1px solid rgba(239,68,68,0.30);
+    border-radius: 3px;
+    color: rgba(252,165,165,0.75);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    cursor: pointer;
+    transition: background 0.2s, border-color 0.2s, color 0.2s;
+    font-family: inherit;
+}
+.bwb-exit-btn:hover {
+    background: rgba(239,68,68,0.18);
+    border-color: rgba(239,68,68,0.55);
+    color: #fca5a5;
+}
+
+/* Single gentle breathe — opacity only, no color jumping */
+@keyframes bypass-bar-breathe {
+    0%, 100% { opacity: 0.80; }
+    50%      { opacity: 1.00; }
+}
+/* Aurora border: slow, gentle breath between deep red and soft amber.
+   Only box-shadow opacity changes — outline-color stays near-constant.
+   The glow softly pulses rather than popping between hues.               */
+@keyframes bypass-border-aurora {
+    0%, 100% {
+        outline-color: rgba(239,68,68,0.38);
+        box-shadow: 0 0 12px rgba(239,68,68,0.10),
+                    0 0 40px rgba(239,68,68,0.04);
+    }
+    45% {
+        outline-color: rgba(245,100,40,0.45);
+        box-shadow: 0 0 20px rgba(245,100,40,0.15),
+                    0 0 55px rgba(245,100,40,0.06);
+    }
+    80% {
+        outline-color: rgba(220,38,38,0.30);
+        box-shadow: 0 0 10px rgba(220,38,38,0.08),
+                    0 0 35px rgba(220,38,38,0.03);
+    }
+}
+
 .chat-messages {
     flex: 1; overflow-y: auto; padding: 16px;
     display: flex; flex-direction: column; gap: 16px;

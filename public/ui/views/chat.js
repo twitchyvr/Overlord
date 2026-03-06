@@ -121,6 +121,9 @@ export class ChatView extends Component {
         sub('approval_timeout', (data) => {
             if (data.toolId === this._approvalToolId) this._hideApprovalModal();
         });
+
+        // Tool exception modal
+        sub('tool_exception_request', (data) => this._showExceptionModal(data));
     }
 
     // ══════════════════════════════════════════════════════════════
@@ -1144,6 +1147,66 @@ export class ChatView extends Component {
         this._hideApprovalModal();
         OverlordUI.dispatch('log', {
             message: approved ? 'Tool approved' : 'Tool denied',
+            type: approved ? 'success' : 'warning'
+        });
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    //  TOOL EXCEPTION MODAL
+    // ══════════════════════════════════════════════════════════════
+
+    _showExceptionModal(data) {
+        const { id, agentName, tool, justification, orchestratorThoughts } = data;
+
+        const content = h('div', { class: 'exception-modal-body' }, [
+            h('div', { class: 'exception-row' }, [
+                h('span', { class: 'exception-label' }, 'Agent'),
+                h('span', { class: 'exception-value' }, agentName || '?')
+            ]),
+            h('div', { class: 'exception-row' }, [
+                h('span', { class: 'exception-label' }, 'Requested Tool'),
+                h('span', { class: 'exception-value exception-tool' }, tool || '?')
+            ]),
+            h('div', { class: 'exception-row exception-block' }, [
+                h('span', { class: 'exception-label' }, 'Agent\'s Justification'),
+                h('p', { class: 'exception-text' }, justification || '')
+            ]),
+            h('div', { class: 'exception-row exception-block' }, [
+                h('span', { class: 'exception-label' }, 'Orchestrator\'s Assessment'),
+                h('p', { class: 'exception-text exception-assessment' }, orchestratorThoughts || '')
+            ]),
+            h('div', { class: 'exception-actions' }, [
+                Button.create('Allow', {
+                    variant: 'primary',
+                    icon: '✅',
+                    onClick: () => { this._resolveException(id, true); Modal.close('tool-exception'); }
+                }),
+                Button.create('Deny', {
+                    variant: 'danger',
+                    icon: '🚫',
+                    onClick: () => { this._resolveException(id, false); Modal.close('tool-exception'); }
+                })
+            ])
+        ]);
+
+        Modal.open('tool-exception', {
+            title: '🔐 Tool Access Request',
+            content,
+            size: 'sm'
+        });
+
+        OverlordUI.dispatch('log', {
+            message: `Tool exception request: ${agentName} wants to use ${tool}`,
+            type: 'warning'
+        });
+    }
+
+    _resolveException(toolId, approved) {
+        if (this._socket) {
+            this._socket.emit('approval_response', { toolId, approved });
+        }
+        OverlordUI.dispatch('log', {
+            message: approved ? `Tool exception allowed: ${toolId}` : `Tool exception denied: ${toolId}`,
             type: approved ? 'success' : 'warning'
         });
     }

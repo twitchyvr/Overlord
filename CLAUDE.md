@@ -104,7 +104,32 @@ Only **LOG** and **ORCHESTRATION** are visible. Others are off but togglable via
 
 ---
 
-## 5. What NOT to do
+## 5. Monolith Porting — MANDATORY DIRECTIVE
+
+**`public/index-ori.html`** is the source of truth for ALL interactive behavior.
+**EVERY** feature, function, and handler in the monolith MUST be ported to `public/index.html`.
+This is a hard requirement — never ship a UI element as an empty shell or unwired stub.
+
+### Checklist when adding/editing any UI element in `index.html`:
+1. **Search `index-ori.html`** for the equivalent element by ID, class, or surrounding comment.
+2. **Extract every function it calls** — inline handlers, click listeners, socket events, store updates.
+3. **Port verbatim**, adapting only what the modular architecture requires:
+   - `socket.on(...)` → use `OverlordUI.subscribe(...)` (socket-bridge already handles raw events)
+   - Direct DOM globals → assign to `window.fnName` so inline HTML handlers can reach them
+   - `var window._x` globals → use `store.set('key', val)` / `store.subscribe('key', fn)`
+4. **Verify in the browser** with `preview_click` / `preview_snapshot` — never assume it works.
+
+### Known function categories that MUST always be present in `index.html`:
+| Category | Key functions |
+|----------|--------------|
+| Conversations | `toggleConversations`, `renderConversations`, `loadConversation`, `startNewConversation` |
+| Folder browser | `openFolderBrowser`, `closeFolderBrowser`, `fbNavigate`, `fbConfirmSelect` |
+| Project manager | `openProjectManager`, `closeProjectManager`, `projRenderList`, `projRenderDetail`, `projSaveProject`, `projSwitchToProject`, `projDeleteProject`, `projLinkProject`, `projUnlinkProject`, `_updateProjBadge` |
+| Working dir | `showWorkingDirPicker`, `setWorkingDirectory` |
+
+---
+
+## 6. What NOT to do
 
 - Do NOT modify `index-ori.html`
 - Do NOT commit directly to `main`
@@ -112,3 +137,4 @@ Only **LOG** and **ORCHESTRATION** are visible. Others are off but togglable via
 - Do NOT claim something works without verifying it (use `preview_*` tools)
 - Do NOT use DOM-overwriting APIs — always use `createElement` / `appendChild`
 - Do NOT add inline styles when a CSS class already covers it
+- Do NOT leave HTML shells unwired — if it has an `id` or `onclick`, it must be fully functional

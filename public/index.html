@@ -9869,6 +9869,9 @@
             amUpdatePreviewCount();
             const bar = document.getElementById('am-preview-bar');
             if (bar) bar.classList.add('active');
+            // AI has changed at least one field — enable the Save button so the user
+            // can persist immediately without having to manually touch a field first.
+            _amMarkDirty();
         }
 
         function amUpdatePreviewCount() {

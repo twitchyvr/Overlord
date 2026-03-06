@@ -3242,7 +3242,44 @@ async function dispatchAgentAndAwait(agentName, task, taskScope = {}) {
         .filter(Boolean)
         .join('\n\n');
 
-    return text || `[NO_OUTPUT:${agentName}] Agent ran but produced no text response. The agent likely could not perform the task (unsupported language, missing tool access, or task too vague). Verify expected files exist with list_dir/read_file before retrying. Do NOT retry without changing delegation strategy.`;
+    // ── Post-delegation file verification ─────────────────────────────────
+    // Scan the new history entries for write_file / patch_file / append_file
+    // tool calls the agent made. Check each target file actually exists on disk
+    // and append a real [FILE VERIFICATION] block so the orchestrator has hard
+    // filesystem evidence — not just the agent's word that work was done.
+    const writtenPaths = added
+        .filter(m => m.role === 'assistant' && Array.isArray(m.content))
+        .flatMap(m => m.content)
+        .filter(c => c.type === 'tool_use' &&
+            (c.name === 'write_file' || c.name === 'patch_file' || c.name === 'append_file'))
+        .map(c => c.input && (c.input.path || c.input.file_path || c.input.filepath))
+        .filter(Boolean);
+
+    let verifyBlock = '';
+    if (writtenPaths.length > 0) {
+        const fs = require('fs');
+        const conv = hub.getService('conversation');
+        const workDir = (conv && conv.getWorkingDirectory ? conv.getWorkingDirectory() : null) || process.cwd();
+        const verifyLines = writtenPaths.map(filePath => {
+            const absPath = path.isAbsolute(filePath) ? filePath : path.join(workDir, filePath);
+            let exists = false;
+            let size = 0;
+            try { const stat = fs.statSync(absPath); exists = true; size = stat.size; } catch (_) {}
+            if (exists && size > 0)   return `\u2705 ${filePath} (${size} bytes)`;
+            if (exists && size === 0) return `\u26a0\ufe0f ${filePath} \u2014 exists but is EMPTY (0 bytes), write may have failed`;
+            return `\u274c ${filePath} \u2014 NOT FOUND on disk, write_file call did not create this file`;
+        });
+        const anyFailed = verifyLines.some(l => l.startsWith('\u26a0') || l.startsWith('\u274c'));
+        verifyBlock = `\n\n[FILE VERIFICATION \u2014 ${agentName}]\n${verifyLines.join('\n')}\n${
+            anyFailed
+                ? '\u26a0\ufe0f One or more files are missing or empty. Do NOT mark this task complete. Investigate and retry with corrected approach.'
+                : '\u2705 All files confirmed present on disk.'
+        }`;
+    }
+    // ──────────────────────────────────────────────────────────────────────
+
+    const baseResult = text || `[NO_OUTPUT:${agentName}] Agent ran but produced no text response. The agent likely could not perform the task (unsupported language, missing tool access, or task too vague). Verify expected files exist with list_dir/read_file before retrying. Do NOT retry without changing delegation strategy.`;
+    return baseResult + verifyBlock;
 }
 
 function runAgentSession(agentName, userMessage) {

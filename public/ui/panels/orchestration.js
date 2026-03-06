@@ -152,16 +152,18 @@ export class OrchestrationPanel extends PanelComponent {
         const cycleEl = document.getElementById('orch-cycle-gauge');
         if (cycleEl) {
             const maxC = s.maxCycles || 10;
-            const pct = maxC ? Math.min(100, Math.round(((s.cycleDepth || 0) / maxC) * 100)) : 0;
-            const fill = pct > 80 ? '#ef4444' : 'var(--accent-cyan)';
+            const isUnlimited = maxC === 0 || maxC === Infinity || maxC > 99999;
+            const pct = isUnlimited ? Math.min(100, (s.cycleDepth || 0)) : Math.min(100, Math.round(((s.cycleDepth || 0) / maxC) * 100));
+            const fill = (!isUnlimited && pct > 80) ? '#ef4444' : 'var(--accent-cyan)';
+            const label = isUnlimited ? `${s.cycleDepth || 0}/∞` : `${s.cycleDepth || 0}/${maxC}`;
 
             cycleEl.textContent = '';
             cycleEl.appendChild(h('div', { class: 'orch-gauge-label' },
                 h('span', null, 'Cycles'),
-                h('span', null, `${s.cycleDepth || 0}/${maxC}`)
+                h('span', null, label)
             ));
             cycleEl.appendChild(h('div', { class: 'orch-gauge' },
-                h('div', { class: 'orch-gauge-fill', style: `width:${pct}%;background:${fill};` })
+                h('div', { class: 'orch-gauge-fill', style: `width:${isUnlimited ? 5 : pct}%;background:${fill};` })
             ));
         }
 
@@ -463,18 +465,40 @@ export class OrchestrationPanel extends PanelComponent {
         const frag = document.createDocumentFragment();
 
         // ── Max Cycles slider ──
+        const isUnlimited = maxC === 0 || maxC > 99999;
         const cycleRow = h('div', { class: 'orch-slider-row' });
         cycleRow.appendChild(h('label', null, 'Max Cycles'));
         const cycleSlider = h('input', {
-            type: 'range', min: '1', max: '50', value: String(maxC)
+            type: 'range', min: '1', max: '100', value: String(isUnlimited ? 100 : maxC)
         });
-        const cycleValue = h('span', { class: 'slider-value' }, String(maxC));
+        if (isUnlimited) cycleSlider.disabled = true;
+        const cycleValue = h('span', { class: 'slider-value' }, isUnlimited ? '∞' : String(maxC));
         cycleSlider.addEventListener('input', () => {
             cycleValue.textContent = cycleSlider.value;
             this._emitMaxCycles(parseInt(cycleSlider.value, 10));
         });
         cycleRow.appendChild(cycleSlider);
         cycleRow.appendChild(cycleValue);
+
+        // ── Unlimited checkbox ──
+        const unlimLabel = h('label', { style: 'display:flex;align-items:center;gap:4px;font-size:10px;color:var(--text-muted);margin-left:8px;cursor:pointer;' });
+        const unlimCb = h('input', { type: 'checkbox' });
+        if (isUnlimited) unlimCb.checked = true;
+        unlimCb.addEventListener('change', () => {
+            if (unlimCb.checked) {
+                cycleSlider.disabled = true;
+                cycleValue.textContent = '∞';
+                this._emitMaxCycles(0); // 0 = unlimited
+            } else {
+                cycleSlider.disabled = false;
+                const v = parseInt(cycleSlider.value, 10) || 10;
+                cycleValue.textContent = String(v);
+                this._emitMaxCycles(v);
+            }
+        });
+        unlimLabel.appendChild(unlimCb);
+        unlimLabel.appendChild(document.createTextNode('Unlimited'));
+        cycleRow.appendChild(unlimLabel);
         frag.appendChild(cycleRow);
 
         // ── Auto QA toggle ──

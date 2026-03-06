@@ -45,6 +45,7 @@ function isNetworkError(e) {
 }
 let pendingApproval = null; // For T3-T4 approval flow
 const pendingApprovalResolvers = new Map(); // toolId → { resolve, reject, timer }
+const pendingApprovalData = new Map();      // toolId → full approval_request payload (for re-send on reconnect)
 
 // Plan mode state
 let awaitingPlanApproval = false;
@@ -78,12 +79,61 @@ let _consecutiveToolErrors = 0;
 let _agentChainDepth = 0;
 
 // Current orchestration state (visible to clients via 'get_orchestration_state')
+// Expanded for the Orchestration Manager panel — comprehensive dashboard data.
 const orchestrationState = {
-    agent: null,
-    task: null,
-    tool: null,
+    // Pipeline status
+    status: 'idle',           // idle | thinking | tool_executing | delegating | waiting_approval
+    agent: null,              // current agent name or 'orchestrator'
+    task: null,               // current task description
+    tool: null,               // current tool being executed
     thinking: false,
-    startTime: null
+    startTime: null,
+
+    // Cycle tracking
+    cycleDepth: 0,
+    maxCycles: 10,
+    totalCyclesThisSession: 0,
+
+    // Strategy & mode
+    strategy: 'auto',         // auto | supervised | autonomous
+    activeOverlay: null,      // null | 'planning' | 'pm'
+    overlayAutoRevert: true,
+
+    // Agent fleet (populated by broadcastOrchestratorDashboard)
+    activeAgents: [],
+    maxParallelAgents: 3,
+
+    // Tool execution history (last 50)
+    toolHistory: [],
+
+    // Token / context usage
+    tokensUsed: 0,
+    tokenBudget: 0,
+    contextUsage: { used: 0, max: 0, percent: 0 },
+
+    // Approval stats
+    pendingApprovals: 0,
+    autoApprovedCount: 0,
+    humanApprovedCount: 0,
+
+    // QA stats
+    qaPassCount: 0,
+    qaFailCount: 0,
+    qaAttempts: 0,
+    autoQA: true,
+
+    // Timestamps
+    lastMessageAt: null,
+    lastToolAt: null,
+    processingStartedAt: null,
+
+    // ── Mini-Agent pattern enhancements ──
+    lastPerception: null,           // Latest perception snapshot from runAICycle()
+    aiSummarization: true,          // Whether AI context summarization is enabled
+    sessionNotesCount: 0,           // Number of persisted session notes
+
+    // ── Task recommendation queue (agents suggest, orchestrator/user approves) ──
+    pendingRecommendations: []
 };
 
 // ==================== PER-AGENT SESSION STATE ====================
@@ -104,11 +154,24 @@ function broadcastActivity(type, data) {
         // Mirror to orchestration_state so agent card activity lines update in real-time.
         // This is the key link: without it, agent sessions never show anything on the Team panel.
         if (type === 'tool_start') {
-            setOrchestratorState({ agent: data.agent || orchestrationState.agent, tool: data.tool || null });
+            setOrchestratorState({ agent: data.agent || orchestrationState.agent, tool: data.tool || null, status: 'tool_executing' });
+            orchestrationState.lastToolAt = Date.now();
         } else if (type === 'tool_complete' || type === 'tool_error') {
-            setOrchestratorState({ tool: null });
+            setOrchestratorState({ tool: null, status: 'thinking' });
+            // Record tool execution in history for the Execution Timeline panel
+            orchestrationState.toolHistory.push({
+                name: data.tool,
+                agent: data.agent || 'orchestrator',
+                startTime: data.startedAt || Date.now(),
+                duration: data.duration || 0,
+                status: type === 'tool_complete' ? 'success' : 'error',
+                tier: data.tier || 1
+            });
+            if (orchestrationState.toolHistory.length > 50) {
+                orchestrationState.toolHistory = orchestrationState.toolHistory.slice(-50);
+            }
         } else if (type === 'agent_thinking_start') {
-            setOrchestratorState({ agent: data.agent || orchestrationState.agent, thinking: true, tool: null });
+            setOrchestratorState({ agent: data.agent || orchestrationState.agent, thinking: true, tool: null, status: 'thinking' });
         } else if (type === 'agent_thinking_done') {
             setOrchestratorState({ thinking: false });
         }
@@ -118,16 +181,124 @@ function broadcastActivity(type, data) {
 function setOrchestratorState(updates) {
     Object.assign(orchestrationState, updates);
     hub.broadcast('orchestration_state', { ...orchestrationState });
+    // Also push dashboard update (throttled)
+    _scheduleDashboardBroadcast();
+}
+
+// ── Orchestration Dashboard broadcasting ──────────────────────────────────
+let _dashboardBroadcastTimer = null;
+function _scheduleDashboardBroadcast() {
+    // Throttle to at most once per 500ms to avoid flooding the client
+    if (_dashboardBroadcastTimer) return;
+    _dashboardBroadcastTimer = setTimeout(() => {
+        _dashboardBroadcastTimer = null;
+        broadcastOrchestratorDashboard();
+    }, 500);
+}
+
+function broadcastOrchestratorDashboard() {
+    // Populate live data before broadcasting
+    orchestrationState.cycleDepth = cycleDepth;
+    orchestrationState.maxCycles = MAX_CYCLES === Infinity ? 0 : MAX_CYCLES; // 0 = unlimited (Infinity can't serialize to JSON)
+    orchestrationState.maxParallelAgents = maxParallelAgents;
+    orchestrationState.pendingApprovals = pendingApprovalResolvers.size;
+
+    // Agent fleet snapshot (enhanced with Mini-Agent persistent context flags)
+    orchestrationState.activeAgents = [];
+    agentSessions.forEach((session, name) => {
+        orchestrationState.activeAgents.push({
+            name,
+            status: session.status || 'idle',
+            task: session.currentTask || null,
+            startTime: session.startTime || null,
+            cycleCount: session.cycleCount || 0,
+            toolsUsed: session.toolsUsed || 0,
+            hasPersistentContext: !!(session.persistentContext)  // Mini-Agent: session notes loaded
+        });
+    });
+
+    // Context usage
+    const conv = hub.getService('conversation');
+    if (conv && conv.getContextUsage) {
+        orchestrationState.contextUsage = conv.getContextUsage();
+    }
+
+    // ── Mini-Agent pattern: perception, summarization, session notes ──
+    // Ensure defaults for new fields
+    if (orchestrationState.lastPerception === undefined) orchestrationState.lastPerception = null;
+    if (orchestrationState.aiSummarization === undefined) orchestrationState.aiSummarization = true; // Enabled by default
+
+    // Session notes count (non-blocking)
+    if (conv?.recallSessionNotes) {
+        conv.recallSessionNotes({ limit: 999 }).then(notes => {
+            orchestrationState.sessionNotesCount = notes.length;
+        }).catch(() => {
+            orchestrationState.sessionNotesCount = 0;
+        });
+    } else {
+        orchestrationState.sessionNotesCount = 0;
+    }
+
+    hub.broadcast('orchestrator_dashboard', { ...orchestrationState });
+}
+
+// ── Strategy + Overlay handlers ──────────────────────────────────────────
+function handleSetStrategy(data) {
+    const valid = ['auto', 'supervised', 'autonomous'];
+    const strategy = valid.includes(data.strategy) ? data.strategy : 'auto';
+    orchestrationState.strategy = strategy;
+
+    // Map strategy → existing chatMode for backward compat
+    const cfg = hub.getService('config');
+    if (cfg) {
+        if (strategy === 'supervised') cfg.chatMode = 'ask';
+        else if (strategy === 'autonomous') cfg.chatMode = 'bypass';
+        else cfg.chatMode = 'auto';
+    }
+
+    hub.broadcast('mode_changed', { mode: cfg ? cfg.chatMode : 'auto', strategy });
+    broadcastOrchestratorDashboard();
+    hub.log(`Strategy changed to: ${strategy}`, 'info');
+}
+
+function handleSetOverlay(data) {
+    const validOverlays = ['planning', 'pm', null];
+    const overlay = validOverlays.includes(data.overlay) ? data.overlay : null;
+    orchestrationState.activeOverlay = overlay;
+    orchestrationState.overlayAutoRevert = true;
+
+    hub.broadcast('overlay_changed', { overlay });
+    broadcastOrchestratorDashboard();
+    hub.log(`Overlay ${overlay ? 'activated: ' + overlay : 'cleared'}`, 'info');
+}
+
+function handleKillAgent(data, cb) {
+    const agentName = data.agent;
+    const session = agentSessions.get(agentName);
+    if (!session) {
+        if (typeof cb === 'function') cb({ error: 'Agent not found: ' + agentName });
+        return;
+    }
+    session.status = 'killed';
+    session.aborted = true;
+    agentSessions.delete(agentName);
+    broadcastOrchestratorDashboard();
+    hub.log(`[kill_agent] Agent "${agentName}" killed by user`, 'warning');
+    if (typeof cb === 'function') cb({ success: true });
 }
 
 // Called when the main orchestrator finishes a processing cycle and returns to idle.
-// Drains any queued user messages so they get processed next.
 function finishMainProcessing(statusText = 'Ready', statusType = 'idle') {
     isProcessing = false;
     hub.status(statusText, statusType);
-    // Drain next queued message after a short tick to avoid sync recursion.
-    // drainMessageQueue() itself broadcasts the updated queue to clients.
-    setTimeout(() => hub.drainMessageQueue(), 80);
+    // Auto-revert temporary overlays (planning/pm) after task completion
+    if (orchestrationState.activeOverlay && orchestrationState.overlayAutoRevert) {
+        hub.log(`Overlay "${orchestrationState.activeOverlay}" auto-reverting after task completion`, 'info');
+        orchestrationState.activeOverlay = null;
+        hub.broadcast('overlay_changed', { overlay: null });
+    }
+    // Push dashboard update on idle
+    broadcastOrchestratorDashboard();
 }
 
 async function init(h) {
@@ -166,6 +337,7 @@ async function init(h) {
                 resolve(true);
             });
             pendingApprovalResolvers.clear();
+            pendingApprovalData.clear();
         }
         // Auto-approve any pending plan approval — user shouldn't be blocked waiting
         // for a plan decision when bypass mode is active
@@ -176,10 +348,91 @@ async function init(h) {
         }
     });
 
+    // ── Orchestration Manager panel controls ────────────────────────────────
+    hub.on('set_strategy',       (data) => handleSetStrategy(data));
+    hub.on('set_overlay',        (data) => handleSetOverlay(data));
+    hub.on('set_max_cycles',     (data) => {
+        const val = data.value || 10;
+        MAX_CYCLES = val === 0 ? Infinity : Math.max(1, val);
+        orchestrationState.maxCycles = MAX_CYCLES === Infinity ? 0 : MAX_CYCLES;
+        broadcastOrchestratorDashboard();
+    });
+    hub.on('set_max_agents',     (data) => { maxParallelAgents = Math.max(1, Math.min(8, data.value || 3)); broadcastOrchestratorDashboard(); });
+    hub.on('set_auto_qa',        (data) => { orchestrationState.autoQA = !!data.enabled; broadcastOrchestratorDashboard(); });
+    hub.on('clear_tool_history', ()     => { orchestrationState.toolHistory = []; broadcastOrchestratorDashboard(); });
+    hub.on('get_orch_dashboard', ({ cb }) => { if (typeof cb === 'function') cb({ ...orchestrationState }); });
+
+    // ── Mini-Agent pattern: AI summarization toggle ──
+    hub.on('set_ai_summarization', (data) => {
+        orchestrationState.aiSummarization = !!data.enabled;
+        hub.log(`[Orchestration] AI summarization ${orchestrationState.aiSummarization ? 'enabled' : 'disabled'}`, 'info');
+        broadcastOrchestratorDashboard();
+    });
+
+    // ── Mini-Agent pattern: session notes query ──
+    hub.on('get_session_notes', async ({ data, cb }) => {
+        const conv = hub.getService('conversation');
+        let notes = [];
+        try {
+            if (conv?.recallSessionNotes) {
+                notes = await conv.recallSessionNotes(data || {});
+            }
+        } catch (e) {
+            hub.log('[SessionNotes] Error recalling notes: ' + e.message, 'warn');
+        }
+        if (typeof cb === 'function') cb(notes);
+    });
+    // ── Task recommendation approval/rejection (user reviews from UI) ──
+    hub.on('approve_recommendation', (data) => {
+        const rec = orchestrationState.pendingRecommendations.find(r => r.id === data.id);
+        if (!rec) {
+            hub.log(`[recommendation] Approval failed — recommendation ${data.id} not found`, 'warn');
+            return;
+        }
+        rec.status = 'approved';
+
+        // Create the actual task from the recommendation
+        const conv = hub.getService('conversation');
+        if (conv && conv.addTask) {
+            const task = {
+                id: 'task_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+                title: data.title || rec.title, // allow user to modify title on approval
+                description: data.description || rec.description,
+                priority: data.priority || rec.priority,
+                status: 'pending',
+                completed: false,
+                milestoneId: data.milestoneId || null,
+                assignee: rec.assignee ? [rec.assignee] : ['code-implementer'],
+                actions: { test: false, lint: false, approval: false },
+                createdAt: new Date().toISOString(),
+                recommendedBy: rec.recommendedBy
+            };
+            conv.addTask(task);
+            hub.log(`[recommendation] Approved: "${rec.title}" → task ${task.id} (recommended by: ${rec.recommendedBy})`, 'success');
+        }
+
+        // Remove from pending
+        orchestrationState.pendingRecommendations = orchestrationState.pendingRecommendations.filter(r => r.id !== data.id);
+        hub.broadcast('task_recommendations_update', orchestrationState.pendingRecommendations);
+    });
+
+    hub.on('reject_recommendation', (data) => {
+        const rec = orchestrationState.pendingRecommendations.find(r => r.id === data.id);
+        orchestrationState.pendingRecommendations = orchestrationState.pendingRecommendations.filter(r => r.id !== data.id);
+        hub.broadcast('task_recommendations_update', orchestrationState.pendingRecommendations);
+        hub.log(`[recommendation] Rejected: "${rec ? rec.title : data.id}"${data.reason ? ' — ' + data.reason : ''}`, 'info');
+    });
+
+    hub.on('pause_agent',        ({ data, cb }) => { pauseAgent(data.agent); if (typeof cb === 'function') cb({ success: true }); });
+    hub.on('resume_agent',       ({ data, cb }) => { resumeAgent(data.agent); if (typeof cb === 'function') cb({ success: true }); });
+    hub.on('kill_agent',         ({ data, cb }) => handleKillAgent(data, cb));
+
     hub.registerService('orchestration', {
         isProcessing: () => isProcessing,
         checkpoint: checkpoint,
         getState: () => ({ ...orchestrationState }),
+        getDashboard: () => ({ ...orchestrationState }),
+        broadcastDashboard: broadcastOrchestratorDashboard,
         // _updateLimits: runtime config update (same fixes applied)
         _updateLimits: (cfg) => {
             if (cfg.maxAICycles !== null) MAX_CYCLES = cfg.maxAICycles === 0 ? Infinity : cfg.maxAICycles;
@@ -452,6 +705,74 @@ async function init(h) {
             return `Task created: "${task.title}" (id: ${task.id}) — assigned to: ${task.assignee.join(', ')}${input.milestoneId ? ' | milestone attached' : ''}`;
         });
         hub.log('✅ create_task tool registered', 'info');
+
+        // ── recommend_task: agents recommend a task (orchestrator must approve) ──
+        tools.registerTool({
+            name: 'recommend_task',
+            description: [
+                'Recommend a new task for the orchestrator to review.',
+                'Unlike create_task, this does NOT create the task immediately.',
+                'The recommendation goes to a pending queue where the orchestrator',
+                'or the user can approve, modify, or reject it.',
+                'Use this as a subagent to suggest follow-up work you identified.',
+                'Duplicate titles are auto-rejected.'
+            ].join(' '),
+            input_schema: {
+                type: 'object',
+                properties: {
+                    title:       { type: 'string', description: 'Recommended task title (concise, action-oriented, max 120 chars)' },
+                    description: { type: 'string', description: 'Why this task should be created and what it involves (max 500 chars)' },
+                    priority:    { type: 'string', enum: ['low', 'normal', 'high'], description: 'Suggested priority (default: normal)' },
+                    assignee:    { type: 'string', description: 'Suggested agent to assign (optional)' },
+                    rationale:   { type: 'string', description: 'Why you are recommending this task (what gap or issue you identified)' }
+                },
+                required: ['title']
+            }
+        }, (input) => {
+            const title = String(input.title || '').trim().substring(0, 120);
+            if (!title) return 'ERROR: title is required';
+
+            // Auto-dedup: check for similar existing tasks
+            const conv = hub.getService('conversation');
+            const existingTasks = conv?.getTasks?.() || [];
+            const titleLower = title.toLowerCase();
+            const duplicate = existingTasks.find(t =>
+                t.title && t.title.toLowerCase() === titleLower
+            );
+            if (duplicate) {
+                return `Task "${title}" already exists (id: ${duplicate.id}). No recommendation created.`;
+            }
+
+            // Check pending recommendations for near-duplicate
+            const pendingDup = orchestrationState.pendingRecommendations.find(r =>
+                r.title.toLowerCase() === titleLower
+            );
+            if (pendingDup) {
+                return `A recommendation with title "${title}" is already pending (id: ${pendingDup.id}). Skipped.`;
+            }
+
+            // Determine recommending agent from current orchestration context
+            const recommendedBy = orchestrationState.agent || 'unknown';
+
+            const recommendation = {
+                id: 'rec_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+                title: title,
+                description: String(input.description || '').trim().substring(0, 500),
+                priority: ['low', 'normal', 'high'].includes(input.priority) ? input.priority : 'normal',
+                assignee: input.assignee ? String(input.assignee).trim() : null,
+                rationale: String(input.rationale || '').trim().substring(0, 500),
+                recommendedBy: recommendedBy,
+                createdAt: new Date().toISOString(),
+                status: 'pending' // pending | approved | rejected
+            };
+
+            orchestrationState.pendingRecommendations.push(recommendation);
+            hub.broadcast('task_recommendations_update', orchestrationState.pendingRecommendations);
+            hub.log(`[recommend_task] New recommendation from ${recommendedBy}: "${title}" (id: ${recommendation.id})`, 'info');
+
+            return `Recommendation submitted: "${title}" (id: ${recommendation.id}). The orchestrator or user will review it.`;
+        });
+        hub.log('✅ recommend_task tool registered', 'info');
 
         // ── delete_task: AI deletes a task ───────────────────────────────────
         tools.registerTool({
@@ -1172,6 +1493,91 @@ async function init(h) {
         });
         hub.log('✅ delegate_to_agent tool registered', 'info');
 
+        // ── delegate_to_team: orchestrator dispatches MULTIPLE agents in parallel ─
+        tools.registerTool({
+            name: 'delegate_to_team',
+            description: [
+                'Delegate tasks to MULTIPLE specialist agents in parallel and wait for all results.',
+                'Use when a task spans multiple domains (e.g., code + tests, frontend + backend, implementation + documentation).',
+                'Each agent gets its own task description and works independently.',
+                'Returns combined results from all agents.',
+                'Prefer this over sequential delegate_to_agent calls for multi-domain work.',
+                'Maximum team size is limited by maxParallelAgents setting.'
+            ].join(' '),
+            input_schema: {
+                type: 'object',
+                properties: {
+                    assignments: {
+                        type: 'array',
+                        description: 'Array of agent assignments. Each must have an agent name and task.',
+                        items: {
+                            type: 'object',
+                            properties: {
+                                agent:   { type: 'string', description: 'Agent name, e.g. "code-implementer", "testing-engineer". Use list_agents to see all available.' },
+                                task:    { type: 'string', description: 'Clear, self-contained task description. Include file paths, requirements, and expected output so the agent can work independently.' },
+                                context: { type: 'string', description: 'Optional: additional context from this conversation that the agent needs.' }
+                            },
+                            required: ['agent', 'task']
+                        }
+                    }
+                },
+                required: ['assignments']
+            }
+        }, async (input) => {
+            const assignments = input.assignments;
+            if (!Array.isArray(assignments) || assignments.length === 0) {
+                return 'ERROR: assignments array is required and must not be empty';
+            }
+            if (assignments.length > maxParallelAgents) {
+                return `ERROR: Team size ${assignments.length} exceeds max parallel agents (${maxParallelAgents}). Reduce team size or increase limit in settings.`;
+            }
+
+            // Validate all agent names upfront
+            const agentMgr = hub.getService('agentManager');
+            const validAgents = agentMgr?.listAgents?.()?.map(a => a.name) || [];
+            for (const assignment of assignments) {
+                const name = String(assignment.agent || '').trim().toLowerCase().replace(/_/g, '-');
+                if (!name) return 'ERROR: each assignment must have an agent name';
+                if (!String(assignment.task || '').trim()) return `ERROR: assignment for "${name}" must have a task description`;
+                if (validAgents.length && !validAgents.includes(name)) {
+                    return `ERROR: Unknown agent "${name}". Available: ${validAgents.join(', ')}`;
+                }
+            }
+
+            hub.log(`[delegate_to_team] Dispatching ${assignments.length} agents in parallel: ${assignments.map(a => a.agent).join(', ')}`, 'info');
+            setOrchestratorState({ status: 'delegating', task: `Team delegation: ${assignments.length} agents` });
+
+            // Dispatch all agents in parallel using existing dispatchAgentAndAwait
+            const promises = assignments.map(assignment => {
+                const agentName = String(assignment.agent).trim().toLowerCase().replace(/_/g, '-');
+                const task = String(assignment.task).trim();
+                const fullTask = assignment.context
+                    ? `${task}\n\n---\nAdditional context:\n${assignment.context}`
+                    : task;
+                const taskScope = { title: task.substring(0, 80) };
+
+                return dispatchAgentAndAwait(agentName, fullTask, taskScope)
+                    .then(result => ({ agent: agentName, status: 'fulfilled', result }))
+                    .catch(err => ({ agent: agentName, status: 'rejected', error: err.message }));
+            });
+
+            const results = await Promise.all(promises);
+
+            // Compose combined result
+            const output = results.map(r => {
+                if (r.status === 'fulfilled') {
+                    return `## [${r.agent} result]\n${r.result}`;
+                }
+                return `## [${r.agent} ERROR]\n${r.error}`;
+            }).join('\n\n---\n\n');
+
+            const succeeded = results.filter(r => r.status === 'fulfilled').length;
+            hub.log(`[delegate_to_team] Complete: ${succeeded}/${results.length} succeeded`, succeeded === results.length ? 'success' : 'warning');
+
+            return `[TEAM DELEGATION: ${results.length} agents, ${succeeded} succeeded]\n\n${output}`;
+        });
+        hub.log('✅ delegate_to_team tool registered', 'info');
+
         // ── message_agent: agent-to-agent messaging with depth guard ──────────
         tools.registerTool({
             name: 'message_agent',
@@ -1477,6 +1883,78 @@ async function init(h) {
         hub.log('✅ handoff_to_orchestrator tool registered', 'info');
     })();
 
+    // ── Session Note Tools (Mini-Agent pattern: persistent agent memory) ────
+    (function registerSessionNoteTools() {
+        const tools = hub.getService('tools');
+        if (!tools || !tools.registerTool) return;
+
+        // save_session_note — agents can persist learnings, decisions, and patterns
+        tools.registerTool({
+            name: 'save_session_note',
+            description: 'Save a note that persists across sessions. Use this to record important learnings, ' +
+                'decisions, patterns, or context that should be remembered for future tasks. ' +
+                'Notes are stored per-agent and can be recalled automatically in future sessions.',
+            input_schema: {
+                type: 'object',
+                properties: {
+                    note:     { type: 'string', description: 'The note content to save' },
+                    category: { type: 'string', enum: ['learning', 'preference', 'pattern', 'context', 'warning'],
+                                description: 'Category of note for organization' },
+                    tags:     { type: 'array', items: { type: 'string' }, description: 'Optional tags for searchability' }
+                },
+                required: ['note', 'category']
+            }
+        }, async (input) => {
+            const conv = hub.getService('conversation');
+            if (!conv?.saveSessionNote) {
+                return 'Session notes not available — conversation module missing saveSessionNote';
+            }
+            const agentName = orchestrationState.agent || 'orchestrator';
+            const note = {
+                id: Date.now().toString(36),
+                agent: agentName,
+                category: input.category,
+                note: input.note,
+                tags: input.tags || [],
+                timestamp: new Date().toISOString(),
+                conversationId: conv.getCurrentId?.() || 'unknown'
+            };
+            await conv.saveSessionNote(note);
+            return `Session note saved [${input.category}]: "${input.note.substring(0, 80)}${input.note.length > 80 ? '...' : ''}"`;
+        });
+
+        // recall_session_notes — retrieve previously saved persistent notes
+        tools.registerTool({
+            name: 'recall_session_notes',
+            description: 'Retrieve previously saved session notes. Useful at the start of a task to recall ' +
+                'relevant context, learnings, or warnings from past sessions.',
+            input_schema: {
+                type: 'object',
+                properties: {
+                    category: { type: 'string', description: 'Filter by category (optional)' },
+                    agent:    { type: 'string', description: 'Filter by agent name (optional)' },
+                    limit:    { type: 'number', description: 'Max notes to return (default 10)' }
+                }
+            }
+        }, async (input) => {
+            const conv = hub.getService('conversation');
+            if (!conv?.recallSessionNotes) {
+                return 'Session notes not available — conversation module missing recallSessionNotes';
+            }
+            const notes = await conv.recallSessionNotes({
+                category: input.category,
+                agent: input.agent,
+                limit: input.limit || 10
+            });
+            if (notes.length === 0) return 'No session notes found matching criteria.';
+            return notes.map(n =>
+                `[${n.category}] (${n.agent}, ${n.timestamp}): ${n.note}`
+            ).join('\n');
+        });
+
+        hub.log('✅ Session Note tools registered (save_session_note, recall_session_notes)', 'info');
+    })();
+
     // ── Reminder check loop ───────────────────────────────────────────────────
     (function startReminderLoop() {
         const fs = require('fs');
@@ -1558,14 +2036,31 @@ function handleClientConnected(socket) {
     } catch (e) {}
 
     hub.log('Client initialized with working dir: ' + workingDirectory, 'info');
+
+    // ── Re-send any pending approval requests so the UI shows them after refresh ──
+    if (pendingApprovalData.size > 0) {
+        for (const [toolId, payload] of pendingApprovalData) {
+            hub.emitTo(socket, 'approval_request', payload);
+            hub.log(`🔄 Re-sent pending approval for ${payload.toolName || toolId} to reconnected client`, 'info');
+        }
+    }
 }
 
 async function handleUserMessage(text, socket) {
+    // ── Non-blocking chat: hot-inject at next cycle boundary instead of queuing ──
+    // The main chat IS the orchestration agent — it should NEVER be blocked.
     if (isProcessing) {
-        // Queue the message instead of dropping it silently
-        hub.queueUserMessage(text);
-        // Broadcast full queue so clients can render the management panel
-        hub.broadcastQueue();
+        hub.hotInject(text);
+        hub.broadcast('message_injected', {
+            text: text.substring(0, 80),
+            willApplyAt: 'next cycle boundary'
+        });
+        // Still add to conversation history so user sees their message in chat
+        const conv = hub.getService('conversation');
+        if (conv) {
+            conv.addUserMessage(text);
+            hub.addMessage('user', text);
+        }
         return;
     }
 
@@ -2131,12 +2626,14 @@ async function executeToolsWithApproval(toolCalls) {
             const bypassOutput = await tools.execute(tool);
             outputContent = (typeof bypassOutput === 'object' && bypassOutput.content) ? bypassOutput.content : String(bypassOutput);
         } else if (activeCfg?.chatMode === 'ask') {
-            hub.broadcast('approval_request', {
+            const askPayload = {
                 toolName: tool.name, toolId: tool.id, input: tool.input,
                 tier: 3, confidence: 1.0,
                 reasoning: 'Ask Permissions mode — all tools require approval',
                 inputSummary: JSON.stringify(tool.input || {}).substring(0, 300)
-            });
+            };
+            pendingApprovalData.set(tool.id, askPayload);
+            hub.broadcast('approval_request', askPayload);
             hub.sendPush('⚠ Approval Required',
                 `${tool.name} is waiting for your approval`,
                 { requireInteraction: true, tag: 'overlord-approval' }
@@ -2190,7 +2687,7 @@ async function executeToolsWithApproval(toolCalls) {
                 hub.log(`⚠️ [${tool.name}] Tier ${recommendation.tier} — awaiting user approval`, 'warning');
 
                 // Emit approval request to all clients
-                hub.broadcast('approval_request', {
+                const t3Payload = {
                     toolName:    tool.name,
                     toolId:      tool.id,
                     input:       tool.input,
@@ -2198,7 +2695,9 @@ async function executeToolsWithApproval(toolCalls) {
                     confidence:  recommendation.confidence,
                     reasoning:   recommendation.reasoning,
                     inputSummary: JSON.stringify(tool.input || {}).substring(0, 300)
-                });
+                };
+                pendingApprovalData.set(tool.id, t3Payload);
+                hub.broadcast('approval_request', t3Payload);
                 hub.sendPush('⚠ Approval Required',
                     `${tool.name} (Tier ${recommendation.tier}) is waiting for your approval`,
                     { requireInteraction: true, tag: 'overlord-approval' }
@@ -2283,13 +2782,22 @@ async function executeToolsWithApproval(toolCalls) {
         }
 
         // Broadcast tool complete activity — include full output for the live inspector
+        // Mini-Agent pattern: include tier from approval classification for timeline badges
+        var _toolTier = 1;
+        try {
+            const agentSys = hub.getService('agentSystem') || hub.getService('agents');
+            if (agentSys?.classifyApprovalTier) {
+                _toolTier = agentSys.classifyApprovalTier(tool.name, tool.input).tier;
+            }
+        } catch (e) {}
         broadcastActivity('tool_complete', {
             tool:      tool.name,
             toolId:    tool.id,
             success:   toolSucceeded,
             output:    outputContent,
             durationMs: Date.now() - toolStartTime,
-            agent:     orchestrationState.agent || 'orchestrator'
+            agent:     orchestrationState.agent || 'orchestrator',
+            tier:      _toolTier
         });
         setOrchestratorState({ tool: null });
 
@@ -2561,8 +3069,51 @@ async function runAICycle() {
     const agentSystem = hub.getService('agentSystem');
     const tokenMgr = hub.getService('tokenManager');
 
+    // ── Hot inject: interleave user messages at cycle boundaries ──
+    // Messages sent while AI was processing are buffered and applied here,
+    // right before the next AI call, so the AI sees them in context.
+    let hotItem;
+    while ((hotItem = hub.consumeHotInject())) {
+        const recent = conv.getHistory().slice(-5);
+        const alreadyAdded = recent.some(m => m.role === 'user' && m.content === hotItem.text);
+        if (!alreadyAdded) {
+            conv.addUserMessage(hotItem.text);
+            hub.addMessage('user', hotItem.text);
+        }
+        hub.broadcastHotInjectApplied(hotItem);
+        hub.log(`[HotInject] Applied message at cycle ${cycleDepth}: "${hotItem.text.substring(0, 60)}..."`, 'info');
+    }
+
+    // ── Perception Phase: observe system state before thinking (Mini-Agent pattern) ──
+    // Proactively build a snapshot of system state so the AI is aware of its environment.
+    const perception = {
+        cycleDepth,
+        maxCycles: MAX_CYCLES,
+        activeAgents: [...agentSessions.entries()]
+            .filter(([_, s]) => s.isProcessing)
+            .map(([name, s]) => ({ name, task: (s.currentTask || '').substring(0, 60), cycles: s.cycleDepth || 0 })),
+        pendingApprovals: pendingApprovalResolvers.size,
+        contextUsage: (conv.getContextUsage ? conv.getContextUsage() : {}),
+        hotInjectPending: (hub.getHotInjectCount ? hub.getHotInjectCount() : 0),
+        agentChainDepth: _agentChainDepth,
+        strategy: orchestrationState.strategy || 'auto',
+        overlay: orchestrationState.activeOverlay || null
+    };
+    orchestrationState.lastPerception = perception;
+
+    const perceptionNote = `[SYSTEM PERCEPTION — Cycle ${cycleDepth}/${MAX_CYCLES}] ` +
+        `Context: ${Math.round(perception.contextUsage.percent || perception.contextUsage.percentUsed || 0)}% | ` +
+        `Active agents: ${perception.activeAgents.length} | ` +
+        `Pending approvals: ${perception.pendingApprovals} | ` +
+        `Strategy: ${perception.strategy}` +
+        (perception.overlay ? ` | Overlay: ${perception.overlay}` : '') +
+        (perception.hotInjectPending ? ` | ${perception.hotInjectPending} hot-injected messages pending` : '');
+
+    hub.log(perceptionNote, 'info');
+    _scheduleDashboardBroadcast();
+
     let history = conv.sanitize(conv.getHistory());
-    
+
     // CRITICAL FIX: Additional sanitize with tokenManager and SAVE BACK
     // This ensures runAICycle also fixes any broken tool chains
     if (tokenMgr && tokenMgr.sanitizeHistory) {
@@ -2793,6 +3344,7 @@ function waitForApproval(toolId, timeoutMs) {
             timer = setTimeout(() => {
                 if (pendingApprovalResolvers.has(toolId)) {
                     pendingApprovalResolvers.delete(toolId);
+                    pendingApprovalData.delete(toolId);
                     hub.log(`⏱️ Approval timeout for ${toolId} — auto-denying`, 'warning');
                     hub.broadcast('approval_timeout', { toolId });
                     resolve(false);
@@ -2812,6 +3364,7 @@ function handleApprovalResponse(data) {
     hub.log(`📋 Approval response for ${data.toolId}: ${data.approved ? 'APPROVED' : 'DENIED'}`, 'info');
 
     // Resolve the blocking Promise in waitForApproval
+    pendingApprovalData.delete(data.toolId); // Clear stored payload — no longer pending
     if (pendingApprovalResolvers.has(data.toolId)) {
         const { resolve, timer } = pendingApprovalResolvers.get(data.toolId);
         clearTimeout(timer);
@@ -2854,6 +3407,7 @@ function handleCancel() {
             resolve(false);
         }
         pendingApprovalResolvers.clear();
+        pendingApprovalData.clear();
         hub.log('⚠️ Generation cancelled', 'warning');
         hub.status('Cancelled', 'idle');
     }
@@ -3062,8 +3616,25 @@ function getOrCreateSession(agentName) {
         cycleDepth: 0,
         paused: false,
         inbox: [],
-        startTime: null
+        startTime: null,
+        persistentContext: null  // Mini-Agent pattern: loaded from session notes
     };
+
+    // Auto-recall session notes for this agent (Mini-Agent pattern)
+    try {
+        const conv = hub.getService('conversation');
+        if (conv?.recallSessionNotes) {
+            conv.recallSessionNotes({ agent: agentName, limit: 5 }).then(notes => {
+                if (notes && notes.length > 0) {
+                    session.persistentContext = notes.map(n =>
+                        `[Past ${n.category}]: ${n.note}`
+                    ).join('\n');
+                    hub.log(`[SessionNotes] Loaded ${notes.length} notes for agent "${agentName}"`, 'info');
+                }
+            }).catch(() => {}); // Non-critical
+        }
+    } catch (e) {} // Non-critical
+
     agentSessions.set(agentName, session);
     return session;
 }
@@ -3089,6 +3660,7 @@ function buildAgentSystemPrompt(session) {
         '4. SCOPE LOCK: Complete ONLY what is in the task description. Never refactor, add features, or install packages beyond what was asked.',
         '5. When done, report your result clearly. Do not loop or continue working after task completion.',
         '6. If you identify improvements outside scope, mention them in your response — do NOT implement them.',
+        '7. Use `recommend_task` instead of `create_task` — you cannot create tasks directly. Your recommendations go to the orchestrator for review.',
     ];
 
     // ── Code Quality Enforcement (injected for all agents — cannot be waived) ──
@@ -3153,6 +3725,14 @@ ${cfg?.autoQATests ? '14. Run qa_run_tests after implementing features. ALL test
 - Commit messages follow Conventional Commits: type(scope): subject (50 chars max).
 - Always run git status before and after operations to confirm expected state.
 - NEVER force-push to main/master. Refuse and report instead.`);
+    }
+
+    // ── Mini-Agent pattern: inject persistent session notes ──
+    if (session.persistentContext) {
+        parts.push(`
+## PERSISTENT MEMORY (from past sessions)
+The following notes were saved by you or other agents in previous sessions. Use this context to inform your decisions:
+${session.persistentContext}`);
     }
 
     // Inject per-task scope constraints when dispatched via delegate_to_agent
@@ -3508,12 +4088,23 @@ async function executeAgentTools(session, toolCalls, agentSystem, tools) {
         // ── GUARDRAIL: block recursive delegate_to_agent from subagents ──────
         // Only the top-level orchestrator (chain depth 0) may delegate.
         // Subagents must use message_agent to communicate, not spawn more agents.
-        if (tool.name === 'delegate_to_agent') {
-            hub.log(`⛔ [GUARDRAIL] ${session.name} attempted delegate_to_agent — blocked. Only the orchestrator may delegate.`, 'warning');
+        if (tool.name === 'delegate_to_agent' || tool.name === 'delegate_to_team') {
+            hub.log(`⛔ [GUARDRAIL] ${session.name} attempted ${tool.name} — blocked. Only the orchestrator may delegate.`, 'warning');
             session.history.push({
                 role: 'tool',
                 content: [{ type: 'tool_result', tool_use_id: tool.id,
-                    content: '⛔ GUARDRAIL: delegate_to_agent is reserved for the orchestrator. You are a subagent — use message_agent to report results instead.' }]
+                    content: `⛔ GUARDRAIL: ${tool.name} is reserved for the orchestrator. You are a subagent — use message_agent to report results instead.` }]
+            });
+            continue;
+        }
+
+        // ── GUARDRAIL: block create_task from subagents — must use recommend_task ──
+        if (tool.name === 'create_task') {
+            hub.log(`⛔ [GUARDRAIL] ${session.name} attempted create_task — blocked. Use recommend_task instead.`, 'warning');
+            session.history.push({
+                role: 'tool',
+                content: [{ type: 'tool_result', tool_use_id: tool.id,
+                    content: '⛔ GUARDRAIL: Subagents cannot create tasks directly. Use recommend_task to submit a recommendation that the orchestrator will review.' }]
             });
             continue;
         }
@@ -3555,7 +4146,7 @@ async function executeAgentTools(session, toolCalls, agentSystem, tools) {
                 outputContent = (typeof output === 'object' && output.content) ? output.content : String(output);
             } else if (approvalResult.escalate && approvalResult.tier >= 3) {
                 // Emit approval request — agent tools also go through the standard approval UI
-                hub.broadcast('approval_request', {
+                const agentPayload = {
                     toolName: tool.name,
                     toolId: tool.id,
                     input: tool.input,
@@ -3563,7 +4154,9 @@ async function executeAgentTools(session, toolCalls, agentSystem, tools) {
                     confidence: recommendation.confidence,
                     reasoning: `[Agent: ${session.name}] ${recommendation.reasoning}`,
                     inputSummary: JSON.stringify(tool.input || {}).substring(0, 300)
-                });
+                };
+                pendingApprovalData.set(tool.id, agentPayload);
+                hub.broadcast('approval_request', agentPayload);
                 const userApproved = await waitForApproval(tool.id, APPROVAL_TIMEOUT_MS);
                 if (!userApproved) {
                     outputContent = `[TOOL DENIED] ${tool.name} was denied.`;
@@ -3580,11 +4173,20 @@ async function executeAgentTools(session, toolCalls, agentSystem, tools) {
             outputContent = (typeof output === 'object' && output.content) ? output.content : String(output);
         }
 
+        // Mini-Agent pattern: include tier for timeline badges
+        var _agentToolTier = 1;
+        try {
+            const agentSys = hub.getService('agentSystem') || hub.getService('agents');
+            if (agentSys?.classifyApprovalTier) {
+                _agentToolTier = agentSys.classifyApprovalTier(tool.name, tool.input).tier;
+            }
+        } catch (e) {}
         broadcastActivity('tool_complete', {
             tool: tool.name,
             success: !outputContent.startsWith('ERROR') && !outputContent.startsWith('[TOOL DENIED]'),
             durationMs: Date.now() - toolStartTime,
-            agent: session.name
+            agent: session.name,
+            tier: _agentToolTier
         });
 
         // Append tool result to session history (NOT main conv history)

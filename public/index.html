@@ -56,12 +56,9 @@
 
 <body>
     <!-- ═══════════════════════════════════════════════════════════════
-         BYPASS MODE WARNING — hidden unless bypass mode is active
+         BYPASS MODE WARNING — moved inside .chat-panel for proper
+         flex layout. Shown/hidden by _setActiveMode() via .visible.
          ═══════════════════════════════════════════════════════════════ -->
-    <div id="bypass-warning-banner" style="display:none;position:fixed;top:0;left:0;right:0;z-index:99999;background:#7c1d1d;color:#fca5a5;font-size:11px;font-weight:700;letter-spacing:0.06em;text-align:center;padding:5px 12px;border-bottom:2px solid #ef4444;user-select:none;">
-        ⚠&nbsp; BYPASS MODE ACTIVE — ALL APPROVAL GATES ARE DISABLED. AI AGENTS EXECUTE WITHOUT CONFIRMATION.&nbsp;
-        <button id="bypass-exit-btn" style="background:#ef4444;border:none;border-radius:3px;color:#fff;font-size:10px;font-weight:700;padding:1px 8px;cursor:pointer;margin-left:8px;">EXIT BYPASS</button>
-    </div>
 
     <div class="app">
         <!-- ═══════════════════════════════════════════════════════════
@@ -145,6 +142,17 @@
 
             <!-- ── Chat Panel (left side) ──────────────────────────── -->
             <div class="chat-panel">
+
+                <!-- ── Bypass Mode Aurora Warning Bar ─────────────────
+                     Visible only when mode === 'bypass'.
+                     Wired by _setActiveMode() via .visible class.
+                     ─────────────────────────────────────────────── -->
+                <div id="bypass-warning-bar" class="bypass-warning-bar" role="alert" aria-live="assertive">
+                    <span class="bwb-icon">⚠</span>
+                    <span class="bwb-text">BYPASS MODE — All approvals disabled</span>
+                    <button class="bwb-exit-btn" id="bypass-exit-btn" title="Switch back to AUTO mode">EXIT BYPASS</button>
+                </div>
+
                 <div class="chat-messages" id="messages"></div>
 
                 <!-- Scroll-to-bottom floating button -->
@@ -1169,13 +1177,24 @@
             const _modeIds = ['auto', 'plan', 'pm', 'ask', 'bypass'];
             const _modeBtns = _modeIds.map(m => document.getElementById('mode-btn-' + m)).filter(Boolean);
 
+            // Cache references to the bypass warning bar + chat panel
+            const _bypassBar      = document.getElementById('bypass-warning-bar');
+            const _mainChatPanel  = document.querySelector('.chat-panel');
+
             function _setActiveMode(mode) {
                 const cur = (mode || 'auto').toLowerCase();
+
+                // Update mode button highlight classes
                 _modeBtns.forEach(btn => {
                     const m = btn.id.replace('mode-btn-', '');
                     _modeIds.forEach(x => btn.classList.remove('active-' + x));
                     if (m === cur) btn.classList.add('active-' + m);
                 });
+
+                // Show/hide bypass aurora warning bar
+                const isBypass = cur === 'bypass';
+                if (_bypassBar)     _bypassBar.classList.toggle('visible', isBypass);
+                if (_mainChatPanel) _mainChatPanel.classList.toggle('bypass-active', isBypass);
             }
 
             _modeBtns.forEach(btn => {
@@ -1186,6 +1205,16 @@
                     _setActiveMode(mode);
                 });
             });
+
+            // EXIT BYPASS button — switches back to AUTO mode
+            const _bypassExitBtn = document.getElementById('bypass-exit-btn');
+            if (_bypassExitBtn) {
+                _bypassExitBtn.addEventListener('click', () => {
+                    store.set('chat.mode', 'auto');
+                    socket.emit('set_mode', 'auto');
+                    _setActiveMode('auto');
+                });
+            }
 
             // Keep in sync with server-pushed mode changes
             store.subscribe('chat.mode', _setActiveMode);
@@ -1333,6 +1362,20 @@
                 const chatPanel = pwDoc.createElement('div');
                 chatPanel.className = 'chat-panel';
 
+                // ── Bypass warning bar (mirrors the main window's bar) ──
+                const pwBypassBar = pwDoc.createElement('div');
+                pwBypassBar.id        = 'bypass-warning-bar';
+                pwBypassBar.className = 'bypass-warning-bar';
+                pwBypassBar.setAttribute('role', 'alert');
+                pwBypassBar.setAttribute('aria-live', 'assertive');
+                const pwBwbIcon = pwDoc.createElement('span');
+                pwBwbIcon.className = 'bwb-icon'; pwBwbIcon.textContent = '⚠';
+                const pwBwbText = pwDoc.createElement('span');
+                pwBwbText.className = 'bwb-text'; pwBwbText.textContent = 'BYPASS MODE — All approvals disabled';
+                pwBypassBar.appendChild(pwBwbIcon);
+                pwBypassBar.appendChild(pwBwbText);
+                chatPanel.appendChild(pwBypassBar);
+
                 const msgs = pwDoc.createElement('div');
                 msgs.className = 'chat-messages';
                 msgs.id        = 'messages';
@@ -1382,7 +1425,17 @@
                     "const chatEl = document.querySelector('.chat-panel');",
                     "const cv     = new ChatView(chatEl, { socket });",
                     "OverlordUI.registerComponent('chat-view', cv);",
-                    "cv.mount();"
+                    "cv.mount();",
+                    "// ── Bypass warning bar: mirrors main window behaviour ──",
+                    "function _pwSetBypass(mode) {",
+                    "    const bar = document.getElementById('bypass-warning-bar');",
+                    "    const cp  = document.querySelector('.chat-panel');",
+                    "    const on  = (mode || 'auto').toLowerCase() === 'bypass';",
+                    "    if (bar) bar.classList.toggle('visible', on);",
+                    "    if (cp)  cp.classList.toggle('bypass-active', on);",
+                    "}",
+                    "store.subscribe('chat.mode', _pwSetBypass);",
+                    "_pwSetBypass(store.get('chat.mode') || 'auto');"
                 ].join('\n');
                 pwBody.appendChild(modScript);
 

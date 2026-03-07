@@ -41,6 +41,57 @@ const LONG_TIMEOUT = 180000;
 // Max tool result size before truncation (chars)
 const MAX_RESULT_CHARS = 32000;
 
+// ==================== TOOL ALIAS REGISTRY ====================
+// Maps common misnomers and alternative names to canonical tool names.
+// When an agent calls a tool with a non-canonical name, resolve it transparently.
+const TOOL_ALIASES = new Map([
+    // Shell aliases
+    ['run_command',     'bash'],
+    ['execute_command', 'bash'],
+    ['execute_shell',   'bash'],
+    ['shell',           'bash'],
+    ['run_bash',        'bash'],
+    ['terminal',        'bash'],
+    ['exec',            'bash'],
+    // File aliases
+    ['edit_file',       'patch_file'],
+    ['modify_file',     'patch_file'],
+    ['update_file',     'patch_file'],
+    ['apply_diff',      'patch_file'],
+    ['create_file',     'write_file'],
+    ['save_file',       'write_file'],
+    ['cat',             'read_file'],
+    ['view_file',       'read_file'],
+    ['open_file',       'read_file'],
+    ['ls',              'list_dir'],
+    ['list_directory',  'list_dir'],
+    ['dir',             'list_dir'],
+    // AI/MCP aliases
+    ['search_web',      'web_search'],
+    ['google',          'web_search'],
+    ['analyze_image',   'understand_image'],
+    ['read_image',      'understand_image'],
+    ['describe_image',  'understand_image'],
+    // Notes aliases
+    ['get_notes',       'recall_notes'],
+    ['read_notes',      'recall_notes'],
+    ['add_note',        'record_note'],
+    ['write_note',      'record_note'],
+    ['save_note',       'record_note'],
+    // QA aliases
+    ['run_tests',       'qa_run_tests'],
+    ['test',            'qa_run_tests'],
+    ['check_lint',      'qa_check_lint'],
+    ['lint',            'qa_check_lint'],
+    ['check_types',     'qa_check_types'],
+    ['typecheck',       'qa_check_types'],
+    ['check_coverage',  'qa_check_coverage'],
+    ['audit_deps',      'qa_audit_deps'],
+    // Agent aliases
+    ['assign_agent',    'delegate_to_agent'],
+    ['delegate',        'delegate_to_agent'],
+]);
+
 // ==================== INITIALIZATION ====================
 
 function init(hub) {
@@ -606,6 +657,13 @@ async function execute(tool, inputOverride) {
         input = {};
     }
 
+    // Alias resolution — transparently map alternative names to canonical tools
+    if (TOOL_ALIASES.has(name)) {
+        const resolved = TOOL_ALIASES.get(name);
+        HUB.log(`[Tools] Alias resolved: ${name} → ${resolved}`, 'info');
+        name = resolved;
+    }
+
     HUB.log(`[Tools] Executing: ${name}`, 'info');
 
     try {
@@ -704,7 +762,11 @@ async function execute(tool, inputOverride) {
                 if (dynHandler) {
                     result = await dynHandler(input);
                 } else {
-                    result = { success: false, content: 'Unknown tool: ' + name };
+                    // Fuzzy-match: suggest closest tool name to help the agent self-correct
+                    const allNames = [...TOOL_DEFS.map(d => d.name), ...DYNAMIC_TOOL_DEFS.map(d => d.name)];
+                    const closest = allNames.find(n => n.includes(name) || name.includes(n));
+                    const hint = closest ? ` Did you mean "${closest}"?` : '';
+                    result = { success: false, content: 'Unknown tool: ' + name + '.' + hint + ' Use list of available tools from your system prompt.' };
                 }
             }
         }

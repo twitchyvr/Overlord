@@ -297,6 +297,17 @@ function finishMainProcessing(statusText = 'Ready', statusType = 'idle') {
         orchestrationState.activeOverlay = null;
         hub.broadcast('overlay_changed', { overlay: null });
     }
+    // Emit internal event for TTS voice modes — extract last assistant message text
+    try {
+        const lastMsg = hub.getService('conversation')?.getMessages?.()
+            ?.filter(m => m.role === 'assistant').pop();
+        if (lastMsg) {
+            const text = Array.isArray(lastMsg.content)
+                ? lastMsg.content.filter(b => b.type === 'text').map(b => b.text).join('')
+                : (typeof lastMsg.content === 'string' ? lastMsg.content : '');
+            if (text.trim()) hub.emit('ai_response_complete', { text });
+        }
+    } catch (_e) { /* TTS event emission must never crash orchestration */ }
     // Push dashboard update on idle
     broadcastOrchestratorDashboard();
 }

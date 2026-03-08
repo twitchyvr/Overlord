@@ -688,18 +688,18 @@ class Hub extends EventEmitter {
                     if (data.maxQAAttempts !== undefined) config.maxQAAttempts = Math.max(1, Math.min(10, parseInt(data.maxQAAttempts, 10) || 3));
                     if (data.approvalTimeoutMs !== undefined) config.approvalTimeoutMs = Math.max(10000, parseInt(data.approvalTimeoutMs, 10) || 300000);
                     if (data.requestTimeoutMs !== undefined) config.requestTimeoutMs = Math.max(10000, parseInt(data.requestTimeoutMs, 10) || 90000);
-                    if (data.sessionNotesLines !== undefined) config.sessionNotesLines = Math.max(1, Math.min(200, parseInt(data.sessionNotesLines, 10) || 50));
-                    if (data.timelineLines !== undefined) config.timelineLines = Math.max(1, Math.min(100, parseInt(data.timelineLines, 10) || 20));
-                    if (data.rateLimitTokens !== undefined) config.rateLimitTokens = Math.max(1, Math.min(100, parseInt(data.rateLimitTokens, 10) || 20));
-                    if (data.rateLimitRefillRate !== undefined) config.rateLimitRefillRate = Math.max(0.5, Math.min(20, parseFloat(data.rateLimitRefillRate) || 4));
-                    if (data.messageQueueSize !== undefined) config.messageQueueSize = Math.max(0, Math.min(20, parseInt(data.messageQueueSize, 10) || 3));
+                    if (data.sessionNotesLines !== undefined) config.sessionNotesLines = Math.max(1, Math.min(500, parseInt(data.sessionNotesLines, 10) || 100));
+                    if (data.timelineLines !== undefined) config.timelineLines = Math.max(1, Math.min(200, parseInt(data.timelineLines, 10) || 50));
+                    if (data.rateLimitTokens !== undefined) config.rateLimitTokens = Math.max(1, Math.min(100, parseInt(data.rateLimitTokens, 10) || 40));
+                    if (data.rateLimitRefillRate !== undefined) config.rateLimitRefillRate = Math.max(0.5, Math.min(20, parseFloat(data.rateLimitRefillRate) || 8));
+                    if (data.messageQueueSize !== undefined) config.messageQueueSize = Math.max(0, Math.min(20, parseInt(data.messageQueueSize, 10) || 5));
                     if (data.chatMode !== undefined && ['auto', 'plan', 'ask', 'pm'].includes(data.chatMode)) config.chatMode = data.chatMode;
                     // Per-mode model switching
                     if (data.autoModelSwitch !== undefined) config.autoModelSwitch = Boolean(data.autoModelSwitch);
                     if (data.pmModel !== undefined) config.pmModel = String(data.pmModel).trim().substring(0, 100);
                     if (data.maxParallelAgents !== undefined) {
                         const n = parseInt(data.maxParallelAgents, 10);
-                        config.maxParallelAgents = isNaN(n) ? 3 : Math.max(1, Math.min(8, n));
+                        config.maxParallelAgents = isNaN(n) ? 5 : Math.max(1, Math.min(10, n));
                     }
                     if (data.autoCreateIssues !== undefined) config.autoCreateIssues = Boolean(data.autoCreateIssues);
                     if (data.taskEnforcement !== undefined) config.taskEnforcement = Boolean(data.taskEnforcement);
@@ -800,13 +800,13 @@ class Hub extends EventEmitter {
                         maxQAAttempts: config.maxQAAttempts || 3,
                         approvalTimeoutMs: config.approvalTimeoutMs || 300000,
                         requestTimeoutMs: config.requestTimeoutMs || 90000,
-                        sessionNotesLines: config.sessionNotesLines || 50,
-                        timelineLines: config.timelineLines || 20,
-                        rateLimitTokens: config.rateLimitTokens || 20,
-                        rateLimitRefillRate: config.rateLimitRefillRate || 4,
-                        messageQueueSize: config.messageQueueSize || 3,
+                        sessionNotesLines: config.sessionNotesLines || 100,
+                        timelineLines: config.timelineLines || 50,
+                        rateLimitTokens: config.rateLimitTokens || 40,
+                        rateLimitRefillRate: config.rateLimitRefillRate || 8,
+                        messageQueueSize: config.messageQueueSize || 5,
                         chatMode: config.chatMode || 'auto',
-                        maxParallelAgents: config.maxParallelAgents ?? 3,
+                        maxParallelAgents: config.maxParallelAgents ?? 5,
                         autoCreateIssues: config.autoCreateIssues === true,
                         taskEnforcement: config.taskEnforcement === true,
                         noTruncate: config.noTruncate === true,

@@ -124,8 +124,22 @@ export class TeamPanel extends PanelComponent {
             return;
         }
 
+        // Sort: working/thinking agents first, then on-deck, then idle.
+        // Ported from index-ori.html:8385-8410 (activeNames → sections → concat).
+        const sorted = [...filtered].sort((a, b) => {
+            const rankOf = (agent) => {
+                const ses = this._sessionStates[agent.name] || {};
+                const st = (agent.status || '').toLowerCase();
+                const isWorking = ses.isProcessing || st === 'working' || st === 'thinking' || st === 'active';
+                if (isWorking) return 0;
+                if (st === 'on_deck' || st === 'standby' || st === 'ready') return 1;
+                return 2;
+            };
+            return rankOf(a) - rankOf(b);
+        });
+
         const frag = document.createDocumentFragment();
-        for (const agent of filtered) {
+        for (const agent of sorted) {
             frag.appendChild(this._buildAgentCard(agent));
         }
 
@@ -200,10 +214,14 @@ export class TeamPanel extends PanelComponent {
         return agents.filter(a => {
             const status = (a.status || '').toLowerCase();
             const ses = this._sessionStates[a.name] || {};
+            // Use the same isWorking logic as _buildAgentCard (line 214) as the single
+            // source of truth for whether an agent is actively processing.
+            // Ported from index-ori.html:8296: if (a.status === 'WORKING' || ses.isProcessing)
+            const isWorking = ses.isProcessing || status === 'working' || status === 'thinking' || status === 'active';
             switch (this._filter) {
-                case 'active':  return status === 'active' || status === 'working' || status === 'thinking' || ses.isProcessing;
-                case 'on_deck': return status === 'on_deck' || status === 'standby' || status === 'ready';
-                case 'idle':    return status === 'idle' || status === 'offline' || !status;
+                case 'active':  return isWorking && !ses.paused;
+                case 'on_deck': return !isWorking && (status === 'on_deck' || status === 'standby' || status === 'ready');
+                case 'idle':    return !isWorking && (status === 'idle' || status === 'offline' || !status);
                 default:        return true;
             }
         });

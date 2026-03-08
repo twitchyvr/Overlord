@@ -3279,9 +3279,22 @@
     border-left: 3px solid var(--border);
 }
 .agent-card:hover        { border-color: var(--accent-cyan); background: rgba(88,166,255,0.04); }
-.agent-card.working      { border-left-color: var(--accent-green); background: rgba(63,185,80,0.05); }
+/* .agent-card.working kept for backwards compat; team.js applies agent-working class */
+.agent-card.working,
+.agent-card.agent-working {
+    border-left-color: var(--accent-green);
+    background: rgba(63,185,80,0.05);
+    /* Aurora breathing glow — ported from index-ori.html auroraBreath, adapted for agent cards */
+    animation: agentCardAurora 3s ease-in-out infinite;
+}
 .agent-card.error        { border-left-color: var(--accent-red); }
 .agent-card.active-agent { border-left-color: var(--accent-cyan); background: rgba(88,166,255,0.08); }
+
+@keyframes agentCardAurora {
+    0%,100% { box-shadow: 0 0 0 1px rgba(0,212,255,0.22), 0 0 18px rgba(0,212,255,0.07); border-color: rgba(0,212,255,0.32); }
+    40%     { box-shadow: 0 0 0 1px rgba(168,85,247,0.25), 0 0 24px rgba(168,85,247,0.09); border-color: rgba(168,85,247,0.38); }
+    70%     { box-shadow: 0 0 0 1px rgba(0,212,255,0.18), 0 0 14px rgba(0,212,255,0.05); border-color: rgba(0,212,255,0.26); }
+}
 
 .agent-card-header { display: flex; align-items: center; gap: 6px; margin-bottom: 3px; }
 

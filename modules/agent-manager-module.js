@@ -35,38 +35,69 @@ const PROGRAMMING_LANGUAGES = [
     'HTML', 'CSS', 'SCSS', 'JSON', 'YAML', 'XML', 'Markdown', 'Dockerfile'
 ];
 
-// Security roles hierarchy
+// Security roles — scoped to actual agent capability needs.
+// allowedCategories maps to TOOL_TIER_REGISTRY.category values.
+// blockedTools is an explicit deny-list that overrides categories.
+// canOverride: if true, a per-agent toggle can relax role restrictions.
 const SECURITY_ROLES = {
-    'ciso': {
-        name: 'CISO',
-        description: 'Chief Information Security Officer - Full system access, all security operations',
-        permissions: ['*']
+    'full-access': {
+        name: 'full-access',
+        label: 'Full Access',
+        description: 'Unrestricted system agent. For orchestrators and system-level coordinators that need every tool.',
+        allowedCategories: ['read', 'write', 'execute', 'diagnostic', 'memory', 'orchestration', 'ai', 'notes'],
+        blockedTools: [],
+        canOverride: false
     },
-    'security-lead': {
-        name: 'Security Lead',
-        description: 'Security team lead - Vulnerability assessment, security reviews',
-        permissions: ['security:audit', 'security:review', 'security:scan', 'qa:full']
+    'implementer': {
+        name: 'implementer',
+        label: 'Implementer',
+        description: 'Can read, write files, and execute commands. Cannot orchestrate other agents directly.',
+        allowedCategories: ['read', 'write', 'execute', 'diagnostic', 'memory', 'ai', 'notes'],
+        blockedTools: ['delegate_to_agent', 'delegate_to_team', 'close_milestone'],
+        canOverride: true
     },
-    'security-analyst': {
-        name: 'Security Analyst',
-        description: 'Security operations - Monitoring, incident response',
-        permissions: ['security:monitor', 'security:logs', 'qa:run']
+    'contributor': {
+        name: 'contributor',
+        label: 'Contributor',
+        description: 'Can read and write files but cannot execute shell commands or orchestrate agents.',
+        allowedCategories: ['read', 'write', 'diagnostic', 'memory', 'ai', 'notes'],
+        blockedTools: ['bash', 'powershell', 'cmd', 'delegate_to_agent', 'delegate_to_team', 'close_milestone'],
+        canOverride: true
     },
-    'security-aware': {
-        name: 'Security Aware',
-        description: 'Security-conscious developer - Follows security best practices',
-        permissions: ['code:read', 'code:write', 'security:best-practices']
+    'reviewer': {
+        name: 'reviewer',
+        label: 'Reviewer',
+        description: 'Read and analyze only. Cannot write files or execute commands.',
+        allowedCategories: ['read', 'diagnostic', 'memory', 'ai', 'notes'],
+        blockedTools: ['write_file', 'patch_file', 'edit_file', 'append_file', 'bash', 'powershell', 'cmd'],
+        canOverride: true
     },
-    'developer': {
-        name: 'Developer',
-        description: 'Standard developer - Code implementation',
-        permissions: ['code:read', 'code:write', 'qa:run']
+    'coordinator': {
+        name: 'coordinator',
+        label: 'Coordinator',
+        description: 'Can read files and use orchestration tools but cannot implement code directly.',
+        allowedCategories: ['read', 'orchestration', 'memory', 'ai', 'notes'],
+        blockedTools: ['write_file', 'patch_file', 'edit_file', 'append_file', 'bash', 'powershell', 'cmd'],
+        canOverride: true
     },
-    'readonly': {
-        name: 'Read Only',
-        description: 'View-only access - Read files, view logs',
-        permissions: ['code:read', 'read-only']
+    'observer': {
+        name: 'observer',
+        label: 'Observer',
+        description: 'Read-only access. Can view files and system info but cannot modify anything.',
+        allowedCategories: ['read'],
+        blockedTools: [],       // category filter handles it — only 'read' category allowed
+        canOverride: false
     }
+};
+
+// Migration map: old InfoSec roles → new capability-scoped roles
+const ROLE_MIGRATION_MAP = {
+    'ciso':              'full-access',
+    'security-lead':     'coordinator',
+    'security-analyst':  'reviewer',
+    'security-aware':    'contributor',
+    'developer':         'implementer',
+    'readonly':          'observer'
 };
 
 // Default agent templates
@@ -88,7 +119,7 @@ const DEFAULT_AGENTS = {
             'web_search', 'fetch_webpage', 'system_info', 'record_note', 'recall_notes'
         ],
         autoAddTools: false,
-        securityRole: 'developer',
+        securityRole: 'full-access',
         builtIn: true,
         forcedTools: ['delegate_to_agent', 'delegate_to_team', 'create_task', 'message_agent', 'recommend_task', 'close_milestone', 'request_tool_exception'],
         blockedTools: ['bash', 'powershell', 'cmd', 'write_file', 'patch_file', 'edit_file'],
@@ -106,7 +137,7 @@ const DEFAULT_AGENTS = {
             'web_search', 'fetch_webpage', 'system_info', 'record_note', 'recall_notes'
         ],
         autoAddTools: false,
-        securityRole: 'developer',
+        securityRole: 'full-access',
         builtIn: true,
         forcedTools: ['handoff_to_orchestrator', 'recommend_task', 'create_task'],
         blockedTools: ['bash', 'powershell', 'cmd', 'write_file', 'patch_file', 'edit_file'],
@@ -122,7 +153,7 @@ const DEFAULT_AGENTS = {
         languages: ['JavaScript', 'TypeScript', 'HTML', 'CSS', 'React', 'Vue', 'Angular'],
         tools: ['read_file', 'write_file', 'patch_file', 'list_dir', 'bash', 'understand_image'],
         autoAddTools: true,
-        securityRole: 'developer',
+        securityRole: 'implementer',
         capabilities: ['html', 'css', 'javascript', 'typescript', 'react', 'vue', 'angular', 'responsive-design', 'frontend-optimization', 'cross-browser', 'accessibility', 'web-performance', 'progressive-web-apps']
     },
     'backend-developer': {
@@ -133,7 +164,7 @@ const DEFAULT_AGENTS = {
         languages: ['JavaScript', 'TypeScript', 'Python', 'Java', 'Go', 'Rust', 'SQL'],
         tools: ['read_file', 'write_file', 'patch_file', 'list_dir', 'bash'],
         autoAddTools: true,
-        securityRole: 'developer',
+        securityRole: 'implementer',
         capabilities: ['nodejs', 'python', 'java', 'go', 'rust', 'sql', 'nosql', 'api-design', 'microservices', 'server-optimization', 'security', 'caching']
     },
     'principal-engineer': {
@@ -144,7 +175,7 @@ const DEFAULT_AGENTS = {
         languages: ['JavaScript', 'TypeScript', 'Python', 'Go', 'Rust'],
         tools: ['read_file', 'write_file', 'patch_file', 'list_dir', 'bash', 'git_diff'],
         autoAddTools: false,
-        securityRole: 'developer',
+        securityRole: 'implementer',
         capabilities: ['architecture', 'system-design', 'technical-leadership', 'mentoring', 'code-review', 'standards', 'innovation', 'strategic-planning']
     },
     'development-coordinator': {
@@ -155,7 +186,7 @@ const DEFAULT_AGENTS = {
         languages: ['English'],
         tools: ['read_file', 'write_file', 'list_dir', 'bash'],
         autoAddTools: false,
-        securityRole: 'readonly',
+        securityRole: 'coordinator',
         capabilities: ['project-coordination', 'resource-management', 'dependency-tracking', 'communication', 'timeline-management', 'risk-management', 'stakeholder-management']
     },
 
@@ -168,7 +199,7 @@ const DEFAULT_AGENTS = {
         languages: ['JavaScript', 'TypeScript', 'HTML', 'CSS', 'React', 'Vue'],
         tools: ['read_file', 'write_file', 'patch_file', 'list_dir', 'bash', 'git_diff', 'understand_image'],
         autoAddTools: false,
-        securityRole: 'developer',
+        securityRole: 'implementer',
         capabilities: ['frontend-architecture', 'team-leadership', 'code-quality', 'performance-optimization', 'design-systems', 'accessibility', 'cross-functional-collaboration']
     },
     'backend-lead': {
@@ -179,7 +210,7 @@ const DEFAULT_AGENTS = {
         languages: ['JavaScript', 'TypeScript', 'Python', 'Go', 'Rust', 'SQL'],
         tools: ['read_file', 'write_file', 'patch_file', 'list_dir', 'bash', 'git_diff'],
         autoAddTools: false,
-        securityRole: 'developer',
+        securityRole: 'implementer',
         capabilities: ['backend-architecture', 'api-design', 'database-optimization', 'team-leadership', 'security', 'scalability', 'microservices']
     },
 
@@ -192,7 +223,7 @@ const DEFAULT_AGENTS = {
         languages: ['JavaScript', 'TypeScript', 'Python', 'Java'],
         tools: ['qa_run_tests', 'qa_check_lint', 'qa_check_types', 'qa_check_coverage', 'read_file', 'write_file', 'list_dir'],
         autoAddTools: true,
-        securityRole: 'developer',
+        securityRole: 'implementer',
         capabilities: ['test-planning', 'test-automation', 'manual-testing', 'regression-testing', 'performance-testing', 'security-testing', 'bug-tracking', 'quality-assurance']
     },
     'qa-lead': {
@@ -203,7 +234,7 @@ const DEFAULT_AGENTS = {
         languages: ['JavaScript', 'TypeScript', 'Python', 'Java'],
         tools: ['qa_run_tests', 'qa_check_lint', 'qa_check_types', 'qa_check_coverage', 'read_file', 'write_file', 'list_dir', 'bash'],
         autoAddTools: false,
-        securityRole: 'developer',
+        securityRole: 'implementer',
         capabilities: ['test-strategy', 'team-leadership', 'quality-management', 'process-improvement', 'test-automation', 'risk-assessment', 'stakeholder-coordination']
     },
     'test-strategy-architect': {
@@ -214,7 +245,7 @@ const DEFAULT_AGENTS = {
         languages: ['JavaScript', 'TypeScript', 'Python', 'Java'],
         tools: ['qa_run_tests', 'qa_check_lint', 'qa_check_types', 'qa_check_coverage', 'read_file', 'write_file', 'list_dir', 'bash'],
         autoAddTools: false,
-        securityRole: 'developer',
+        securityRole: 'implementer',
         capabilities: ['test-architecture', 'strategy-design', 'test-automation-frameworks', 'ci-cd-integration', 'quality-metrics', 'risk-based-testing', 'tool-evaluation']
     },
     'deployment-verification-agent': {
@@ -225,7 +256,7 @@ const DEFAULT_AGENTS = {
         languages: ['JavaScript', 'TypeScript', 'Python', 'Bash'],
         tools: ['qa_run_tests', 'read_file', 'write_file', 'list_dir', 'bash'],
         autoAddTools: true,
-        securityRole: 'developer',
+        securityRole: 'implementer',
         capabilities: ['deployment-validation', 'smoke-testing', 'environment-verification', 'rollback-procedures', 'monitoring', 'incident-response']
     },
 
@@ -238,7 +269,7 @@ const DEFAULT_AGENTS = {
         languages: ['Bash', 'Python', 'JavaScript', 'TypeScript', 'YAML'],
         tools: ['bash', 'read_file', 'write_file', 'list_dir', 'git_diff'],
         autoAddTools: true,
-        securityRole: 'developer',
+        securityRole: 'implementer',
         capabilities: ['ci-cd', 'infrastructure-as-code', 'containerization', 'orchestration', 'monitoring', 'logging', 'automation', 'cloud-infrastructure']
     },
     'devops-lead': {
@@ -249,7 +280,7 @@ const DEFAULT_AGENTS = {
         languages: ['Bash', 'Python', 'JavaScript', 'TypeScript', 'YAML'],
         tools: ['bash', 'read_file', 'write_file', 'list_dir', 'git_diff'],
         autoAddTools: false,
-        securityRole: 'developer',
+        securityRole: 'implementer',
         capabilities: ['devops-strategy', 'team-leadership', 'cloud-architecture', 'cost-optimization', 'security-compliance', 'tooling', 'process-improvement']
     },
     'gitops-specialist': {
@@ -260,7 +291,7 @@ const DEFAULT_AGENTS = {
         languages: ['Bash', 'YAML', 'Python', 'Go'],
         tools: ['bash', 'read_file', 'write_file', 'list_dir', 'git_diff', 'github'],
         autoAddTools: true,
-        securityRole: 'developer',
+        securityRole: 'implementer',
         capabilities: ['gitops', 'argocd', 'flux', 'helm', 'kubernetes', 'git-workflows', 'infrastructure-as-code', 'drift-detection']
     },
     'deployment-orchestrator': {
@@ -271,7 +302,7 @@ const DEFAULT_AGENTS = {
         languages: ['Bash', 'Python', 'YAML', 'JavaScript'],
         tools: ['bash', 'read_file', 'write_file', 'list_dir', 'git_diff'],
         autoAddTools: false,
-        securityRole: 'developer',
+        securityRole: 'implementer',
         capabilities: ['deployment-strategy', 'release-management', 'rollback-automation', 'feature-flags', 'environment-management', 'coordination']
     },
     'system-maintenance-coordinator': {
@@ -282,7 +313,7 @@ const DEFAULT_AGENTS = {
         languages: ['Bash', 'Python', 'YAML'],
         tools: ['bash', 'read_file', 'write_file', 'list_dir'],
         autoAddTools: false,
-        securityRole: 'developer',
+        securityRole: 'implementer',
         capabilities: ['maintenance-planning', 'patch-management', 'system-monitoring', 'incident-coordination', 'compliance', 'documentation']
     },
 
@@ -295,7 +326,7 @@ const DEFAULT_AGENTS = {
         languages: ['JavaScript', 'TypeScript', 'Python', 'Go', 'Rust', 'SQL'],
         tools: ['read_file', 'write_file', 'patch_file', 'list_dir', 'bash', 'git_diff'],
         autoAddTools: false,
-        securityRole: 'developer',
+        securityRole: 'implementer',
         capabilities: ['system-design', 'architecture-patterns', 'scalability', 'performance', 'security', 'technology-selection', 'integration-design']
     },
     'enterprise-solutions-architect': {
@@ -306,7 +337,7 @@ const DEFAULT_AGENTS = {
         languages: ['JavaScript', 'TypeScript', 'Python', 'Java', 'Go'],
         tools: ['read_file', 'write_file', 'patch_file', 'list_dir', 'bash', 'git_diff'],
         autoAddTools: false,
-        securityRole: 'developer',
+        securityRole: 'implementer',
         capabilities: ['enterprise-architecture', 'solution-design', 'business-alignment', 'technology-roadmapping', 'architecture-governance', 'risk-assessment']
     },
     'enterprise-solutions-engineer': {
@@ -317,7 +348,7 @@ const DEFAULT_AGENTS = {
         languages: ['Java', 'Python', 'JavaScript', 'TypeScript', 'SQL'],
         tools: ['read_file', 'write_file', 'patch_file', 'list_dir', 'bash'],
         autoAddTools: false,
-        securityRole: 'developer',
+        securityRole: 'implementer',
         capabilities: ['enterprise-integration', 'system-integration', 'api-gateway', 'data-pipelines', 'workflow-automation', 'enterprise-security']
     },
     'architecture-coordinator': {
@@ -328,7 +359,7 @@ const DEFAULT_AGENTS = {
         languages: ['English'],
         tools: ['read_file', 'write_file', 'list_dir', 'bash'],
         autoAddTools: false,
-        securityRole: 'readonly',
+        securityRole: 'coordinator',
         capabilities: ['architecture-governance', 'coordination', 'documentation', 'standards-enforcement', 'technical-debt-management', 'stakeholder-communication']
     },
 
@@ -341,7 +372,7 @@ const DEFAULT_AGENTS = {
         languages: ['HTML', 'CSS', 'JavaScript', 'SCSS'],
         tools: ['read_file', 'write_file', 'patch_file', 'understand_image', 'list_dir'],
         autoAddTools: true,
-        securityRole: 'developer',
+        securityRole: 'implementer',
         capabilities: ['ui-design', 'visual-design', 'prototyping', 'design-systems', 'responsive-design', 'typography', 'color-theory', 'iconography']
     },
     'ux-interface-designer': {
@@ -352,7 +383,7 @@ const DEFAULT_AGENTS = {
         languages: ['HTML', 'CSS', 'JavaScript'],
         tools: ['read_file', 'write_file', 'patch_file', 'understand_image', 'list_dir'],
         autoAddTools: true,
-        securityRole: 'developer',
+        securityRole: 'implementer',
         capabilities: ['ux-design', 'user-research', 'wireframing', 'prototyping', 'usability-testing', 'information-architecture', 'interaction-design']
     },
 
@@ -365,7 +396,7 @@ const DEFAULT_AGENTS = {
         languages: ['Python', 'SQL', 'Java', 'Scala', 'Bash'],
         tools: ['read_file', 'write_file', 'patch_file', 'list_dir', 'bash'],
         autoAddTools: true,
-        securityRole: 'developer',
+        securityRole: 'implementer',
         capabilities: ['data-pipelines', 'etl', 'data-warehousing', 'big-data', 'sql', 'python', 'spark', 'data-quality', 'data-modeling']
     },
     'data-scientist': {
@@ -376,7 +407,7 @@ const DEFAULT_AGENTS = {
         languages: ['Python', 'R', 'SQL', 'Julia'],
         tools: ['read_file', 'write_file', 'patch_file', 'list_dir', 'bash'],
         autoAddTools: true,
-        securityRole: 'developer',
+        securityRole: 'implementer',
         capabilities: ['machine-learning', 'statistical-analysis', 'data-visualization', 'python', 'r', 'deep-learning', 'nlp', 'predictive-modeling']
     },
 
@@ -389,7 +420,7 @@ const DEFAULT_AGENTS = {
         languages: ['English'],
         tools: ['read_file', 'write_file', 'list_dir'],
         autoAddTools: false,
-        securityRole: 'readonly',
+        securityRole: 'reviewer',
         capabilities: ['product-strategy', 'roadmap-management', 'stakeholder-management', 'user-research', 'prioritization', 'agile', 'market-analysis']
     },
     'business-analyst': {
@@ -400,7 +431,7 @@ const DEFAULT_AGENTS = {
         languages: ['English'],
         tools: ['read_file', 'write_file', 'list_dir'],
         autoAddTools: false,
-        securityRole: 'readonly',
+        securityRole: 'reviewer',
         capabilities: ['requirements-analysis', 'business-process-modeling', 'data-analysis', 'stakeholder-communication', 'use-cases', 'functional-specs']
     },
     'project-initializer': {
@@ -411,7 +442,7 @@ const DEFAULT_AGENTS = {
         languages: ['English', 'JavaScript', 'TypeScript'],
         tools: ['read_file', 'write_file', 'patch_file', 'list_dir', 'bash'],
         autoAddTools: false,
-        securityRole: 'developer',
+        securityRole: 'implementer',
         capabilities: ['project-setup', 'template-creation', 'workflow-definition', 'tooling-setup', 'team-onboarding', 'governance-setup']
     },
 
@@ -424,7 +455,7 @@ const DEFAULT_AGENTS = {
         languages: ['English'],
         tools: ['read_file', 'write_file', 'list_dir'],
         autoAddTools: false,
-        securityRole: 'readonly',
+        securityRole: 'coordinator',
         capabilities: ['scrum', 'facilitation', 'coaching', 'impediment-removal', 'ceremony-facilitation', 'continuous-improvement', 'conflict-resolution']
     },
     'sprint-planner': {
@@ -435,7 +466,7 @@ const DEFAULT_AGENTS = {
         languages: ['English'],
         tools: ['read_file', 'write_file', 'list_dir'],
         autoAddTools: false,
-        securityRole: 'readonly',
+        securityRole: 'coordinator',
         capabilities: ['sprint-planning', 'estimation', 'velocity-tracking', 'capacity-planning', 'goal-setting', 'prioritization']
     },
     'sprint-retrospective-facilitator': {
@@ -446,7 +477,7 @@ const DEFAULT_AGENTS = {
         languages: ['English'],
         tools: ['read_file', 'write_file', 'list_dir'],
         autoAddTools: false,
-        securityRole: 'readonly',
+        securityRole: 'coordinator',
         capabilities: ['retrospective-facilitation', 'process-improvement', 'team-coaching', 'feedback-analysis', 'action-tracking', 'change-management']
     },
     'agile-workflow-orchestrator': {
@@ -457,7 +488,7 @@ const DEFAULT_AGENTS = {
         languages: ['English'],
         tools: ['read_file', 'write_file', 'list_dir', 'bash'],
         autoAddTools: false,
-        securityRole: 'readonly',
+        securityRole: 'coordinator',
         capabilities: ['workflow-orchestration', 'cross-team-coordination', 'agile-coaching', 'process-optimization', 'dependency-management', 'delivery-tracking']
     },
 
@@ -470,7 +501,7 @@ const DEFAULT_AGENTS = {
         languages: ['English'],
         tools: ['read_file', 'write_file', 'list_dir', 'bash'],
         autoAddTools: false,
-        securityRole: 'developer',
+        securityRole: 'implementer',
         capabilities: ['security-compliance', 'audit', 'risk-assessment', 'policy-development', 'regulatory-compliance', 'security-frameworks', 'incident-response']
     },
     'workflow-termination-coordinator': {
@@ -481,7 +512,7 @@ const DEFAULT_AGENTS = {
         languages: ['JavaScript', 'TypeScript', 'Python', 'Bash'],
         tools: ['read_file', 'write_file', 'patch_file', 'list_dir', 'bash'],
         autoAddTools: false,
-        securityRole: 'developer',
+        securityRole: 'implementer',
         capabilities: ['workflow-management', 'process-termination', 'cleanup-automation', 'resource-release', 'state-management', 'error-handling']
     },
 
@@ -494,7 +525,7 @@ const DEFAULT_AGENTS = {
         languages: ['English', 'Markdown'],
         tools: ['read_file', 'write_file', 'list_dir'],
         autoAddTools: false,
-        securityRole: 'readonly',
+        securityRole: 'reviewer',
         capabilities: ['documentation-strategy', 'content-architecture', 'knowledge-management', 'technical-writing', 'api-documentation', 'style-guides']
     },
     'documentation-technician': {
@@ -505,7 +536,7 @@ const DEFAULT_AGENTS = {
         languages: ['English', 'Markdown'],
         tools: ['read_file', 'write_file', 'patch_file', 'list_dir'],
         autoAddTools: true,
-        securityRole: 'developer',
+        securityRole: 'implementer',
         capabilities: ['technical-writing', 'api-documentation', 'user-guides', 'markdown', 'documentation-tools', 'content-updates']
     },
 
@@ -518,7 +549,7 @@ const DEFAULT_AGENTS = {
         languages: ['Bash'],
         tools: ['github', 'bash'],
         autoAddTools: false,
-        securityRole: 'developer',
+        securityRole: 'implementer',
         capabilities: ['git', 'github', 'version-control']
     },
     'testing-engineer': {
@@ -529,7 +560,7 @@ const DEFAULT_AGENTS = {
         languages: ['JavaScript', 'TypeScript', 'Python'],
         tools: ['qa_run_tests', 'qa_check_lint', 'qa_check_types', 'qa_check_coverage', 'qa_audit_deps'],
         autoAddTools: true,
-        securityRole: 'developer',
+        securityRole: 'implementer',
         capabilities: ['testing', 'linting', 'quality-assurance', 'coverage']
     },
     'code-implementer': {
@@ -540,7 +571,7 @@ const DEFAULT_AGENTS = {
         languages: ['JavaScript', 'TypeScript', 'Python', 'Go', 'Rust', 'C++', 'C'],
         tools: ['read_file', 'write_file', 'patch_file', 'list_dir', 'bash'],
         autoAddTools: true,
-        securityRole: 'developer',
+        securityRole: 'implementer',
         capabilities: ['coding', 'file-operations', 'implementation']
     },
     'ui-expert': {
@@ -551,7 +582,7 @@ const DEFAULT_AGENTS = {
         languages: ['JavaScript', 'TypeScript', 'HTML', 'CSS', 'SCSS'],
         tools: ['read_file', 'write_file', 'patch_file', 'list_dir', 'understand_image'],
         autoAddTools: true,
-        securityRole: 'developer',
+        securityRole: 'implementer',
         capabilities: ['ui-design', 'ux-design', 'css', 'html', 'accessibility', 'responsive-design', 'animation', 'visual-design']
     },
     'ui-tester': {
@@ -562,7 +593,7 @@ const DEFAULT_AGENTS = {
         languages: ['JavaScript', 'TypeScript', 'Python'],
         tools: ['qa_run_tests', 'qa_check_lint', 'understand_image', 'read_file'],
         autoAddTools: true,
-        securityRole: 'developer',
+        securityRole: 'implementer',
         capabilities: ['ui-testing', 'visual-testing', 'accessibility-testing', 'e2e-testing', 'regression-testing']
     },
     'regex-expert': {
@@ -573,7 +604,7 @@ const DEFAULT_AGENTS = {
         languages: ['JavaScript', 'TypeScript', 'Python', 'Bash'],
         tools: ['read_file', 'write_file', 'bash'],
         autoAddTools: true,
-        securityRole: 'developer',
+        securityRole: 'implementer',
         capabilities: ['regex', 'pattern-matching', 'text-processing', 'validation', 'parsing']
     }
 };
@@ -622,11 +653,16 @@ function init(hub) {
         startCollaboration: startCollaboration,
         endCollaboration: endCollaboration,
         getActiveCollaborations: getActiveCollaborations,
-        
+
+        // Role enforcement
+        isToolAllowedForRole: isToolAllowedForRole,
+        findCapableAgent: findCapableAgent,
+
         // Constants
         TOOL_CATEGORIES: TOOL_CATEGORIES,
         PROGRAMMING_LANGUAGES: PROGRAMMING_LANGUAGES,
         SECURITY_ROLES: SECURITY_ROLES,
+        ROLE_MIGRATION_MAP: ROLE_MIGRATION_MAP,
         DEFAULT_AGENTS: DEFAULT_AGENTS
     };
     
@@ -660,7 +696,7 @@ function initializeAgentTables() {
                 tools TEXT,
                 tool_policy TEXT DEFAULT 'allowlist',
                 auto_add_tools INTEGER DEFAULT 1,
-                security_role TEXT DEFAULT 'developer',
+                security_role TEXT DEFAULT 'implementer',
                 capabilities TEXT,
                 metadata TEXT,
                 status TEXT DEFAULT 'active',
@@ -679,6 +715,12 @@ function initializeAgentTables() {
         try { db.run(`ALTER TABLE agents ADD COLUMN built_in INTEGER DEFAULT 0`); } catch (_) {}
         try { db.run(`ALTER TABLE agents ADD COLUMN forced_tools TEXT DEFAULT '[]'`); } catch (_) {}
         try { db.run(`ALTER TABLE agents ADD COLUMN blocked_tools TEXT DEFAULT '[]'`); } catch (_) {}
+        try { db.run(`ALTER TABLE agents ADD COLUMN override_role_restrictions INTEGER DEFAULT 0`); } catch (_) {}
+
+        // Migrate old InfoSec security roles → new capability-scoped roles
+        for (const [oldRole, newRole] of Object.entries(ROLE_MIGRATION_MAP)) {
+            try { db.run(`UPDATE agents SET security_role = ? WHERE security_role = ?`, [newRole, oldRole]); } catch (_) {}
+        }
 
         // Agent groups table
         db.run(`
@@ -688,12 +730,16 @@ function initializeAgentTables() {
                 description TEXT,
                 color TEXT,
                 collaboration_mode TEXT DEFAULT 'sequential',
+                parent_id TEXT DEFAULT NULL,
                 metadata TEXT,
                 created_at TEXT DEFAULT CURRENT_TIMESTAMP,
                 updated_at TEXT DEFAULT CURRENT_TIMESTAMP
             )
         `);
-        
+
+        // Migration: add parent_id column for hierarchical groups (2-level max)
+        try { db.run(`ALTER TABLE agent_groups ADD COLUMN parent_id TEXT DEFAULT NULL`); } catch (_) {}
+
         // Agent collaborations table (for multi-agent sessions)
         db.run(`
             CREATE TABLE IF NOT EXISTS agent_collaborations (
@@ -799,13 +845,35 @@ function initializeDefaultAgents() {
     try {
         const existing = db.query('SELECT COUNT(*) as count FROM agent_groups');
         if (existing.success && existing.results[0].count === 0) {
-            for (const g of getDefaultGroups()) {
+            // Insert root groups first, then subgroups (parent_id references root)
+            const defaults = getDefaultGroups();
+            const roots = defaults.filter(g => !g.parentId);
+            const subs = defaults.filter(g => g.parentId);
+            for (const g of [...roots, ...subs]) {
                 db.run(
-                    'INSERT OR IGNORE INTO agent_groups (id, name, description, color, collaboration_mode, metadata) VALUES (?, ?, ?, ?, ?, ?)',
-                    [g.id, g.name, g.description, g.color, g.collaborationMode, '{}']
+                    'INSERT OR IGNORE INTO agent_groups (id, name, description, color, collaboration_mode, parent_id, metadata) VALUES (?, ?, ?, ?, ?, ?, ?)',
+                    [g.id, g.name, g.description, g.color, g.collaborationMode, g.parentId || null, '{}']
                 );
             }
-            HUB?.log('✅ Default groups initialized', 'info');
+            HUB?.log('✅ Default hierarchical groups initialized', 'info');
+        } else {
+            // Migration: remap old flat groups to new hierarchy
+            const FLAT_GROUP_MIGRATION = {
+                'development': 'engineering',      // development → Engineering (root)
+                'quality-assurance': 'quality-review', // quality-assurance → Quality & Review (root)
+                'version-control': 'devops',       // version-control → Engineering > DevOps
+                // 'security' stays as 'security' but now under Operations
+            };
+            for (const [oldId, newId] of Object.entries(FLAT_GROUP_MIGRATION)) {
+                try {
+                    // Update agents pointing to old group IDs
+                    db.run('UPDATE agents SET group_id = ? WHERE group_id = ?', [newId, oldId]);
+                } catch (_) {}
+            }
+            // Ensure security group gets parent_id = 'operations' if it exists without one
+            try {
+                db.run(`UPDATE agent_groups SET parent_id = 'operations' WHERE id = 'security' AND parent_id IS NULL`);
+            } catch (_) {}
         }
     } catch (e) {
         HUB?.log('⚠️ Default groups init error: ' + e.message, 'warn');
@@ -849,7 +917,7 @@ function createAgent(agentData) {
                 JSON.stringify(agentData.tools || []),
                 agentData.toolPolicy || 'allowlist',
                 agentData.autoAddTools !== false ? 1 : 0,
-                agentData.securityRole || 'developer',
+                agentData.securityRole || 'implementer',
                 JSON.stringify(agentData.capabilities || []),
                 JSON.stringify(agentData.metadata || {}),
                 'active',
@@ -920,7 +988,7 @@ function updateAgent(agentId, updates) {
                 JSON.stringify(mergedTools),
                 merged.toolPolicy  || 'allowlist',
                 merged.autoAddTools !== false ? 1 : 0,
-                merged.securityRole || 'developer',
+                merged.securityRole || 'implementer',
                 JSON.stringify(merged.capabilities || []),
                 JSON.stringify(merged.metadata    || {}),
                 'active', 'global',
@@ -965,6 +1033,7 @@ function updateAgent(agentId, updates) {
         if (updates.securityRole !== undefined) { fields.push('security_role = ?'); values.push(updates.securityRole); }
         if (updates.capabilities !== undefined) { fields.push('capabilities = ?'); values.push(JSON.stringify(updates.capabilities)); }
         if (updates.status       !== undefined) { fields.push('status = ?');        values.push(updates.status); }
+        if (updates.overrideRoleRestrictions !== undefined) { fields.push('override_role_restrictions = ?'); values.push(updates.overrideRoleRestrictions ? 1 : 0); }
 
         if (fields.length > 0) {
             fields.push('updated_at = ?');
@@ -1037,6 +1106,7 @@ function listAgents(includeProjectAgents = []) {
                 builtIn: agent.builtIn || false,
                 forcedTools: agent.forcedTools || [],
                 blockedTools: agent.blockedTools || [],
+                overrideRoleRestrictions: false,
                 isDefault: true
             }));
         } else {
@@ -1079,8 +1149,63 @@ function parseAgentRow(row) {
         builtIn: !!row.built_in,
         forcedTools: JSON.parse(row.forced_tools  || '[]'),
         blockedTools: JSON.parse(row.blocked_tools || '[]'),
+        overrideRoleRestrictions: !!row.override_role_restrictions,
         isDefault: false
     };
+}
+
+// ==================== ROLE ENFORCEMENT ====================
+
+/**
+ * Check whether a tool is allowed for a given security role.
+ * Uses the role's allowedCategories (matched against TOOL_TIER_REGISTRY)
+ * and explicit blockedTools list.
+ *
+ * @param {string} toolName   - The tool being invoked
+ * @param {string} role       - The agent's securityRole value
+ * @param {object} agentConfig - The full agent config (may include overrideRoleRestrictions)
+ * @returns {boolean} true if allowed
+ */
+function isToolAllowedForRole(toolName, role, agentConfig = {}) {
+    const roleDef = SECURITY_ROLES[role];
+    if (!roleDef) return true;  // unknown role → allow (fail-open during migration)
+
+    // Per-agent override: if agent has override toggle enabled AND role allows it
+    if (agentConfig.overrideRoleRestrictions && roleDef.canOverride) return true;
+
+    // Explicit block list — always checked first
+    if (roleDef.blockedTools.includes(toolName)) return false;
+
+    // Category check: look up tool's category from TOOL_TIER_REGISTRY
+    // The registry is loaded from agent-system-module at runtime via HUB
+    const agentSystem = HUB ? HUB.getService('agentSystem') : null;
+    const tierRegistry = agentSystem && agentSystem.TOOL_TIER_REGISTRY;
+    if (tierRegistry) {
+        const toolInfo = tierRegistry[toolName];
+        if (toolInfo && toolInfo.category && !roleDef.allowedCategories.includes(toolInfo.category)) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+/**
+ * Find an existing agent that is permitted to execute a given tool.
+ * Used for delegation-on-block: when an agent's role blocks a tool,
+ * we suggest an agent that CAN handle it.
+ *
+ * @param {string} toolName       - The tool to find a capable agent for
+ * @param {string} excludeAgentId - Agent to exclude (the one that was blocked)
+ * @returns {object|null} The first capable agent, or null
+ */
+function findCapableAgent(toolName, excludeAgentId) {
+    const agents = listAgents();
+    return agents.find(a =>
+        a.name !== excludeAgentId &&
+        Array.isArray(a.tools) && a.tools.includes(toolName) &&
+        isToolAllowedForRole(toolName, a.securityRole, a)
+    ) || null;
 }
 
 // ==================== GROUPS ====================
@@ -1089,25 +1214,35 @@ function createGroup(groupData) {
     if (!groupData.name) {
         return { success: false, error: 'Group name is required' };
     }
-    
-    const id = 'group_' + Date.now().toString(36);
-    
+
+    // Enforce 2-level max hierarchy: subgroups cannot have children
+    const parentId = groupData.parentId || null;
+    if (parentId && db) {
+        const parentRow = db.query('SELECT parent_id FROM agent_groups WHERE id = ?', [parentId]);
+        if (parentRow.success && parentRow.results.length > 0 && parentRow.results[0].parent_id) {
+            return { success: false, error: 'Maximum group depth is 2 levels. Cannot create a sub-sub-group.' };
+        }
+    }
+
+    const id = groupData.id || ('group_' + Date.now().toString(36));
+
     try {
         if (db) {
             db.run(`
-                INSERT INTO agent_groups (id, name, description, color, collaboration_mode, metadata)
-                VALUES (?, ?, ?, ?, ?, ?)
+                INSERT INTO agent_groups (id, name, description, color, collaboration_mode, parent_id, metadata)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
             `, [
                 id,
                 groupData.name,
                 groupData.description || '',
                 groupData.color || '#58a6ff',
                 groupData.collaborationMode || 'sequential',
+                parentId,
                 JSON.stringify(groupData.metadata || {})
             ]);
         }
-        
-        return { success: true, group: { id, ...groupData } };
+
+        return { success: true, group: { id, parentId, ...groupData } };
     } catch (e) {
         return { success: false, error: e.message };
     }
@@ -1116,23 +1251,37 @@ function createGroup(groupData) {
 function updateGroup(groupId, updates) {
     try {
         if (db) {
+            // Enforce 2-level max if changing parentId
+            if (updates.parentId !== undefined && updates.parentId !== null) {
+                const parentRow = db.query('SELECT parent_id FROM agent_groups WHERE id = ?', [updates.parentId]);
+                if (parentRow.success && parentRow.results.length > 0 && parentRow.results[0].parent_id) {
+                    return { success: false, error: 'Maximum group depth is 2 levels. Cannot nest under a subgroup.' };
+                }
+                // Also check if this group has children — if so, it can't become a subgroup
+                const children = db.query('SELECT COUNT(*) as count FROM agent_groups WHERE parent_id = ?', [groupId]);
+                if (children.success && children.results[0].count > 0) {
+                    return { success: false, error: 'This group has subgroups. Move or remove them first before nesting this group.' };
+                }
+            }
+
             const fields = [];
             const values = [];
-            
+
             if (updates.name !== undefined) { fields.push('name = ?'); values.push(updates.name); }
             if (updates.description !== undefined) { fields.push('description = ?'); values.push(updates.description); }
             if (updates.color !== undefined) { fields.push('color = ?'); values.push(updates.color); }
             if (updates.collaborationMode !== undefined) { fields.push('collaboration_mode = ?'); values.push(updates.collaborationMode); }
-            
+            if (updates.parentId !== undefined) { fields.push('parent_id = ?'); values.push(updates.parentId); }
+
             if (fields.length > 0) {
                 fields.push('updated_at = ?');
                 values.push(new Date().toISOString());
                 values.push(groupId);
-                
+
                 db.run('UPDATE agent_groups SET ' + fields.join(', ') + ' WHERE id = ?', values);
             }
         }
-        
+
         return { success: true };
     } catch (e) {
         return { success: false, error: e.message };
@@ -1142,7 +1291,9 @@ function updateGroup(groupId, updates) {
 function deleteGroup(groupId) {
     try {
         if (db) {
-            // Remove group from agents first
+            // If this is a root group with children, orphan the children (set parent_id = NULL)
+            db.run('UPDATE agent_groups SET parent_id = NULL WHERE parent_id = ?', [groupId]);
+            // Remove group assignment from agents
             db.run('UPDATE agents SET group_id = NULL WHERE group_id = ?', [groupId]);
             db.run('DELETE FROM agent_groups WHERE id = ?', [groupId]);
         }
@@ -1155,16 +1306,18 @@ function deleteGroup(groupId) {
 function listGroups() {
     try {
         if (!db) return getDefaultGroups();
-        
-        const result = db.query('SELECT * FROM agent_groups ORDER BY name');
+
+        // Order: roots first (parent_id IS NULL), then subgroups, alphabetical within each level
+        const result = db.query('SELECT * FROM agent_groups ORDER BY CASE WHEN parent_id IS NULL THEN 0 ELSE 1 END, parent_id, name');
         if (!result.success) return getDefaultGroups();
-        
+
         return result.results.map(row => ({
             id: row.id,
             name: row.name,
             description: row.description,
             color: row.color,
             collaborationMode: row.collaboration_mode,
+            parentId: row.parent_id || null,
             metadata: JSON.parse(row.metadata || '{}')
         }));
     } catch (e) {
@@ -1174,10 +1327,21 @@ function listGroups() {
 
 function getDefaultGroups() {
     return [
-        { id: 'development', name: 'Development', description: 'Code development team', color: '#3fb950', collaborationMode: 'sequential' },
-        { id: 'quality-assurance', name: 'Quality Assurance', description: 'Testing and QA team', color: '#58a6ff', collaborationMode: 'parallel' },
-        { id: 'version-control', name: 'Version Control', description: 'Git operations team', color: '#f85149', collaborationMode: 'sequential' },
-        { id: 'security', name: 'Security', description: 'Security operations', color: '#d29922', collaborationMode: 'parallel' }
+        // Root groups
+        { id: 'engineering', name: 'Engineering', description: 'Engineering teams', color: '#3fb950', collaborationMode: 'sequential', parentId: null },
+        { id: 'quality-review', name: 'Quality & Review', description: 'Testing and review teams', color: '#58a6ff', collaborationMode: 'parallel', parentId: null },
+        { id: 'operations', name: 'Operations', description: 'Operations and infrastructure', color: '#d29922', collaborationMode: 'parallel', parentId: null },
+        { id: 'system', name: 'System', description: 'Core system agents (orchestrator, PM)', color: '#8b949e', collaborationMode: 'sequential', parentId: null },
+        // Subgroups under Engineering
+        { id: 'frontend', name: 'Frontend', description: 'Frontend development', color: '#3fb950', collaborationMode: 'sequential', parentId: 'engineering' },
+        { id: 'backend', name: 'Backend', description: 'Backend development', color: '#3fb950', collaborationMode: 'sequential', parentId: 'engineering' },
+        { id: 'devops', name: 'DevOps', description: 'DevOps and version control', color: '#f85149', collaborationMode: 'sequential', parentId: 'engineering' },
+        // Subgroups under Quality & Review
+        { id: 'testing', name: 'Testing', description: 'QA and testing team', color: '#58a6ff', collaborationMode: 'parallel', parentId: 'quality-review' },
+        { id: 'code-review', name: 'Code Review', description: 'Code review team', color: '#58a6ff', collaborationMode: 'sequential', parentId: 'quality-review' },
+        // Subgroups under Operations
+        { id: 'security', name: 'Security', description: 'Security operations', color: '#d29922', collaborationMode: 'parallel', parentId: 'operations' },
+        { id: 'infrastructure', name: 'Infrastructure', description: 'Infrastructure management', color: '#d29922', collaborationMode: 'sequential', parentId: 'operations' }
     ];
 }
 

@@ -33,6 +33,8 @@ export class TeamPanel extends PanelComponent {
         this._agentTickers = {};      // processing heartbeat intervals
         this._sparklineInterval = null;
         this._sessionStates = {};     // { agentName: {isProcessing, paused, ...} }
+        this._chatRooms = [];         // Active inter-agent chat rooms
+        this._watchingRoom = null;    // Currently expanded room ID
     }
 
     mount() {
@@ -118,6 +120,38 @@ export class TeamPanel extends PanelComponent {
             }
         }));
 
+        // ── Agent Chat Rooms ──────────────────────────────────────────
+        // Fetch existing rooms on mount
+        if (OverlordUI._socket) {
+            OverlordUI._socket.emit('list_chat_rooms', (rooms) => {
+                this._chatRooms = rooms || [];
+                this.render(this._agents);
+            });
+        }
+
+        // Listen for room lifecycle events
+        this._subs.push(OverlordUI.subscribe('agent_room_opened', (room) => {
+            this._chatRooms = this._chatRooms.filter(r => r.id !== room.id);
+            this._chatRooms.unshift(room);
+            this.render(this._agents);
+        }));
+        this._subs.push(OverlordUI.subscribe('agent_room_message', (data) => {
+            const room = this._chatRooms.find(r => r.id === data.roomId);
+            if (room) {
+                room.messageCount = (room.messageCount || 0) + 1;
+                if (!room.messages) room.messages = [];
+                room.messages.push(data.message);
+                this._updateRoomCard(data.roomId);
+            }
+        }));
+        this._subs.push(OverlordUI.subscribe('agent_room_closed', (data) => {
+            const room = this._chatRooms.find(r => r.id === data.roomId);
+            if (room) {
+                room.status = data.status || 'completed';
+                this._updateRoomCard(data.roomId);
+            }
+        }));
+
         // Refresh all visible sparklines every 1s
         this._sparklineInterval = setInterval(() => {
             this._agents.forEach(a => this._updateSparklineEl(a.name));
@@ -134,9 +168,24 @@ export class TeamPanel extends PanelComponent {
         if (!this._listEl) return;
         this._agents = agents || this._agents;
 
+        const frag = document.createDocumentFragment();
+
+        // ── Active Chat Rooms section ────────────────────────────────
+        const activeRooms = this._chatRooms.filter(r => r.status === 'active');
+        if (activeRooms.length) {
+            const roomsHeader = h('div', {
+                style: 'display:flex;align-items:center;gap:6px;padding:6px 8px;font-size:10px;font-weight:700;color:var(--accent-primary);letter-spacing:0.05em;text-transform:uppercase;'
+            }, `\u{1F4AC} Agent Rooms (${activeRooms.length})`);
+            frag.appendChild(roomsHeader);
+            for (const room of activeRooms) {
+                frag.appendChild(this._buildRoomCard(room));
+            }
+            frag.appendChild(h('div', { style: 'height:8px;border-bottom:1px solid var(--border-color);margin-bottom:6px;' }));
+        }
+
         const filtered = this._filterAgents(this._agents);
 
-        if (!filtered.length) {
+        if (!filtered.length && !activeRooms.length) {
             OverlordUI.setContent(this._listEl, h('div', {
                 style: 'padding:16px;text-align:center;color:var(--text-muted);font-size:12px;'
             }, this._filter === 'all' ? 'No agents registered' : `No ${this._filter} agents`));
@@ -154,7 +203,6 @@ export class TeamPanel extends PanelComponent {
             return rankOf(a) - rankOf(b);
         });
 
-        const frag = document.createDocumentFragment();
         for (const agent of sorted) {
             frag.appendChild(this._buildAgentCard(agent));
         }
@@ -376,5 +424,146 @@ export class TeamPanel extends PanelComponent {
         }, `↑${stats.sent} ↓${stats.recv}`));
 
         return card;
+    }
+
+    // ── Agent Chat Rooms UI ──────────────────────────────────────
+
+    _buildRoomCard(room) {
+        const isWatching = this._watchingRoom === room.id;
+        const esc = (s) => OverlordUI.escapeHtml ? OverlordUI.escapeHtml(String(s)) : String(s);
+
+        const card = h('div', {
+            id: `room-card-${room.id}`,
+            style: `background:var(--bg-secondary);border:1px solid ${isWatching ? 'var(--accent-primary)' : 'var(--border-color)'};border-radius:6px;margin:0 4px 4px;padding:8px 10px;cursor:pointer;transition:border-color 0.2s;`,
+            onClick: () => this._toggleWatchRoom(room.id)
+        },
+            // Header row: agents + status
+            h('div', { style: 'display:flex;align-items:center;gap:6px;margin-bottom:4px;' },
+                h('span', { style: 'font-size:11px;font-weight:600;color:var(--text-primary);' },
+                    esc(room.fromAgent) + ' \u2194 ' + esc(room.toAgent)),
+                room.tool ? h('span', {
+                    style: 'font-size:9px;background:var(--bg-tertiary);color:var(--accent-primary);padding:1px 5px;border-radius:3px;'
+                }, esc(room.tool)) : null,
+                h('span', {
+                    style: `font-size:9px;margin-left:auto;color:${room.status === 'active' ? 'var(--accent-green)' : 'var(--text-muted)'};`
+                }, room.status === 'active' ? '\u25CF live' : room.status)
+            ),
+            // Reason
+            room.reason ? h('div', {
+                style: 'font-size:10px;color:var(--text-muted);margin-bottom:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;'
+            }, esc(room.reason)) : null,
+            // Message count + action buttons
+            h('div', { style: 'display:flex;align-items:center;gap:6px;' },
+                h('span', { style: 'font-size:9px;color:var(--text-muted);' },
+                    (room.messageCount || 0) + ' messages'),
+                h('button', {
+                    style: 'margin-left:auto;padding:2px 8px;font-size:10px;background:var(--accent-primary);border:none;border-radius:3px;cursor:pointer;color:#000;font-weight:600;',
+                    onClick: (e) => { e.stopPropagation(); this._toggleWatchRoom(room.id); }
+                }, isWatching ? 'Close' : 'Watch'),
+                room.status === 'active' ? h('button', {
+                    style: 'padding:2px 8px;font-size:10px;background:var(--accent-red);border:none;border-radius:3px;cursor:pointer;color:#fff;font-weight:600;',
+                    onClick: (e) => { e.stopPropagation(); this._endRoom(room.id); }
+                }, 'End') : null
+            )
+        );
+
+        // Expanded chat log
+        if (isWatching) {
+            const chatLog = h('div', {
+                id: `room-log-${room.id}`,
+                style: 'margin-top:8px;max-height:240px;overflow-y:auto;border-top:1px solid var(--border-color);padding-top:6px;'
+            });
+            const msgs = (room.messages || []);
+            if (msgs.length === 0) {
+                chatLog.appendChild(h('div', { style: 'font-size:10px;color:var(--text-muted);text-align:center;padding:8px;' }, 'Waiting for messages...'));
+            } else {
+                for (const msg of msgs) {
+                    const isFrom = msg.from === room.fromAgent;
+                    chatLog.appendChild(h('div', {
+                        style: `font-size:10px;margin-bottom:4px;padding:4px 6px;border-radius:4px;background:${isFrom ? 'rgba(88,166,255,0.08)' : 'rgba(63,185,80,0.08)'};border-left:2px solid ${isFrom ? 'var(--accent-primary)' : 'var(--accent-green)'};`
+                    },
+                        h('span', { style: 'font-weight:600;color:var(--text-primary);' }, esc(msg.from) + ': '),
+                        h('span', { style: 'color:var(--text-secondary);' }, esc(String(msg.content).substring(0, 500)))
+                    ));
+                }
+            }
+            // User chat input — the user can join the conversation
+            const inputRow = h('div', { style: 'display:flex;gap:4px;margin-top:6px;' },
+                h('input', {
+                    id: `room-input-${room.id}`,
+                    type: 'text',
+                    placeholder: 'Type a message to both agents...',
+                    style: 'flex:1;padding:4px 8px;background:var(--bg-primary);border:1px solid var(--border-color);border-radius:4px;color:var(--text-primary);font-size:11px;',
+                    onKeydown: (e) => {
+                        if (e.key === 'Enter') this._sendRoomMessage(room.id);
+                    }
+                }),
+                h('button', {
+                    style: 'padding:4px 10px;background:var(--accent-primary);border:none;border-radius:4px;cursor:pointer;color:#000;font-size:10px;font-weight:600;',
+                    onClick: () => this._sendRoomMessage(room.id)
+                }, 'Send')
+            );
+            card.appendChild(chatLog);
+            card.appendChild(inputRow);
+        }
+
+        return card;
+    }
+
+    _toggleWatchRoom(roomId) {
+        if (this._watchingRoom === roomId) {
+            this._watchingRoom = null;
+        } else {
+            this._watchingRoom = roomId;
+            // Fetch full room data (with messages) when watching
+            if (OverlordUI._socket) {
+                OverlordUI._socket.emit('get_chat_room', roomId, (fullRoom) => {
+                    if (fullRoom) {
+                        const idx = this._chatRooms.findIndex(r => r.id === roomId);
+                        if (idx >= 0) this._chatRooms[idx] = fullRoom;
+                    }
+                    this.render(this._agents);
+                });
+                return; // render will be called in callback
+            }
+        }
+        this.render(this._agents);
+    }
+
+    _sendRoomMessage(roomId) {
+        const input = this._listEl.querySelector(`#room-input-${roomId}`);
+        if (!input || !input.value.trim()) return;
+        const message = input.value.trim();
+        input.value = '';
+
+        // Send as "user" — both agents in the room will see this
+        if (OverlordUI._socket) {
+            OverlordUI._socket.emit('send_room_message', { roomId, message }, () => {
+                // Optimistic update
+                const room = this._chatRooms.find(r => r.id === roomId);
+                if (room) {
+                    if (!room.messages) room.messages = [];
+                    room.messages.push({ from: 'user', content: message, type: 'message', ts: Date.now() });
+                    room.messageCount = (room.messageCount || 0) + 1;
+                    this.render(this._agents);
+                }
+            });
+        }
+    }
+
+    _endRoom(roomId) {
+        if (OverlordUI._socket) {
+            OverlordUI._socket.emit('end_chat_room', roomId, () => {
+                const room = this._chatRooms.find(r => r.id === roomId);
+                if (room) room.status = 'ended';
+                if (this._watchingRoom === roomId) this._watchingRoom = null;
+                this.render(this._agents);
+            });
+        }
+    }
+
+    _updateRoomCard(roomId) {
+        // Re-render full panel to update room card (simple approach)
+        this.render(this._agents);
     }
 }

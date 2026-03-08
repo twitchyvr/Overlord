@@ -131,6 +131,9 @@ export function initSocketBridge(socket, store, engine) {
     // ══════════════════════════════════════════════════════════════
 
     socket.on('status_update', (data) => {
+        // Derive processing state so Stop button enables and send-area aurora fires.
+        // The legacy build (index-ori.html:6739) used: isProcessing = (data.status === 'thinking' || data.status === 'tool')
+        store.set('ui.processing', data.status === 'thinking' || data.status === 'tool');
         store.set('ui.status', data);
         engine.dispatch('status_update', data);
     });

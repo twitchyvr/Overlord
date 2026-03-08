@@ -1669,16 +1669,28 @@
         }
 
 
-        // ── Processing State → Status Bar + Aurora ────────────────────
+        // ── Processing State → Aurora ──────────────────────────────────
+        // Note: status text is handled by the ui.status subscriber below.
+        // Stop button enable/disable is handled by its own subscriber at btn-cancel below.
+        // Ported from index-ori.html:6739 (isProcessing derivation).
         store.subscribe('ui.processing', (processing) => {
-            const el = document.getElementById('status');
-            if (el) el.textContent = processing ? 'Processing…' : 'Connected';
             // Aurora breathing on send area while processing
             const sendArea = document.getElementById('send-area');
             if (sendArea) {
                 if (processing) sendArea.classList.add('is-thinking');
                 else sendArea.classList.remove('is-thinking');
             }
+        });
+
+        // ── Status Text → Rich server-driven updates ──────────────────
+        // Ported from index-ori.html:6737-6738:
+        //   elements.status.textContent = data.text;
+        //   elements.status.className = 'status ' + data.status;
+        store.subscribe('ui.status', (data) => {
+            const el = document.getElementById('status');
+            if (!el || !data) return;
+            el.textContent = data.text || 'Connected';
+            el.className = 'status ' + (data.status || '');
         });
 
 

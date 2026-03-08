@@ -38,6 +38,8 @@ class Hub extends EventEmitter {
         this.initialized = false;
         // ── Web Push subscriptions (socketId → PushSubscription JSON) ──
         this._pushSubscriptions = new Map();
+        // ── Room discussion round timers (roomId → timeoutId) ──
+        this._roomDiscussionTimers = new Map();
         
         // Process state tracking
         this.processState = {
@@ -1137,6 +1139,13 @@ class Hub extends EventEmitter {
                 const room = orch.getChatRoom(data.roomId);
                 if (!room) { if (typeof cb === 'function') cb({ success: false }); return; }
 
+                // Stop any ongoing discussion round for this room before starting fresh
+                if (this._roomDiscussionTimers.has(data.roomId)) {
+                    clearTimeout(this._roomDiscussionTimers.get(data.roomId));
+                    this._roomDiscussionTimers.delete(data.roomId);
+                }
+                if (orch.clearRoomAgentCallbacks) orch.clearRoomAgentCallbacks(data.roomId);
+
                 // Add user message to room transcript
                 orch.addRoomMessage(data.roomId, 'user', data.message, 'message');
 
@@ -1145,53 +1154,84 @@ class Hub extends EventEmitter {
 
                 if (typeof cb === 'function') cb({ success: true });
 
-                // ── Sequential agent chain — each agent sees the previous agents' responses ──
-                // Build a transcript string from room messages (last 30) for context
+                // ── Multi-round discussion — agents talk to each other across rounds ──
+                // Round 0: agents respond to user's message
+                // Rounds 1+: agents respond to each other (autonomous discussion)
+                const MAX_ROUNDS = 4;  // 1 user-prompt round + 3 agent-to-agent rounds
+
                 const buildTranscript = () => {
-                    const msgs = (orch.getChatRoom(data.roomId)?.messages || []).slice(-30);
+                    const msgs = (orch.getChatRoom(data.roomId)?.messages || []).slice(-40);
                     return msgs.map(m => `[${m.from}]: ${m.content}`).join('\n');
                 };
 
-                const triggerNext = (index) => {
-                    if (index >= agentNames.length) return;
-                    const agentName = agentNames[index];
-                    const participantList = allParticipants.join(', ');
-                    const transcript = buildTranscript();
+                const triggerRound = (round) => {
+                    const triggerNext = (index) => {
+                        if (index >= agentNames.length) {
+                            // All agents finished this round — schedule next if not at limit
+                            if (round + 1 < MAX_ROUNDS) {
+                                const timer = setTimeout(() => {
+                                    this._roomDiscussionTimers.delete(data.roomId);
+                                    const r = orch.getChatRoom(data.roomId);
+                                    if (!r) return;
+                                    this.log(`[Room ${data.roomId}] Starting discussion round ${round + 2}/${MAX_ROUNDS}`, 'info');
+                                    triggerRound(round + 1);
+                                }, 1500);
+                                this._roomDiscussionTimers.set(data.roomId, timer);
+                            }
+                            return;
+                        }
 
-                    this.log(`[Room ${data.roomId}] Triggering ${agentName} (${index + 1}/${agentNames.length})`, 'info');
+                        const agentName = agentNames[index];
+                        const participantList = allParticipants.join(', ');
+                        const transcript = buildTranscript();
 
-                    // Signal UI to show thinking dots before the agent responds
-                    this.broadcast('room_agent_thinking', { roomId: data.roomId, agentName });
+                        this.log(`[Room ${data.roomId}] Round ${round + 1}/${MAX_ROUNDS} — triggering ${agentName}`, 'info');
+                        this.broadcast('room_agent_thinking', { roomId: data.roomId, agentName });
 
-                    const prompt = [
-                        `[Meeting room ${data.roomId}] Participants: ${participantList}`,
-                        ``,
-                        `Recent conversation:`,
-                        transcript,
-                        ``,
-                        `You are ${agentName}. Respond to the conversation above. Be concise and collaborative.`,
-                        `If another agent already answered the main question, add your own perspective or ask a follow-up.`
-                    ].join('\n');
+                        const prompt = round === 0
+                            ? [
+                                `[Meeting room — Participants: ${participantList}]`,
+                                ``,
+                                `Conversation:`,
+                                transcript,
+                                ``,
+                                `You are ${agentName}. Respond to the conversation above. Be concise and collaborative.`,
+                                `If another agent already addressed the main point, add your own perspective or ask a follow-up question.`
+                            ].join('\n')
+                            : [
+                                `[Meeting room — Participants: ${participantList}]`,
+                                ``,
+                                `Conversation so far:`,
+                                transcript,
+                                ``,
+                                `You are ${agentName}. Continue the discussion — respond directly to what was just said.`,
+                                `Build on the other agents' ideas, challenge assumptions, ask a follow-up, or propose next steps.`,
+                                `Keep it concise (2-4 sentences). Address other agents by name when relevant. Do NOT restart the conversation.`
+                            ].join('\n');
 
-                    if (orch.runAgentSessionInRoom) {
-                        orch.runAgentSessionInRoom(agentName, prompt, data.roomId, () => triggerNext(index + 1));
-                    } else if (orch.runAgentSession) {
-                        orch.runAgentSession(agentName, prompt);
-                        triggerNext(index + 1);
-                    }
+                        if (orch.runAgentSessionInRoom) {
+                            orch.runAgentSessionInRoom(agentName, prompt, data.roomId, () => triggerNext(index + 1));
+                        } else if (orch.runAgentSession) {
+                            orch.runAgentSession(agentName, prompt);
+                            triggerNext(index + 1);
+                        }
+                    };
+
+                    triggerNext(0);
                 };
 
-                triggerNext(0);
+                triggerRound(0);
             });
 
-            // Stop the sequential agent chain for a room (clears callbacks + broadcasts done)
+            // Stop the sequential agent chain + any pending discussion rounds for a room
             socket.on('stop_room_agents', (roomId, cb) => {
-                const orch = this.getService('orchestration');
-                if (!orch || !orch.clearRoomAgentCallbacks) {
-                    if (typeof cb === 'function') cb({ success: false });
-                    return;
+                // Cancel any pending next-round timer
+                if (this._roomDiscussionTimers.has(roomId)) {
+                    clearTimeout(this._roomDiscussionTimers.get(roomId));
+                    this._roomDiscussionTimers.delete(roomId);
                 }
-                orch.clearRoomAgentCallbacks(roomId);
+                const orch = this.getService('orchestration');
+                if (orch?.clearRoomAgentCallbacks) orch.clearRoomAgentCallbacks(roomId);
                 this.broadcast('room_agents_stopped', { roomId });
                 if (typeof cb === 'function') cb({ success: true });
             });

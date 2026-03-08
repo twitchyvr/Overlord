@@ -22,9 +22,17 @@ import { Modal }  from '../components/modal.js';
 import { Toast }  from '../components/toast.js';
 
 const MODAL_ID = 'agent-manager';
-const SECURITY_ROLES = ['developer', 'security-aware', 'security-analyst', 'security-lead', 'ciso', 'readonly'];
-const FILLABLE_FIELDS = ['name', 'role', 'description', 'instructions', 'securityRole', 'tools'];
-const FIELD_IDS = { name: 'am-name', role: 'am-role', description: 'am-description', instructions: 'am-instructions', securityRole: 'am-security-role' };
+// Fallback roles — replaced at runtime by server-provided roles via get_security_roles
+let SECURITY_ROLES_MAP = {
+    'full-access':  { label: 'Full Access',   description: 'Unrestricted system agent' },
+    'implementer':  { label: 'Implementer',   description: 'Read, write, execute — no orchestration' },
+    'contributor':  { label: 'Contributor',    description: 'Read and write — no shell access' },
+    'reviewer':     { label: 'Reviewer',       description: 'Read and analyze only' },
+    'coordinator':  { label: 'Coordinator',    description: 'Read + orchestration — no implementation' },
+    'observer':     { label: 'Observer',       description: 'Read-only access' }
+};
+const FILLABLE_FIELDS = ['name', 'role', 'description', 'instructions', 'securityRole', 'group', 'tools'];
+const FIELD_IDS = { name: 'am-name', role: 'am-role', description: 'am-description', instructions: 'am-instructions', securityRole: 'am-security-role', group: 'am-group' };
 
 export class AgentManagerView extends Component {
 
@@ -68,12 +76,18 @@ export class AgentManagerView extends Component {
             className: 'agent-manager-modal',
             onClose: () => { this._dirty = false; this._currentAgentId = null; this._clearPreview(); }
         });
-        // Fetch dynamic tool categories, then load data
+        // Fetch dynamic tool categories + security roles, then load data
         if (this._socket) {
             this._socket.emit('get_available_tools', (cats) => {
                 this._toolCategories = cats || {};
                 this._loadAgentList();
                 this._loadGroups();
+            });
+            // Fetch server-side security role definitions
+            this._socket.emit('get_security_roles', (roles) => {
+                if (roles && typeof roles === 'object' && Object.keys(roles).length > 0) {
+                    SECURITY_ROLES_MAP = roles;
+                }
             });
         }
     }
@@ -188,16 +202,21 @@ export class AgentManagerView extends Component {
         const el = this._agentListEl;
         if (!el) return;
         el.textContent = '';
-        for (const agent of this._agents) {
+        const sorted = [...this._agents].sort((a, b) => (b.builtIn ? 1 : 0) - (a.builtIn ? 1 : 0));
+        for (const agent of sorted) {
             const id = agent.id || agent.name;
             const selected = id === this._currentAgentId;
+            const nameEl = h('div', { style: { fontWeight: '600', fontSize: '11px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', display: 'flex', alignItems: 'center', gap: '4px' } },
+                agent.name || id,
+                agent.builtIn ? h('span', { style: { fontSize: '9px', background: 'rgba(88,166,255,0.2)', color: 'var(--accent-primary,#58a6ff)', borderRadius: '3px', padding: '1px 4px', letterSpacing: '0.04em', flexShrink: '0' } }, 'BUILT-IN') : null
+            );
             const row = h('div', {
                 class: 'am-agent-row' + (selected ? ' selected' : ''),
                 onClick: () => this._selectAgent(id)
             },
                 h('div', { class: 'am-agent-dot' }),
                 h('div', { style: { flex: '1', overflow: 'hidden' } },
-                    h('div', { style: { fontWeight: '600', fontSize: '11px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' } }, agent.name || id),
+                    nameEl,
                     h('div', { style: { fontSize: '10px', color: 'var(--text-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' } }, agent.role || '')
                 )
             );
@@ -213,6 +232,7 @@ export class AgentManagerView extends Component {
         if (!this._socket) return;
         this._socket.emit('get_agent', agentId, (agent) => {
             if (!agent) return;
+            this._currentAgent = agent;
             this._emptyEl.style.display = 'none';
             this._editorEl.style.display = 'block';
             this._renderEditor(agent);
@@ -249,8 +269,11 @@ export class AgentManagerView extends Component {
         ed.textContent = '';
 
         const title = h('h3', {
-            style: { margin: '0 0 14px', fontSize: '12px', fontWeight: '700', letterSpacing: '0.06em', color: 'var(--text-secondary)' }
-        }, isNew ? 'NEW AGENT' : 'EDIT AGENT');
+            style: { margin: '0 0 14px', fontSize: '12px', fontWeight: '700', letterSpacing: '0.06em', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '6px' }
+        },
+            isNew ? 'NEW AGENT' : 'EDIT AGENT',
+            (!isNew && agent.builtIn) ? h('span', { style: { fontSize: '10px', background: 'rgba(88,166,255,0.15)', color: 'var(--accent-primary,#58a6ff)', borderRadius: '4px', padding: '2px 7px', fontWeight: '600' } }, '🔒 BUILT-IN') : null
+        );
 
         const fields = h('div', { style: { display: 'flex', flexDirection: 'column', gap: '10px' } });
 
@@ -261,7 +284,8 @@ export class AgentManagerView extends Component {
         fields.appendChild(this._buildField('INSTRUCTIONS', 'instructions', 'textarea', agent.instructions || '', 'Special instructions for this agent...', 3));
 
         // Security Role + Group row
-        const securitySelect = this._buildSelect('am-security-role', SECURITY_ROLES, agent.securityRole || 'developer');
+        const securityRoleNames = Object.keys(SECURITY_ROLES_MAP);
+        const securitySelect = this._buildSelect('am-security-role', securityRoleNames, agent.securityRole || 'implementer', SECURITY_ROLES_MAP);
         const groupSelect = h('select', {
             id: 'am-group',
             style: { width: '100%', padding: '6px 8px', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '4px', color: 'var(--text-primary)', fontSize: '12px' },
@@ -269,10 +293,27 @@ export class AgentManagerView extends Component {
         }, h('option', { value: '' }, 'None'));
         this._groupSelect = groupSelect;
 
+        // Override toggle — only shown when the role allows it
+        const roleDef = SECURITY_ROLES_MAP[agent.securityRole || 'implementer'] || {};
+        const overrideCheckbox = h('input', {
+            type: 'checkbox', id: 'am-override-role',
+            checked: agent.overrideRoleRestrictions || false,
+            style: { marginRight: '4px', verticalAlign: 'middle' },
+            onChange: () => this._markDirty()
+        });
+        const overrideRow = h('div', {
+            id: 'am-override-row',
+            style: {
+                display: roleDef.canOverride !== false ? 'flex' : 'none',
+                alignItems: 'center', gap: '4px', marginTop: '4px', fontSize: '11px', color: 'var(--text-muted)'
+            }
+        }, overrideCheckbox, 'Override role restrictions');
+
         const secGroupRow = h('div', { style: { display: 'flex', gap: '8px' } },
             h('div', { style: { flex: '1' } },
                 this._buildFieldHeader('SECURITY ROLE', 'securityRole'),
                 securitySelect,
+                overrideRow,
                 this._buildDiffBar('securityRole')
             ),
             h('div', { style: { flex: '1' } },
@@ -342,7 +383,7 @@ export class AgentManagerView extends Component {
         }, 'Cancel');
         const deleteBtn = h('button', {
             id: 'am-delete-btn',
-            style: { padding: '7px', background: 'none', border: '1px solid var(--accent-red)', borderRadius: '4px', cursor: 'pointer', color: 'var(--accent-red)', fontSize: '12px', display: isNew ? 'none' : '' },
+            style: { padding: '7px', background: 'none', border: '1px solid var(--accent-red)', borderRadius: '4px', cursor: 'pointer', color: 'var(--accent-red)', fontSize: '12px', display: (isNew || agent.builtIn) ? 'none' : '' },
             onClick: () => this._deleteAgent()
         }, 'Delete');
 
@@ -411,14 +452,16 @@ export class AgentManagerView extends Component {
         return h('div', { class: 'am-field-diff', id: 'am-diff-' + field }, wasEl, acceptBtn, revertBtn);
     }
 
-    _buildSelect(id, options, selected) {
+    _buildSelect(id, options, selected, labelMap) {
         const sel = h('select', {
             id,
             style: { width: '100%', padding: '6px 8px', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '4px', color: 'var(--text-primary)', fontSize: '12px' },
             onChange: () => this._markDirty()
         });
         for (const opt of options) {
-            const o = h('option', { value: opt }, opt);
+            const info = labelMap && labelMap[opt];
+            const label = info ? `${info.label || opt} — ${info.description || ''}` : opt;
+            const o = h('option', { value: opt, title: info ? (info.description || '') : '' }, label);
             if (opt === selected) o.selected = true;
             sel.appendChild(o);
         }
@@ -432,6 +475,10 @@ export class AgentManagerView extends Component {
         if (!el) return;
         while (el.firstChild) el.removeChild(el.firstChild);
 
+        const agent       = this._currentAgent || {};
+        const forcedTools  = agent.forcedTools  || [];
+        const blockedTools = agent.blockedTools || [];
+
         const categories = this._toolCategories;
         for (const [cat, tools] of Object.entries(categories)) {
             const catDiv = document.createElement('div');
@@ -444,23 +491,33 @@ export class AgentManagerView extends Component {
             const wrap = document.createElement('div');
             wrap.style.cssText = 'display:flex;flex-wrap:wrap;gap:5px;';
             for (const tool of tools) {
-                const inCurrent = currentTools.includes(tool);
+                const isForced   = forcedTools.includes(tool);
+                const isBlocked  = blockedTools.includes(tool);
+                const inCurrent  = currentTools.includes(tool);
                 const inProposed = proposedTools ? proposedTools.includes(tool) : inCurrent;
-                const changed = proposedTools && (inProposed !== inCurrent);
+                const changed    = !isForced && !isBlocked && proposedTools && (inProposed !== inCurrent);
 
                 const lbl = document.createElement('label');
-                lbl.style.cssText = 'display:flex;align-items:center;gap:3px;font-size:10px;color:var(--text-primary);cursor:pointer;white-space:nowrap;';
-                if (changed) { lbl.style.outline = '1px solid #d29922'; lbl.style.borderRadius = '3px'; lbl.style.padding = '1px 3px'; }
+                lbl.style.cssText = 'display:flex;align-items:center;gap:3px;font-size:10px;cursor:pointer;white-space:nowrap;';
+                if (isForced)  { lbl.style.color = 'var(--accent-primary,#58a6ff)'; lbl.title = 'Required — cannot remove'; }
+                else if (isBlocked) { lbl.style.opacity = '0.35'; lbl.title = 'Blocked — cannot add'; }
+                else           { lbl.style.color = 'var(--text-primary)'; }
+                if (changed)   { lbl.style.outline = '1px solid #d29922'; lbl.style.borderRadius = '3px'; lbl.style.padding = '1px 3px'; }
 
                 const chk = document.createElement('input');
                 chk.type = 'checkbox';
                 chk.className = 'am-tool-chk';
                 chk.value = tool;
-                chk.checked = inProposed;
-                chk.style.accentColor = 'var(--accent-green)';
+                chk.style.accentColor = isForced ? 'var(--accent-primary,#58a6ff)' : 'var(--accent-green)';
+
+                if (isForced)  { chk.checked = true;  chk.disabled = true; }
+                else if (isBlocked) { chk.checked = false; chk.disabled = true; }
+                else           { chk.checked = inProposed; }
 
                 lbl.appendChild(chk);
                 lbl.appendChild(document.createTextNode(tool));
+                if (isForced)  { const ic = document.createElement('span'); ic.textContent = '🔒'; ic.style.fontSize = '9px'; lbl.appendChild(ic); }
+                else if (isBlocked) { const ic = document.createElement('span'); ic.textContent = '⛔'; ic.style.fontSize = '9px'; lbl.appendChild(ic); }
                 wrap.appendChild(lbl);
             }
             catDiv.appendChild(wrap);
@@ -470,7 +527,16 @@ export class AgentManagerView extends Component {
 
     _getSelectedTools() {
         if (!this._editorEl) return [];
-        return [...this._editorEl.querySelectorAll('.am-tool-chk:checked')].map(cb => cb.value);
+        const agent       = this._currentAgent || {};
+        const forcedTools  = agent.forcedTools  || [];
+        const blockedTools = agent.blockedTools || [];
+        // Collect all checked non-disabled checkboxes
+        let selected = [...this._editorEl.querySelectorAll('.am-tool-chk:checked:not(:disabled)')].map(cb => cb.value);
+        // Always include forced tools (they are disabled/checked, not captured above)
+        for (const t of forcedTools) { if (!selected.includes(t)) selected.push(t); }
+        // Strip any blocked tools (defensive)
+        selected = selected.filter(t => !blockedTools.includes(t));
+        return selected;
     }
 
     // ── Dirty state ───────────────────────────────────────────
@@ -500,14 +566,16 @@ export class AgentManagerView extends Component {
 
         if (this._saveBtn) { this._saveBtn.disabled = true; this._saveBtn.textContent = 'Saving…'; }
 
+        const overrideEl = this._editorEl.querySelector('#am-override-role');
         const data = {
             name,
             role:         val('role'),
             description:  val('description'),
             instructions: val('instructions'),
             securityRole: val('securityRole'),
-            group:        (this._editorEl.querySelector('#am-group') || {}).value || '',
-            tools:        this._getSelectedTools()
+            group:        (this._getFieldEl('group') || {}).value || '',
+            tools:        this._getSelectedTools(),
+            overrideRoleRestrictions: overrideEl ? overrideEl.checked : false
         };
 
         const onSuccess = (reloadId) => {
@@ -548,10 +616,16 @@ export class AgentManagerView extends Component {
     _deleteAgent() {
         if (!this._currentAgentId || !this._socket) return;
         if (!confirm('Delete this agent?')) return;
-        this._socket.emit('remove_agent', this._currentAgentId);
-        Toast.info('Agent deleted');
-        this._cancelEdit();
-        setTimeout(() => this._loadAgentList(), 300);
+        this._socket.emit('remove_agent', this._currentAgentId, (result) => {
+            if (result && result.success === false) {
+                Toast.error(result.error || 'Cannot delete this agent');
+            } else {
+                Toast.info('Agent deleted');
+                this._currentAgent = null;
+                this._cancelEdit();
+                setTimeout(() => this._loadAgentList(), 300);
+            }
+        });
     }
 
     // ══════════════════════════════════════════════════════════════
@@ -594,7 +668,8 @@ export class AgentManagerView extends Component {
             role:         (this._getFieldEl('role') || {}).value || '',
             description:  (this._getFieldEl('description') || {}).value || '',
             instructions: (this._getFieldEl('instructions') || {}).value || '',
-            securityRole: (this._getFieldEl('securityRole') || {}).value || 'developer',
+            securityRole: (this._getFieldEl('securityRole') || {}).value || 'implementer',
+            group:        (this._getFieldEl('group') || {}).value || '',
             tools:        this._getSelectedTools(),
             prompt:       hint.trim()
         };
@@ -618,7 +693,7 @@ export class AgentManagerView extends Component {
 
     _applyPreview(result, orig) {
         // Text/select fields
-        ['name', 'role', 'description', 'instructions', 'securityRole'].forEach(field => {
+        ['name', 'role', 'description', 'instructions', 'securityRole', 'group'].forEach(field => {
             if (this._lockedFields.has(field)) return;
             const proposed = result[field];
             if (!proposed) return;
@@ -748,12 +823,22 @@ export class AgentManagerView extends Component {
     _populateGroupDropdown() {
         const sel = this._groupSelect;
         if (!sel) return;
-        // safe: programmatic option building
+        // safe: programmatic option building — show hierarchy as "Root > Sub"
         sel.textContent = '';
         sel.appendChild(h('option', { value: '' }, 'None'));
-        for (const g of this._groups) {
-            const opt = h('option', { value: g.id }, g.name || g.id);
-            sel.appendChild(opt);
+        const roots = (this._groups || []).filter(g => !g.parentId);
+        const childMap = {};
+        for (const g of this._groups || []) {
+            if (g.parentId) {
+                if (!childMap[g.parentId]) childMap[g.parentId] = [];
+                childMap[g.parentId].push(g);
+            }
+        }
+        for (const root of roots) {
+            sel.appendChild(h('option', { value: root.id }, root.name || root.id));
+            for (const child of (childMap[root.id] || [])) {
+                sel.appendChild(h('option', { value: child.id }, (root.name || root.id) + ' > ' + (child.name || child.id)));
+            }
         }
         if (this._pendingGroupValue !== null) {
             sel.value = this._pendingGroupValue;
@@ -773,7 +858,17 @@ export class AgentManagerView extends Component {
 
         const esc = (s) => OverlordUI.escapeHtml ? OverlordUI.escapeHtml(String(s)) : String(s);
 
+        // Build tree: root groups first, then their children
+        const roots = this._groups.filter(g => !g.parentId);
+        const childMap = {};
         for (const g of this._groups) {
+            if (g.parentId) {
+                if (!childMap[g.parentId]) childMap[g.parentId] = [];
+                childMap[g.parentId].push(g);
+            }
+        }
+
+        const renderGroupCard = (g, isSubgroup) => {
             const members = this._allAgents.filter(a => a.group === g.id || a.group === g.name);
             const collabLabel = { sequential: 'Sequential', parallel: 'Parallel', consensus: 'Consensus' }[g.collaborationMode] || g.collaborationMode || 'Sequential';
 
@@ -817,12 +912,25 @@ export class AgentManagerView extends Component {
                 );
             }
 
+            const nameStyle = isSubgroup
+                ? { fontWeight: '500', fontSize: '11px', color: 'var(--text-primary)', flex: '1' }
+                : { fontWeight: '700', fontSize: '12px', color: 'var(--text-primary)', flex: '1' };
+
             const card = h('div', {
-                style: { background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '6px', padding: '12px' }
+                style: {
+                    background: isSubgroup ? 'var(--bg-primary)' : 'var(--bg-secondary)',
+                    border: '1px solid var(--border-color)',
+                    borderRadius: isSubgroup ? '4px' : '6px',
+                    padding: isSubgroup ? '10px 12px' : '12px',
+                    marginLeft: isSubgroup ? '20px' : '0',
+                    borderLeft: isSubgroup ? '2px solid ' + (g.color || '#58a6ff') : 'none'
+                }
             },
                 h('div', { style: { display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' } },
-                    h('div', { style: { width: '14px', height: '14px', borderRadius: '3px', background: g.color || '#58a6ff', flexShrink: '0' } }),
-                    h('span', { style: { fontWeight: '600', fontSize: '12px', color: 'var(--text-primary)', flex: '1' } }, esc(g.name)),
+                    isSubgroup
+                        ? h('span', { style: { fontSize: '10px', color: 'var(--text-muted)', marginRight: '-4px' } }, '└')
+                        : h('div', { style: { width: '14px', height: '14px', borderRadius: '3px', background: g.color || '#58a6ff', flexShrink: '0' } }),
+                    h('span', { style: nameStyle }, esc(g.name)),
                     h('span', { style: { fontSize: '10px', color: 'var(--text-muted)', background: 'var(--bg-tertiary)', padding: '2px 6px', borderRadius: '3px' } }, collabLabel),
                     h('button', {
                         style: { background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', fontSize: '11px', padding: '2px 4px' },
@@ -837,7 +945,21 @@ export class AgentManagerView extends Component {
                 memberWrap,
                 addRow
             );
-            el.appendChild(card);
+            return card;
+        };
+
+        // Render tree: root groups with their children inline
+        for (const root of roots) {
+            el.appendChild(renderGroupCard(root, false));
+            const children = childMap[root.id] || [];
+            for (const child of children) {
+                el.appendChild(renderGroupCard(child, true));
+            }
+        }
+        // Render orphaned subgroups (parentId points to deleted group)
+        const orphans = this._groups.filter(g => g.parentId && !roots.find(r => r.id === g.parentId));
+        for (const g of orphans) {
+            el.appendChild(renderGroupCard(g, true));
         }
     }
 
@@ -892,9 +1014,25 @@ export class AgentManagerView extends Component {
         );
         if (st.collaborationMode) collabSelect.value = st.collaborationMode;
 
+        // Parent group dropdown (only root groups can be parents)
+        const parentSelect = h('select', {
+            id: 'am-group-parent',
+            style: { flex: '1', padding: '5px 8px', background: 'var(--bg-primary)', border: '1px solid var(--border-color)', borderRadius: '4px', color: 'var(--text-primary)', fontSize: '12px' }
+        }, h('option', { value: '' }, '— None (root group) —'));
+        const rootGroups = (this._groups || []).filter(g => !g.parentId && g.id !== st.editId);
+        for (const rg of rootGroups) {
+            const opt = h('option', { value: rg.id }, rg.name);
+            parentSelect.appendChild(opt);
+        }
+        if (st.parentId) parentSelect.value = st.parentId;
+
         form.appendChild(titleEl);
         form.appendChild(h('div', { style: { display: 'flex', gap: '8px', marginBottom: '8px' } }, nameInput, colorInput));
         form.appendChild(descInput);
+        form.appendChild(h('div', { style: { display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' } },
+            h('span', { style: { fontSize: '11px', color: 'var(--text-muted)', whiteSpace: 'nowrap' } }, 'Parent:'),
+            parentSelect
+        ));
         form.appendChild(h('div', { style: { display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' } },
             h('span', { style: { fontSize: '11px', color: 'var(--text-muted)', whiteSpace: 'nowrap' } }, 'Collab mode:'),
             collabSelect
@@ -913,7 +1051,7 @@ export class AgentManagerView extends Component {
     }
 
     _newGroup() {
-        this._groupFormState = { editId: null, name: '', description: '', color: '#3fb950', collaborationMode: 'sequential' };
+        this._groupFormState = { editId: null, name: '', description: '', color: '#3fb950', collaborationMode: 'sequential', parentId: null };
         this._buildGroupForm();
     }
 
@@ -926,7 +1064,8 @@ export class AgentManagerView extends Component {
                 name: g.name || '',
                 description: g.description || '',
                 color: g.color || '#3fb950',
-                collaborationMode: g.collaborationMode || 'sequential'
+                collaborationMode: g.collaborationMode || 'sequential',
+                parentId: g.parentId || null
             };
             this._buildGroupForm();
         });
@@ -935,11 +1074,13 @@ export class AgentManagerView extends Component {
     _saveGroup() {
         const name = (this._groupFormEl.querySelector('#am-group-name') || {}).value?.trim();
         if (!name) { Toast.error('Group name is required'); return; }
+        const parentId = (this._groupFormEl.querySelector('#am-group-parent') || {}).value || null;
         const groupData = {
             name,
             description: (this._groupFormEl.querySelector('#am-group-description') || {}).value?.trim() || '',
             color: (this._groupFormEl.querySelector('#am-group-color') || {}).value || '#3fb950',
-            collaborationMode: (this._groupFormEl.querySelector('#am-group-collab') || {}).value || 'sequential'
+            collaborationMode: (this._groupFormEl.querySelector('#am-group-collab') || {}).value || 'sequential',
+            parentId
         };
         const editId = this._groupFormState?.editId;
         if (editId) {

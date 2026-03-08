@@ -51,9 +51,9 @@
    2. Panel Dividers
    ══════════════════════════════════════════════════════════════ */
 .panel-divider {
-    flex: 0 0 4px;
+    flex: 0 0 6px;
     background: linear-gradient(90deg, transparent, var(--electric), transparent);
-    opacity: 0.12;
+    opacity: 0.3;
     cursor: ns-resize;
     transition: opacity 0.18s, background 0.15s;
     position: relative;
@@ -916,7 +916,6 @@
 
 /* Fully hidden panel */
 .panel.panel-hidden { display: none !important; }
-.panel.panel-hidden + .panel-divider { display: none !important; }
 
 /* Popped-out panel */
 .panel.panel-popped-out .panel-content > *:not(.popout-placeholder) { display: none !important; }

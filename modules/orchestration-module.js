@@ -78,6 +78,10 @@ let _consecutiveToolErrors = 0;
 // ── Agent-to-agent chain depth guard (prevents runaway delegation) ────────
 let _agentChainDepth = 0;
 
+// ── Agent Chat Rooms — visible inter-agent conversations the user can watch ──
+const agentChatRooms = new Map(); // roomId → { id, fromAgent, toAgent, tool, reason, messages[], status, createdAt }
+let _nextRoomId = 1;
+
 // Current orchestration state (visible to clients via 'get_orchestration_state')
 // Expanded for the Orchestration Manager panel — comprehensive dashboard data.
 const orchestrationState = {
@@ -1687,6 +1691,24 @@ async function init(h) {
             };
             hub.emit('backchannel_push', backMsg);
 
+            // Create or find an active chat room for this agent pair
+            let existingRoom = null;
+            for (const [, room] of agentChatRooms) {
+                if (room.status === 'active' &&
+                    ((room.fromAgent === senderName && room.toAgent === targetAgent) ||
+                     (room.fromAgent === targetAgent && room.toAgent === senderName))) {
+                    existingRoom = room;
+                    break;
+                }
+            }
+            if (!existingRoom) {
+                existingRoom = createChatRoom(senderName, targetAgent, {
+                    tool: null,
+                    reason: `${msgType}: ${message.substring(0, 100)}`
+                });
+            }
+            addRoomMessage(existingRoom.id, senderName, message, msgType);
+
             // Fire-and-forget agent session (non-blocking — don't chain depth further)
             const prefix = msgType === 'task'   ? `[Task from ${senderName}]: ` :
                            msgType === 'result'  ? `[Result from ${senderName}]: ` :
@@ -1700,7 +1722,7 @@ async function init(h) {
                 runAgentSession(targetAgent, prefix + message);
             }
 
-            return `✅ Message sent to ${targetAgent} (type: ${msgType}). They will act on it independently.`;
+            return `✅ Message sent to ${targetAgent} (type: ${msgType}). They will act on it independently. [Room: ${existingRoom.id}]`;
         });
         hub.log('✅ message_agent tool registered', 'info');
 
@@ -2695,6 +2717,27 @@ async function executeToolsWithApproval(toolCalls) {
             );
             setOrchestratorState({ tool: null });
             continue;
+        }
+
+        // ── SECURITY ROLE ENFORCEMENT ──────────────────────────────────────
+        // Check if the orchestrator's security role allows this tool.
+        // Orchestrator is typically full-access, but this enforces any future role changes.
+        const agentMgrForRole = hub.getService('agentManager');
+        if (agentMgrForRole && agentMgrForRole.isToolAllowedForRole) {
+            const orchRole = orchestrationState.securityRole || 'full-access';
+            if (!agentMgrForRole.isToolAllowedForRole(tool.name, orchRole)) {
+                const capable = agentMgrForRole.findCapableAgent ? agentMgrForRole.findCapableAgent(tool.name, 'orchestrator') : null;
+                const delegateHint = capable
+                    ? `\nSuggested delegate: "${capable.name}" (role: ${capable.securityRole}) can execute this tool.`
+                    : '';
+                hub.log(`⛔ [ROLE] Orchestrator role "${orchRole}" blocked ${tool.name}`, 'warning');
+                conv.addToolResult(tool.id,
+                    `⛔ ROLE RESTRICTION: Tool "${tool.name}" is not allowed for role "${orchRole}".${delegateHint}\n` +
+                    `Use delegate_to_agent to assign this work to a capable agent.`
+                );
+                setOrchestratorState({ tool: null });
+                continue;
+            }
         }
 
         hub.status(`🔧 Running: ${tool.name}`, 'tool');
@@ -4300,6 +4343,42 @@ async function executeAgentTools(session, toolCalls, agentSystem, tools) {
             continue;
         }
 
+        // ── SECURITY ROLE ENFORCEMENT ──────────────────────────────────────
+        // Check if the agent's security role allows this tool (category + blocklist).
+        const agentMgrForRole = hub.getService('agentManager');
+        if (agentMgrForRole && agentMgrForRole.isToolAllowedForRole) {
+            const agentRole = agentDef.securityRole || 'implementer';
+            const agentCfg = { overrideRoleRestrictions: agentDef.overrideRoleRestrictions || false };
+            if (!agentMgrForRole.isToolAllowedForRole(tool.name, agentRole, agentCfg)) {
+                const capable = agentMgrForRole.findCapableAgent ? agentMgrForRole.findCapableAgent(tool.name, session.name) : null;
+                const delegateHint = capable
+                    ? ` Agent "${capable.name}" (role: ${capable.securityRole}) can handle this.`
+                    : '';
+                hub.log(`⛔ [ROLE] ${session.name} (role: ${agentRole}) blocked from ${tool.name}`, 'warning');
+                session.history.push({
+                    role: 'tool',
+                    content: [{ type: 'tool_result', tool_use_id: tool.id,
+                        content: `⛔ ROLE RESTRICTION: Tool "${tool.name}" is not allowed for your security role "${agentRole}".${delegateHint}\nUse request_tool_exception with a clear justification if you need one-time access, or use message_agent to ask a capable agent for help.` }]
+                });
+                // Emit role_block event so the UI can show delegation suggestions
+                hub.broadcast('role_block', {
+                    agent: session.name,
+                    tool: tool.name,
+                    role: agentRole,
+                    suggestedDelegate: capable ? capable.name : null,
+                    timestamp: Date.now()
+                });
+                // Auto-create a chat room if a capable delegate was found
+                if (capable) {
+                    createChatRoom(session.name, capable.name, {
+                        tool: tool.name,
+                        reason: `Role "${agentRole}" blocked tool "${tool.name}" — delegating to ${capable.name}`
+                    });
+                }
+                continue;
+            }
+        }
+
         broadcastActivity('tool_start', {
             tool: tool.name,
             inputSummary: JSON.stringify(tool.input || {}).substring(0, 120),
@@ -4509,11 +4588,12 @@ async function handleToolException(session, input, tools) {
             `Respond with EXACTLY one of these formats and nothing else:\n` +
             `APPROVE: <one sentence why>\n` +
             `DENY: <one sentence why>\n` +
+            `DELEGATE: <one sentence explaining why another agent should handle this>\n` +
             `DEFER: <one sentence explaining your uncertainty for the user>`;
 
         try {
             const evalResult = await ai.quickComplete(evalPrompt, { maxTokens: 200, temperature: 0.1 });
-            const match = evalResult.match(/^(APPROVE|DENY|DEFER):\s*(.+)/m);
+            const match = evalResult.match(/^(APPROVE|DENY|DELEGATE|DEFER):\s*(.+)/m);
             if (match) {
                 verdict = match[1];
                 reason  = match[2].trim();
@@ -4533,6 +4613,30 @@ async function handleToolException(session, input, tools) {
     // ── Step 2: DENY ────────────────────────────────────────────────────────
     if (verdict === 'DENY') {
         return `🚫 DENIED: ${reason}`;
+    }
+
+    // ── Step 2b: DELEGATE — find a capable agent and suggest delegation ────
+    if (verdict === 'DELEGATE') {
+        const agentMgrDel = hub.getService('agentManager');
+        const capable = (agentMgrDel && agentMgrDel.findCapableAgent)
+            ? agentMgrDel.findCapableAgent(toolName, session.name) : null;
+        if (capable) {
+            hub.broadcast('delegation_request', {
+                fromAgent: session.name,
+                toAgent: capable.name,
+                tool: toolName,
+                justification: justify,
+                reason,
+                timestamp: Date.now()
+            });
+            return `🔄 DELEGATE: ${reason}\n\n` +
+                `Agent "${capable.name}" (role: ${capable.securityRole}) can execute "${toolName}".\n` +
+                `Use message_agent(agent: "${capable.name}", message: "<describe what you need>") to request their help.`;
+        }
+        // No capable agent found — fall through to DEFER
+        hub.log(`[EXCEPTION] DELEGATE verdict but no capable agent found for ${toolName}`, 'warn');
+        verdict = 'DEFER';
+        reason = `Delegation suggested but no agent can handle "${toolName}". Deferring to user.`;
     }
 
     // ── Step 3: APPROVE — execute the tool on the agent's behalf ───────────
@@ -4587,4 +4691,61 @@ async function handleToolException(session, input, tools) {
     }
 }
 
-module.exports = { init };
+// ==================== AGENT CHAT ROOMS ====================
+// Inter-agent conversations that the user can watch in the UI.
+// Created when delegation-on-block triggers, or via message_agent.
+
+function createChatRoom(fromAgent, toAgent, opts = {}) {
+    const roomId = 'room_' + (_nextRoomId++);
+    const room = {
+        id: roomId,
+        fromAgent,
+        toAgent,
+        tool: opts.tool || null,
+        reason: opts.reason || '',
+        messages: [],
+        status: 'active', // active | completed | ended
+        createdAt: Date.now()
+    };
+    agentChatRooms.set(roomId, room);
+    hub.broadcast('agent_room_opened', room);
+    hub.log(`💬 [ROOM] ${roomId}: ${fromAgent} ↔ ${toAgent} (tool: ${opts.tool || 'n/a'})`, 'info');
+    return room;
+}
+
+function addRoomMessage(roomId, from, content, type = 'message') {
+    const room = agentChatRooms.get(roomId);
+    if (!room) return;
+    const msg = { from, content, type, ts: Date.now() };
+    room.messages.push(msg);
+    hub.broadcast('agent_room_message', { roomId, message: msg });
+}
+
+function endChatRoom(roomId, status = 'completed') {
+    const room = agentChatRooms.get(roomId);
+    if (!room) return;
+    room.status = status;
+    hub.broadcast('agent_room_closed', { roomId, status });
+    hub.log(`💬 [ROOM] ${roomId} ${status}`, 'info');
+    // Keep room in map for history viewing — clean up after 10 minutes
+    setTimeout(() => agentChatRooms.delete(roomId), 10 * 60 * 1000);
+}
+
+function listChatRooms() {
+    return Array.from(agentChatRooms.values()).map(r => ({
+        id: r.id,
+        fromAgent: r.fromAgent,
+        toAgent: r.toAgent,
+        tool: r.tool,
+        reason: r.reason,
+        status: r.status,
+        messageCount: r.messages.length,
+        createdAt: r.createdAt
+    }));
+}
+
+function getChatRoom(roomId) {
+    return agentChatRooms.get(roomId) || null;
+}
+
+module.exports = { init, createChatRoom, addRoomMessage, endChatRoom, listChatRooms, getChatRoom };

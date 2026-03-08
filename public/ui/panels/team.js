@@ -375,19 +375,25 @@ export class TeamPanel extends PanelComponent {
     }
 
     // Single source of truth: is this agent currently processing work?
-    // Only trust live session state (isProcessing flag from agent_session_state events).
-    // Deliberately ignores agent.status from DB — that field can be stale across restarts.
+    // IMPORTANT: agent.status from the server is the *registration* status (e.g. 'WORKING'
+    // for ALL agents) and is NOT a reliable processing indicator. Only ses.isProcessing
+    // from agent_session_state events reflects actual real-time processing.
+    // We also accept 'thinking' status since that is a transient processing signal.
     _isAgentWorking(agent) {
         const ses = this._sessionStates[agent.name] || {};
-        return ses.isProcessing === true;
+        if (ses.isProcessing) return true;
+        const status = (agent.status || '').toLowerCase();
+        return status === 'thinking';
     }
 
     _buildAgentCard(agent) {
         const ses = this._sessionStates[agent.name] || {};
         const isWorking = this._isAgentWorking(agent);
-        const isOrchestrator = agent.name === 'orchestrator';
-        const dotCls = ses.paused ? 'paused' : (isWorking ? 'working' : (isOrchestrator ? 'ready' : 'idle'));
-        const effectiveStatus = ses.paused ? 'PAUSED' : isWorking ? 'WORKING' : (isOrchestrator ? 'READY' : 'IDLE');
+        // Derive visual status from processing state, not agent.status (which is always 'WORKING')
+        const isOnDeck = !isWorking && !ses.paused && ((ses.inboxCount || 0) > 0 ||
+            ['on_deck', 'standby', 'ready'].includes((agent.status || '').toLowerCase()));
+        const dotCls = ses.paused ? 'paused' : isWorking ? 'working' : isOnDeck ? 'on_deck' : 'idle';
+        const effectiveStatus = ses.paused ? 'PAUSED' : isWorking ? 'WORKING' : isOnDeck ? 'ON DECK' : 'IDLE';
         const safeName = agent.name.replace(/\s+/g, '_');
 
         const card = h('div', {
@@ -454,14 +460,14 @@ export class TeamPanel extends PanelComponent {
             class: 'agent-card-btn',
             title: `Chat with ${agent.name}`,
             dataset: { action: 'agent-chat', agent: agent.name }
-        }, '💬'));
+        }, '��'));
 
         // Start Room button (opens a multi-agent room with this agent)
         header.appendChild(h('button', {
             class: 'agent-card-btn',
             title: `Start a room with ${agent.name}`,
             dataset: { action: 'start-room', agent: agent.name }
-        }, '🚪'));
+        }, '��'));
 
         // Pause/resume button
         const pauseIcon = ses.paused ? '▶' : '⏸';

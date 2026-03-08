@@ -360,7 +360,9 @@ export class SettingsView extends Component {
 
         // Long-Running Mode
         const lrWrap = this._toggle('longRunning', 'Long-running mode', (checked) => {
-            localStorage.setItem('overlord_long_running', checked ? 'on' : 'off');
+            const store = OverlordUI._store;
+            if (store) store.set('settings.longRunning', checked ? 'on' : 'off');
+            else localStorage.setItem('overlord_long_running', checked ? 'on' : 'off');
         });
         panel.appendChild(this._section('Session Behavior',
             'Keeps sessions alive for extended autonomous runs.',
@@ -1335,7 +1337,11 @@ export class SettingsView extends Component {
 
         // Long-running checkbox
         const lrEl = body.querySelector('[data-toggle="longRunning"]');
-        if (lrEl) lrEl.checked = localStorage.getItem('overlord_long_running') === 'on';
+        if (lrEl) {
+            const store = OverlordUI._store;
+            lrEl.checked = store ? store.get('settings.longRunning') === 'on'
+                                 : localStorage.getItem('overlord_long_running') === 'on';
+        }
 
         // Notification state
         const notifEl = body.querySelector('[data-toggle="notifEnabled"]');

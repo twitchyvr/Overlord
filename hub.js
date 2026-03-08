@@ -1398,6 +1398,33 @@ class Hub extends EventEmitter {
             socket.on('get_process_state', () => {
                 socket.emit('process_state', this.getProcessState());
             });
+
+            // Get all agent session states (for refresh/reconnect state hydration)
+            socket.on('get_all_agent_states', () => {
+                const orch = this.getService('orchestration');
+                if (orch && orch.getAllAgentStates) {
+                    socket.emit('all_agent_states', orch.getAllAgentStates());
+                }
+            });
+
+            // Get current team list (for refresh/reconnect)
+            socket.on('get_team', () => {
+                const agentMgr = this.getService('agentManager');
+                if (!agentMgr) return;
+                const projects = this.getService('projects');
+                const activeProjectId = projects?.getActiveProjectId?.();
+                const projectAgents = activeProjectId ? (projects.listProjectAgents?.(activeProjectId) || []) : [];
+                const dbAgents = agentMgr.listAgents ? agentMgr.listAgents(projectAgents) : [];
+                const team = dbAgents.map(a => ({
+                    name: a.name,
+                    role: a.role,
+                    description: a.description || '',
+                    capabilities: a.capabilities || [],
+                    status: a.status || 'IDLE',
+                    scope: a.scope || 'global'
+                }));
+                socket.emit('team_update', team);
+            });
             
             // Request server restart
             socket.on('request_restart', (data) => {

@@ -1312,12 +1312,26 @@
                 if (_mainChatPanel) _mainChatPanel.classList.toggle('bypass-active', isBypass);
             }
 
+            // Map mode → overlay (PLAN↔planning, PM↔pm, others clear overlay)
+            const _modeToOverlay = { plan: 'planning', pm: 'pm' };
+
             _modeBtns.forEach(btn => {
                 const mode = btn.id.replace('mode-btn-', '');
                 btn.addEventListener('click', () => {
                     store.set('chat.mode', mode);
                     socket.emit('set_mode', mode);
                     _setActiveMode(mode);
+                    // Sync orch overlay with mode
+                    socket.emit('set_overlay', { overlay: _modeToOverlay[mode] ?? null });
+                    // Enable long-running for PLAN and PM (mirrors monolith behaviour)
+                    if (mode === 'plan' || mode === 'pm') {
+                        const lr = document.getElementById('long-running-mode');
+                        if (lr && !lr.checked) {
+                            lr.checked = true;
+                            store.set('ui.longRunning', true);
+                            socket.emit('set_long_running', true);
+                        }
+                    }
                 });
             });
 
@@ -1328,6 +1342,7 @@
                     store.set('chat.mode', 'auto');
                     socket.emit('set_mode', 'auto');
                     _setActiveMode('auto');
+                    socket.emit('set_overlay', { overlay: null });
                 });
             }
 

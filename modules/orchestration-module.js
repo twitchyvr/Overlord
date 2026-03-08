@@ -78,6 +78,11 @@ let _consecutiveToolErrors = 0;
 // ── Agent-to-agent chain depth guard (prevents runaway delegation) ────────
 let _agentChainDepth = 0;
 
+// ── Agent Chat Rooms — visible inter-agent conversations the user can watch ──
+const agentChatRooms = new Map(); // roomId → { id, fromAgent, toAgent, participants[], tool, reason, messages[], status, isMeeting, meetingNotes, userPresent, pulledInBy, createdAt }
+let _nextRoomId = 1;
+const MAX_ROOM_AGENTS = 5; // Maximum agents per room (user is separate)
+
 // Current orchestration state (visible to clients via 'get_orchestration_state')
 // Expanded for the Orchestration Manager panel — comprehensive dashboard data.
 const orchestrationState = {
@@ -284,7 +289,7 @@ function handleSetOverlay(data) {
 }
 
 function handleKillAgent(data, cb) {
-    const agentName = data.agent;
+    const agentName = data.agentName || data.agent;
     const session = agentSessions.get(agentName);
     if (!session) {
         if (typeof cb === 'function') cb({ error: 'Agent not found: ' + agentName });
@@ -292,6 +297,8 @@ function handleKillAgent(data, cb) {
     }
     session.status = 'killed';
     session.aborted = true;
+    // Abort any in-flight AI stream for this agent
+    try { hub.getService('ai')?.abort(); } catch (_e) { /* best-effort */ }
     agentSessions.delete(agentName);
     broadcastOrchestratorDashboard();
     hub.log(`[kill_agent] Agent "${agentName}" killed by user`, 'warning');
@@ -445,8 +452,8 @@ async function init(h) {
         hub.log(`[recommendation] Rejected: "${rec ? rec.title : data.id}"${data.reason ? ' — ' + data.reason : ''}`, 'info');
     });
 
-    hub.on('pause_agent',        ({ data, cb }) => { pauseAgent(data.agent); if (typeof cb === 'function') cb({ success: true }); });
-    hub.on('resume_agent',       ({ data, cb }) => { resumeAgent(data.agent); if (typeof cb === 'function') cb({ success: true }); });
+    hub.on('pause_agent',        ({ data, cb }) => { pauseAgent(data.agentName || data.agent); if (typeof cb === 'function') cb({ success: true }); });
+    hub.on('resume_agent',       ({ data, cb }) => { resumeAgent(data.agentName || data.agent); if (typeof cb === 'function') cb({ success: true }); });
     hub.on('kill_agent',         ({ data, cb }) => handleKillAgent(data, cb));
 
     hub.registerService('orchestration', {
@@ -463,13 +470,26 @@ async function init(h) {
             if (cfg.maxParallelAgents !== null) maxParallelAgents = Math.max(1, Math.min(8, parseInt(cfg.maxParallelAgents, 10) || 3));
         },
         runAgentSession,
+        runAgentSessionInRoom,
         pauseAgent,
         resumeAgent,
         getAgentSessionState,
         getAgentHistory,
         getAgentInbox,
         getOrchestratorState: getState,
-        getAllAgentStates
+        getAllAgentStates,
+        // ── Chat room / meeting functions ──────────────────────────────
+        createChatRoom,
+        addRoomMessage,
+        endChatRoom,
+        listChatRooms,
+        getChatRoom,
+        pullAgentIntoRoom,
+        userLeaveRoom,
+        userJoinRoom,
+        endMeeting,
+        generateMeetingNotes,
+        clearRoomAgentCallbacks
     });
 
     // Allow clients to request current orchestration state
@@ -490,6 +510,7 @@ async function init(h) {
         }
         tools.registerTool({
             name: 'update_task_status',
+            category: 'tasks',
             description: 'Update the status of a task in the project task list. Call this when you start working on a task (status: in_progress) and again when you complete it (status: completed). This keeps the kanban board accurate in real time.',
             input_schema: {
                 type: 'object',
@@ -563,6 +584,7 @@ async function init(h) {
         // ── create_milestone: AI creates a new milestone ─────────────────────
         tools.registerTool({
             name: 'create_milestone',
+            category: 'milestones',
             description: 'Create a new project milestone. Use this to organize related tasks under a named goal. After creating a milestone, use assign_task_to_milestone to link tasks to it.',
             input_schema: {
                 type: 'object',
@@ -600,6 +622,7 @@ async function init(h) {
         // ── assign_task_to_milestone: link a task to a milestone ─────────────
         tools.registerTool({
             name: 'assign_task_to_milestone',
+            category: 'milestones',
             description: 'Assign an existing task to a milestone. The task will appear in the milestone\'s task list. Use list_milestones to find milestone IDs.',
             input_schema: {
                 type: 'object',
@@ -634,6 +657,7 @@ async function init(h) {
         // ── list_milestones: AI queries current milestones + task counts ──────
         tools.registerTool({
             name: 'list_milestones',
+            category: 'milestones',
             description: 'List all project milestones with their IDs, status, and task counts. Use this to find milestone IDs for assign_task_to_milestone, or to check progress.',
             input_schema: { type: 'object', properties: {} }
         }, (input) => {
@@ -654,6 +678,7 @@ async function init(h) {
         // ── close_milestone: user-initiated wrap-up ───────────────────────────
         tools.registerTool({
             name: 'close_milestone',
+            category: 'milestones',
             description: 'Mark a milestone as complete and closed. Only call this when ALL tasks have been completed/skipped and the user (or orchestrator) explicitly confirms the milestone is done. This action is final.',
             input_schema: {
                 type: 'object',
@@ -693,6 +718,7 @@ async function init(h) {
         // ── create_task: AI creates a new task ───────────────────────────────
         tools.registerTool({
             name: 'create_task',
+            category: 'tasks',
             description: 'Create a new task on the kanban board. Optionally assign to a milestone and/or agent. Use this whenever you need to track a piece of work.',
             input_schema: {
                 type: 'object',
@@ -731,6 +757,7 @@ async function init(h) {
         // ── recommend_task: agents recommend a task (orchestrator must approve) ──
         tools.registerTool({
             name: 'recommend_task',
+            category: 'tasks',
             description: [
                 'Recommend a new task for the orchestrator to review.',
                 'Unlike create_task, this does NOT create the task immediately.',
@@ -799,6 +826,7 @@ async function init(h) {
         // ── delete_task: AI deletes a task ───────────────────────────────────
         tools.registerTool({
             name: 'delete_task',
+            category: 'tasks',
             description: 'Permanently delete a task from the kanban board. Use with care — this is irreversible.',
             input_schema: {
                 type: 'object',
@@ -822,6 +850,7 @@ async function init(h) {
         // ── bulk_delete_tasks: AI deletes multiple tasks at once ─────────────
         tools.registerTool({
             name: 'bulk_delete_tasks',
+            category: 'tasks',
             description: 'Delete multiple tasks at once. Filter by explicit ID list, status, or milestoneId. Supports dry-run to preview what would be deleted.',
             input_schema: {
                 type: 'object',
@@ -858,6 +887,7 @@ async function init(h) {
         // ── list_tasks: AI queries current tasks ─────────────────────────────
         tools.registerTool({
             name: 'list_tasks',
+            category: 'tasks',
             description: 'List tasks with optional filters. Returns compact summaries to minimize token usage. Use this to find task IDs and current status.',
             input_schema: {
                 type: 'object',
@@ -889,6 +919,7 @@ async function init(h) {
         // ── update_task: AI updates any task field ────────────────────────────
         tools.registerTool({
             name: 'update_task',
+            category: 'tasks',
             description: 'Update any field of a task: title, description, priority, milestoneId, assignee, status, or notes. More flexible than update_task_status.',
             input_schema: {
                 type: 'object',
@@ -930,6 +961,7 @@ async function init(h) {
         // ── delete_milestone: AI deletes a milestone (with cascade option) ────
         tools.registerTool({
             name: 'delete_milestone',
+            category: 'milestones',
             description: 'Delete a milestone. Choose whether to also delete its tasks or just unassign them.',
             input_schema: {
                 type: 'object',
@@ -961,6 +993,7 @@ async function init(h) {
         // ── update_milestone: AI updates milestone fields ─────────────────────
         tools.registerTool({
             name: 'update_milestone',
+            category: 'milestones',
             description: 'Update a milestone\'s name, description, color, or status.',
             input_schema: {
                 type: 'object',
@@ -990,10 +1023,11 @@ async function init(h) {
         });
         hub.log('✅ update_milestone tool registered', 'info');
 
-        // ── add_agent: AI creates a new team agent ────────────────────────────
+        // ── add_agent: AI creates a new agent (global or project-scoped) ────────
         tools.registerTool({
             name: 'add_agent',
-            description: 'Add a new agent to the team. The agent will immediately be available for task assignment.',
+            category: 'agents',
+            description: 'Add a new agent to the team. Agents are global by default (available in all projects). Set scope="project" to create a project-specific agent that only appears in the active project.',
             input_schema: {
                 type: 'object',
                 properties: {
@@ -1001,36 +1035,52 @@ async function init(h) {
                     role:         { type: 'string', description: 'Role title, e.g. "Security Auditor"' },
                     description:  { type: 'string', description: 'What this agent does and its expertise' },
                     capabilities: { type: 'array', items: { type: 'string' }, description: 'List of capability strings' },
-                    group:        { type: 'string', description: 'Group/team name (e.g. "engineering", "qa")' }
+                    group:        { type: 'string', description: 'Group/team name (e.g. "engineering", "qa")' },
+                    scope:        { type: 'string', enum: ['global', 'project'], description: 'Scope: "global" (default, persisted to DB, available everywhere) or "project" (stored with the active project only)' },
+                    instructions: { type: 'string', description: 'Optional system-prompt instructions for this agent' }
                 },
                 required: ['name', 'role', 'description']
             }
         }, (input) => {
-            const agentMgr = hub.getService('agentManager');
-            if (!agentMgr || !agentMgr.addAgent) return 'ERROR: Agent manager service not available';
             const name = String(input.name).toLowerCase().replace(/[^a-z0-9-]/g, '-').replace(/--+/g, '-').trim('-');
             if (!name) return 'ERROR: Invalid agent name — use lowercase letters, numbers, and hyphens only';
-            try {
-                const agent = agentMgr.addAgent({
-                    name,
-                    role: String(input.role).trim(),
-                    description: String(input.description).trim(),
-                    capabilities: Array.isArray(input.capabilities) ? input.capabilities : [],
-                    group: input.group || 'custom'
-                });
-                hub.broadcastAll('agents_updated', {});
-                hub.log(`[add_agent] Created: "${name}"`, 'success');
-                return `Agent "${name}" created with role "${input.role}".`;
-            } catch (e) {
-                return `ERROR creating agent: ${e.message}`;
+            const agentData = {
+                name,
+                role:         String(input.role).trim(),
+                description:  String(input.description).trim(),
+                capabilities: Array.isArray(input.capabilities) ? input.capabilities : [],
+                group:        input.group || 'custom',
+                instructions: input.instructions || ''
+            };
+
+            if (input.scope === 'project') {
+                // Project-scoped: persist to the active project's data.json
+                const projects = hub.getService('projects');
+                const pid = projects?.getActiveProjectId?.();
+                if (!pid) return 'ERROR: No active project. Switch to a project first, or create a global agent (omit scope).';
+                const result = projects.addProjectAgent(pid, { ...agentData, scope: 'project' });
+                if (result && result.success === false) return `ERROR creating project agent: ${result.error}`;
+                hub.broadcastAll('agents_updated', { projectId: pid });
+                hub.log(`[add_agent] Created project agent "${name}" in project ${pid}`, 'success');
+                return `Project agent "${name}" created with role "${input.role}". Available in the active project only.`;
             }
+
+            // Global: persist to SQLite via agentManager
+            const agentMgr = hub.getService('agentManager');
+            if (!agentMgr || !agentMgr.createAgent) return 'ERROR: Agent manager service not available';
+            const result = agentMgr.createAgent({ ...agentData, scope: 'global' });
+            if (result && result.success === false) return `ERROR creating agent: ${result.error}`;
+            hub.broadcastAll('agents_updated', {});
+            hub.log(`[add_agent] Created global agent "${name}"`, 'success');
+            return `Global agent "${name}" created with role "${input.role}". Available in all projects.`;
         });
         hub.log('✅ add_agent tool registered', 'info');
 
-        // ── remove_agent: AI removes a team agent ─────────────────────────────
+        // ── remove_agent: AI removes a global or project-scoped agent ─────────
         tools.registerTool({
             name: 'remove_agent',
-            description: 'Remove an agent from the team. Use with care — existing task assignments using this agent will not be auto-removed.',
+            category: 'agents',
+            description: 'Remove an agent. Project-scoped agents are removed from the active project; global agents are soft-deleted from the database. Use with care — existing task assignments are not auto-updated.',
             input_schema: {
                 type: 'object',
                 properties: {
@@ -1040,44 +1090,79 @@ async function init(h) {
                 required: ['name']
             }
         }, (input) => {
-            const agentMgr = hub.getService('agentManager');
-            if (!agentMgr || !agentMgr.removeAgent) return 'ERROR: Agent manager service not available';
-            try {
-                agentMgr.removeAgent(input.name);
-                hub.broadcastAll('agents_updated', {});
-                hub.log(`[remove_agent] Removed: "${input.name}"${input.reason ? ' — ' + input.reason : ''}`, 'info');
-                return `Agent "${input.name}" removed.${input.reason ? ' Reason: ' + input.reason : ''}`;
-            } catch (e) {
-                return `ERROR removing agent: ${e.message}`;
+            // Try project agent first (if an active project exists)
+            const projects = hub.getService('projects');
+            const pid = projects?.getActiveProjectId?.();
+            if (pid) {
+                const projAgents = projects.listProjectAgents?.(pid) || [];
+                if (projAgents.some(a => a.name === input.name)) {
+                    const result = projects.removeProjectAgent(pid, input.name);
+                    if (result && result.success === false) return `ERROR removing project agent: ${result.error}`;
+                    hub.broadcastAll('agents_updated', { projectId: pid });
+                    hub.log(`[remove_agent] Removed project agent "${input.name}"${input.reason ? ' — ' + input.reason : ''}`, 'info');
+                    return `Project agent "${input.name}" removed.${input.reason ? ' Reason: ' + input.reason : ''}`;
+                }
             }
+            // Fall back to global DB agent
+            const agentMgr = hub.getService('agentManager');
+            if (!agentMgr || !agentMgr.deleteAgent) return 'ERROR: Agent manager service not available';
+            const result = agentMgr.deleteAgent(input.name);
+            if (result && result.success === false) return `ERROR removing agent: ${result.error}`;
+            hub.broadcastAll('agents_updated', {});
+            hub.log(`[remove_agent] Removed global agent "${input.name}"${input.reason ? ' — ' + input.reason : ''}`, 'info');
+            return `Agent "${input.name}" removed.${input.reason ? ' Reason: ' + input.reason : ''}`;
         });
         hub.log('✅ remove_agent tool registered', 'info');
 
-        // ── list_agents: AI lists all team agents ─────────────────────────────
+        // ── list_agents: AI lists all agents (global + active project) ─────────
         tools.registerTool({
             name: 'list_agents',
-            description: 'List all agents on the team with their names, roles, descriptions, and capabilities. Use this to see who is available before delegating or to check what agents exist before adding a new one.',
+            category: 'agents',
+            description: 'List all agents: global agents (available everywhere) plus any project-specific agents for the active project. Use this before delegating or before adding a new agent.',
             input_schema: {
                 type: 'object',
                 properties: {
-                    group: { type: 'string', description: 'Optional: filter by group name (e.g. "engineering", "qa", "custom")' }
+                    group: { type: 'string', description: 'Optional: filter by group name (e.g. "engineering", "qa", "custom")' },
+                    scope: { type: 'string', enum: ['all', 'global', 'project'], description: 'Optional: filter by scope. Default "all".' }
                 }
             }
         }, (input) => {
             const agentMgr = hub.getService('agentManager');
             if (!agentMgr || !agentMgr.listAgents) return 'ERROR: Agent manager service not available';
             try {
-                const agents = agentMgr.listAgents();
-                let filtered = agents;
-                if (input.group) {
-                    filtered = agents.filter(a => (a.group || '').toLowerCase() === input.group.toLowerCase());
+                let agents = agentMgr.listAgents().map(a => ({ ...a, scope: a.scope || 'global' }));
+
+                // Merge active project agents (deduplicated by name — project overrides global)
+                const projects = hub.getService('projects');
+                const pid = projects?.getActiveProjectId?.();
+                if (pid) {
+                    const projAgents = (projects.listProjectAgents?.(pid) || []).map(a => ({ ...a, scope: 'project' }));
+                    const projNames = new Set(projAgents.map(a => a.name));
+                    agents = agents.filter(a => !projNames.has(a.name)).concat(projAgents);
                 }
-                if (!filtered.length) return input.group ? `No agents in group "${input.group}".` : 'No agents found.';
-                const lines = filtered.map(a =>
-                    `- **${a.name}** (${a.role || 'No role'}) [group: ${a.group || 'none'}]\n  ${a.description || 'No description'}` +
-                    (a.capabilities && a.capabilities.length ? `\n  Capabilities: ${a.capabilities.join(', ')}` : '')
-                );
-                return `## Team Agents (${filtered.length})\n\n${lines.join('\n\n')}`;
+
+                if (input.scope && input.scope !== 'all') {
+                    agents = agents.filter(a => a.scope === input.scope);
+                }
+                if (input.group) {
+                    agents = agents.filter(a => (a.group || '').toLowerCase() === input.group.toLowerCase());
+                }
+                if (!agents.length) return 'No agents found matching the filter.';
+
+                const lines = agents.map(a => {
+                    const scopeTag = a.scope === 'project' ? ' [project]' : ' [global]';
+                    let line = `- **${a.name}** (${a.role || 'No role'}) [group: ${a.group || 'none'}]${scopeTag}\n  ${a.description || 'No description'}`;
+                    if (a.capabilities && a.capabilities.length) {
+                        line += `\n  Capabilities: ${a.capabilities.join(', ')}`;
+                    }
+                    if (a.instructions) {
+                        const firstLine = a.instructions.split('\n')[0].trim();
+                        if (firstLine) line += `\n  Specialty: ${firstLine}`;
+                    }
+                    return line;
+                });
+                const header = pid ? `## Team Agents (${agents.length}) — global + project` : `## Team Agents (${agents.length})`;
+                return `${header}\n\n${lines.join('\n\n')}`;
             } catch (e) {
                 return `ERROR listing agents: ${e.message}`;
             }
@@ -1087,6 +1172,7 @@ async function init(h) {
         // ── get_agent_info: get full details about one agent ───────────────────
         tools.registerTool({
             name: 'get_agent_info',
+            category: 'agents',
             description: 'Get detailed information about a specific agent: role, description, capabilities, group, system prompt, and allowed tools. Use list_agents first to find the agent name.',
             input_schema: {
                 type: 'object',
@@ -1121,6 +1207,7 @@ async function init(h) {
         // ── update_agent: AI modifies an existing agent ───────────────────────
         tools.registerTool({
             name: 'update_agent',
+            category: 'agents',
             description: 'Update an existing agent\'s properties: name, role, description, capabilities, group, systemPrompt, or languages. Only provide the fields you want to change.',
             input_schema: {
                 type: 'object',
@@ -1154,6 +1241,7 @@ async function init(h) {
         // ── list_agent_groups: list all agent groups ───────────────────────────
         tools.registerTool({
             name: 'list_agent_groups',
+            category: 'groups',
             description: 'List all agent groups with their names, descriptions, and agent counts.',
             input_schema: { type: 'object', properties: {} }
         }, () => {
@@ -1175,6 +1263,7 @@ async function init(h) {
         // ── create_agent_group: create a new group ─────────────────────────────
         tools.registerTool({
             name: 'create_agent_group',
+            category: 'groups',
             description: 'Create a new agent group to organize agents by department or function (e.g. "engineering", "qa", "devops").',
             input_schema: {
                 type: 'object',
@@ -1201,6 +1290,7 @@ async function init(h) {
         // ── update_agent_group: rename or re-describe a group ─────────────────
         tools.registerTool({
             name: 'update_agent_group',
+            category: 'groups',
             description: 'Update an existing agent group\'s name, description, or color.',
             input_schema: {
                 type: 'object',
@@ -1229,6 +1319,7 @@ async function init(h) {
         // ── delete_agent_group: remove a group ────────────────────────────────
         tools.registerTool({
             name: 'delete_agent_group',
+            category: 'groups',
             description: 'Delete an agent group. Agents in the group will remain but will no longer be associated with it.',
             input_schema: {
                 type: 'object',
@@ -1253,6 +1344,7 @@ async function init(h) {
         // ── add_agent_to_group: move an agent into a group ────────────────────
         tools.registerTool({
             name: 'add_agent_to_group',
+            category: 'groups',
             description: 'Add an existing agent to a group. Use list_agents and list_agent_groups to find the names/IDs.',
             input_schema: {
                 type: 'object',
@@ -1280,6 +1372,7 @@ async function init(h) {
         // ── remove_agent_from_group: unassign an agent from its group ─────────
         tools.registerTool({
             name: 'remove_agent_from_group',
+            category: 'groups',
             description: 'Remove an agent from its current group (the agent is not deleted, just ungrouped).',
             input_schema: {
                 type: 'object',
@@ -1306,6 +1399,7 @@ async function init(h) {
         // ── list_projects: list all projects ──────────────────────────────────
         tools.registerTool({
             name: 'list_projects',
+            category: 'projects',
             description: 'List all projects. Shows each project\'s name, description, working directory, and whether it is currently active.',
             input_schema: { type: 'object', properties: {} }
         }, () => {
@@ -1328,6 +1422,7 @@ async function init(h) {
         // ── get_project: get full details for one project ─────────────────────
         tools.registerTool({
             name: 'get_project',
+            category: 'projects',
             description: 'Get full details about a specific project including its description, working directory, linked agents, and metadata.',
             input_schema: {
                 type: 'object',
@@ -1359,6 +1454,7 @@ async function init(h) {
         // ── create_project: create a new project ──────────────────────────────
         tools.registerTool({
             name: 'create_project',
+            category: 'projects',
             description: 'Create a new project. Projects let you organize work with separate tasks, agents, and working directories.',
             input_schema: {
                 type: 'object',
@@ -1385,6 +1481,7 @@ async function init(h) {
         // ── update_project: modify an existing project ────────────────────────
         tools.registerTool({
             name: 'update_project',
+            category: 'projects',
             description: 'Update a project\'s name, description, or working directory.',
             input_schema: {
                 type: 'object',
@@ -1413,6 +1510,7 @@ async function init(h) {
         // ── delete_project: delete a project ──────────────────────────────────
         tools.registerTool({
             name: 'delete_project',
+            category: 'projects',
             description: 'Delete a project and all its data. This is irreversible. The project\'s tasks and agents are removed.',
             input_schema: {
                 type: 'object',
@@ -1437,6 +1535,7 @@ async function init(h) {
         // ── switch_project: change the active project ──────────────────────────
         tools.registerTool({
             name: 'switch_project',
+            category: 'projects',
             description: 'Switch to a different project, making it the active context. Tasks, agents, and working directory will switch to the selected project.',
             input_schema: {
                 type: 'object',
@@ -1461,18 +1560,20 @@ async function init(h) {
         // ── delegate_to_agent: orchestrator hands a task to a specialist agent ─
         tools.registerTool({
             name: 'delegate_to_agent',
+            category: 'agents',
             description: [
                 'Delegate a subtask to a specialist AI agent and wait for their result.',
-                'The agent runs its own full AI + tool cycle independently, then returns the output.',
-                'Use this to divide work: code-implementer for coding, testing-engineer for tests,',
-                'git-keeper for git operations, ui-expert for UI/CSS work.',
-                'The agent\'s activity will appear on the Team panel while they work.',
-                'Prefer this over doing everything yourself — your team exists to help you.'
+                'ALWAYS consult your AGENT ROUTING MATRIX before choosing an agent.',
+                'Key agents: documentation-technician (docs/vault/research), ui-expert (UI/CSS),',
+                'testing-engineer (run tests), qa-engineer (write tests), git-keeper (git ops),',
+                'code-implementer (general code ONLY when no specialist better fits).',
+                'Use list_agents to see all 40+ available agents.',
+                'Prefer delegation over doing work yourself — your team exists to help you.'
             ].join(' '),
             input_schema: {
                 type: 'object',
                 properties: {
-                    agent:   { type: 'string', description: 'Agent name, e.g. "code-implementer", "testing-engineer", "git-keeper", "ui-expert". Use list_agents to see all available.' },
+                    agent:   { type: 'string', description: 'Agent name from your ROUTING MATRIX or list_agents output. E.g. "documentation-technician", "git-keeper", "ui-expert", "testing-engineer", "qa-engineer", "code-implementer".' },
                     task:    { type: 'string', description: 'Clear, self-contained task description. Include file paths, requirements, and expected output so the agent can work independently.' },
                     context: { type: 'string', description: 'Optional: additional context from this conversation that the agent needs (e.g. relevant code snippets, constraints, prior decisions).' }
                 },
@@ -1484,9 +1585,15 @@ async function init(h) {
             if (!agentName) return 'ERROR: agent name is required';
             if (!task)      return 'ERROR: task description is required';
 
-            // Validate agent exists
+            // Validate agent exists — check global DB agents + active project agents
             const agentMgr = hub.getService('agentManager');
-            const validAgents = agentMgr?.listAgents?.()?.map(a => a.name) || [];
+            const globalNames = agentMgr?.listAgents?.()?.map(a => a.name) || [];
+            const projectsSvc = hub.getService('projects');
+            const activePid   = projectsSvc?.getActiveProjectId?.();
+            const projNames   = activePid
+                ? (projectsSvc.listProjectAgents?.(activePid) || []).map(a => a.name)
+                : [];
+            const validAgents = [...new Set([...globalNames, ...projNames])];
             if (validAgents.length && !validAgents.includes(agentName)) {
                 return `ERROR: Unknown agent "${agentName}". Available: ${validAgents.join(', ')}`;
             }
@@ -1518,6 +1625,7 @@ async function init(h) {
         // ── delegate_to_team: orchestrator dispatches MULTIPLE agents in parallel ─
         tools.registerTool({
             name: 'delegate_to_team',
+            category: 'agents',
             description: [
                 'Delegate tasks to MULTIPLE specialist agents in parallel and wait for all results.',
                 'Use when a task spans multiple domains (e.g., code + tests, frontend + backend, implementation + documentation).',
@@ -1603,6 +1711,7 @@ async function init(h) {
         // ── message_agent: agent-to-agent messaging with depth guard ──────────
         tools.registerTool({
             name: 'message_agent',
+            category: 'agents',
             description: [
                 'Send a note or task to another agent via the backchannel.',
                 'Use when you (an agent) need to hand off work or share findings with a peer.',
@@ -1654,6 +1763,24 @@ async function init(h) {
             };
             hub.emit('backchannel_push', backMsg);
 
+            // Create or find an active chat room for this agent pair
+            let existingRoom = null;
+            for (const [, room] of agentChatRooms) {
+                if (room.status === 'active' &&
+                    ((room.fromAgent === senderName && room.toAgent === targetAgent) ||
+                     (room.fromAgent === targetAgent && room.toAgent === senderName))) {
+                    existingRoom = room;
+                    break;
+                }
+            }
+            if (!existingRoom) {
+                existingRoom = createChatRoom(senderName, targetAgent, {
+                    tool: null,
+                    reason: `${msgType}: ${message.substring(0, 100)}`
+                });
+            }
+            addRoomMessage(existingRoom.id, senderName, message, msgType);
+
             // Fire-and-forget agent session (non-blocking — don't chain depth further)
             const prefix = msgType === 'task'   ? `[Task from ${senderName}]: ` :
                            msgType === 'result'  ? `[Result from ${senderName}]: ` :
@@ -1667,13 +1794,14 @@ async function init(h) {
                 runAgentSession(targetAgent, prefix + message);
             }
 
-            return `✅ Message sent to ${targetAgent} (type: ${msgType}). They will act on it independently.`;
+            return `✅ Message sent to ${targetAgent} (type: ${msgType}). They will act on it independently. [Room: ${existingRoom.id}]`;
         });
         hub.log('✅ message_agent tool registered', 'info');
 
         // ── get_config: AI reads current configuration ────────────────────────
         tools.registerTool({
             name: 'get_config',
+            category: 'config',
             description: 'Read one or all current configuration values. Use this to check settings before changing them.',
             input_schema: {
                 type: 'object',
@@ -1705,6 +1833,7 @@ async function init(h) {
         // ── set_config: AI changes a configuration setting persistently ───────
         tools.registerTool({
             name: 'set_config',
+            category: 'config',
             description: 'Change a configuration setting. Changes persist across server restarts. A 🤖 badge will appear in the settings UI next to AI-configured items.',
             input_schema: {
                 type: 'object',
@@ -1752,6 +1881,7 @@ async function init(h) {
         // ── add_reminder: AI sets a timed reminder ────────────────────────────
         tools.registerTool({
             name: 'add_reminder',
+            category: 'reminders',
             description: 'Set a reminder that fires at a specific time. Supports natural language: "in 30 minutes", "in 2 hours", "in 1 day". The reminder will appear as a toast notification and in the reminders list.',
             input_schema: {
                 type: 'object',
@@ -1801,6 +1931,7 @@ async function init(h) {
         // ── list_reminders: AI lists upcoming reminders ───────────────────────
         tools.registerTool({
             name: 'list_reminders',
+            category: 'reminders',
             description: 'List all upcoming (non-dismissed) reminders.',
             input_schema: { type: 'object', properties: {} }
         }, () => {
@@ -1819,6 +1950,7 @@ async function init(h) {
         // ── dismiss_reminder: AI dismisses a reminder ─────────────────────────
         tools.registerTool({
             name: 'dismiss_reminder',
+            category: 'reminders',
             description: 'Dismiss a reminder so it no longer fires.',
             input_schema: {
                 type: 'object',
@@ -1841,6 +1973,7 @@ async function init(h) {
         // ── handoff_to_orchestrator: PM hands off work to AUTO mode ──────────
         tools.registerTool({
             name: 'handoff_to_orchestrator',
+            category: 'orchestration',
             description: 'As Project Manager: hand off work to the Orchestrator. Switches the AI to AUTO mode, logs the handoff in session notes, and optionally creates tasks for the work.',
             input_schema: {
                 type: 'object',
@@ -1913,6 +2046,7 @@ async function init(h) {
         // save_session_note — agents can persist learnings, decisions, and patterns
         tools.registerTool({
             name: 'save_session_note',
+            category: 'orchestration',
             description: 'Save a note that persists across sessions. Use this to record important learnings, ' +
                 'decisions, patterns, or context that should be remembered for future tasks. ' +
                 'Notes are stored per-agent and can be recalled automatically in future sessions.',
@@ -1948,6 +2082,7 @@ async function init(h) {
         // recall_session_notes — retrieve previously saved persistent notes
         tools.registerTool({
             name: 'recall_session_notes',
+            category: 'orchestration',
             description: 'Retrieve previously saved session notes. Useful at the start of a task to recall ' +
                 'relevant context, learnings, or warnings from past sessions.',
             input_schema: {
@@ -1977,6 +2112,7 @@ async function init(h) {
         // request_tool_exception — allows any agent to request one-time access to a blocked tool
         tools.registerTool({
             name: 'request_tool_exception',
+            category: 'orchestration',
             description: 'Request one-time permission to use a tool that is outside your permitted set. ' +
                 'The orchestrator will evaluate your justification and either approve, deny, or escalate to the user. ' +
                 'If approved, the tool will be executed on your behalf and the result returned to you. ' +
@@ -2041,21 +2177,36 @@ function handleClientConnected(socket) {
     // CRITICAL: Get the actual working directory from conversation service
     const workingDirectory = conv.getWorkingDirectory ? conv.getWorkingDirectory() : process.cwd();
 
-    // Safely get agent list — prefer DB (agentManager) so team panel matches Agent Manager UI
+    // Safely get agent list — global DB agents + active project agents merged
     let team = [];
     try {
         const agentMgr = hub.getService('agentManager');
         if (agentMgr && agentMgr.listAgents) {
-            const dbAgents = agentMgr.listAgents();
-            team = dbAgents.map(a => ({
+            team = agentMgr.listAgents().map(a => ({
                 name: a.name,
                 role: a.role,
                 description: a.description || '',
                 capabilities: a.capabilities || [],
+                scope: a.scope || 'global',
                 status: a.status || 'IDLE'
             }));
         } else {
             team = agents ? agents.getAgentList() : [];
+        }
+        // Merge active project agents (project agents override global if same name)
+        const projectsSvc = hub.getService('projects');
+        const activePid   = projectsSvc?.getActiveProjectId?.();
+        if (activePid) {
+            const projAgents = (projectsSvc.listProjectAgents?.(activePid) || []).map(a => ({
+                name: a.name,
+                role: a.role,
+                description: a.description || '',
+                capabilities: a.capabilities || [],
+                scope: 'project',
+                status: 'IDLE'
+            }));
+            const projNames = new Set(projAgents.map(a => a.name));
+            team = team.filter(a => !projNames.has(a.name)).concat(projAgents);
         }
     } catch (e) {
         hub.log('Could not get agent list: ' + e.message, 'warn');
@@ -2268,8 +2419,17 @@ async function handleUserMessage(text, socket) {
     const cfg = hub.getService('config');
     if (cfg?.chatMode === 'plan') {
         const agentMgr = hub.getService('agentManager');
-        const availableAgents = agentMgr?.listAgents?.()
-            ?.map(a => a.name).join(', ') || 'orchestrator, code-implementer, testing-engineer, git-keeper';
+        let availableAgentNames = agentMgr?.listAgents?.()?.map(a => a.name) || [];
+        // Include active project agents in plan mode roster
+        try {
+            const projectsSvc = hub.getService('projects');
+            const activePid   = projectsSvc?.getActiveProjectId?.();
+            if (activePid) {
+                const projNames = (projectsSvc.listProjectAgents?.(activePid) || []).map(a => a.name);
+                availableAgentNames = [...new Set([...availableAgentNames, ...projNames])];
+            }
+        } catch (_) {}
+        const availableAgents = availableAgentNames.join(', ') || 'orchestrator, code-implementer, testing-engineer, git-keeper';
         const planLength = cfg.planLength || 'regular';
         const lengthConstraints = {
             short:     'SHORT: 3–5 tasks maximum. Critical path only.',
@@ -2653,6 +2813,27 @@ async function executeToolsWithApproval(toolCalls) {
             );
             setOrchestratorState({ tool: null });
             continue;
+        }
+
+        // ── SECURITY ROLE ENFORCEMENT ──────────────────────────────────────
+        // Check if the orchestrator's security role allows this tool.
+        // Orchestrator is typically full-access, but this enforces any future role changes.
+        const agentMgrForRole = hub.getService('agentManager');
+        if (agentMgrForRole && agentMgrForRole.isToolAllowedForRole) {
+            const orchRole = orchestrationState.securityRole || 'full-access';
+            if (!agentMgrForRole.isToolAllowedForRole(tool.name, orchRole)) {
+                const capable = agentMgrForRole.findCapableAgent ? agentMgrForRole.findCapableAgent(tool.name, 'orchestrator') : null;
+                const delegateHint = capable
+                    ? `\nSuggested delegate: "${capable.name}" (role: ${capable.securityRole}) can execute this tool.`
+                    : '';
+                hub.log(`⛔ [ROLE] Orchestrator role "${orchRole}" blocked ${tool.name}`, 'warning');
+                conv.addToolResult(tool.id,
+                    `⛔ ROLE RESTRICTION: Tool "${tool.name}" is not allowed for role "${orchRole}".${delegateHint}\n` +
+                    `Use delegate_to_agent to assign this work to a capable agent.`
+                );
+                setOrchestratorState({ tool: null });
+                continue;
+            }
         }
 
         hub.status(`🔧 Running: ${tool.name}`, 'tool');
@@ -3649,12 +3830,22 @@ function handleSwitchPlanVariant({ variant } = {}) {
 function getOrCreateSession(agentName) {
     if (agentSessions.has(agentName)) return agentSessions.get(agentName);
 
-    // Fetch agent definition
+    // Fetch agent definition — try global DB, then project agents, then legacy in-memory list
     let def = null;
     try {
         const agentMgr = hub.getService('agentManager');
         if (agentMgr && agentMgr.getAgent) def = agentMgr.getAgent(agentName);
     } catch (e) {}
+    if (!def) {
+        try {
+            const projects = hub.getService('projects');
+            const pid = projects?.getActiveProjectId?.();
+            if (pid) {
+                const projAgents = projects.listProjectAgents?.(pid) || [];
+                def = projAgents.find(a => a.name === agentName) || null;
+            }
+        } catch (e) {}
+    }
     if (!def) {
         try {
             const agents = hub.getService('agents');
@@ -3822,6 +4013,84 @@ When any subagent reports task completion, you MUST verify before relaying resul
 
 5. **If verification fails**, automatically re-delegate the remaining items.
    Break large bulk tasks into batches and track which batch is in progress.`);
+
+        parts.push(`
+## AGENT ROUTING MATRIX (orchestrator-only — authoritative)
+
+Before delegating ANY task, identify the PRIMARY action type and pick ONE agent below.
+Do NOT default to code-implementer when unsure — consult this matrix first.
+
+### DOCUMENTATION & VAULT
+| Task | Agent |
+|------|-------|
+| Write docs, README, changelog, guides | documentation-technician |
+| Fetch external docs / summarise web pages | documentation-technician |
+| Generate Obsidian vault notes | documentation-technician |
+| Plan documentation strategy or structure | documentation-strategist |
+
+### CODE IMPLEMENTATION
+| Task | Agent |
+|------|-------|
+| General feature / bug fix (no specialist fit) | code-implementer |
+| Frontend components, HTML, CSS, JS/TS | ui-expert OR frontend-developer |
+| Backend APIs, server logic, databases | backend-developer |
+| Large cross-file refactors | principal-engineer |
+| Regex / text processing | regex-expert |
+
+### UI & DESIGN
+| Task | Agent |
+|------|-------|
+| UI implementation (HTML/CSS/JS) | ui-expert |
+| Visual design, design systems | ui-designer |
+| UX wireframes, user flows | ux-interface-designer |
+| Frontend framework (React/Vue/Angular) | frontend-developer |
+
+### TESTING & QUALITY
+| Task | Agent |
+|------|-------|
+| RUN existing test suite / lint / type check | testing-engineer |
+| WRITE new test cases | qa-engineer |
+| Visual / accessibility testing | ui-tester |
+| QA strategy | qa-lead OR test-strategy-architect |
+| Smoke tests after deployment | deployment-verification-agent |
+
+### GIT & VERSION CONTROL
+| Task | Agent |
+|------|-------|
+| Commit, push, branch, merge, PR, tags | git-keeper |
+| GitOps, Helm, declarative infra | gitops-specialist |
+
+### DEVOPS & INFRASTRUCTURE
+| Task | Agent |
+|------|-------|
+| CI/CD pipelines, Docker | devops-engineer |
+| Multi-environment deployment | deployment-orchestrator |
+| DevOps strategy / infra design | devops-lead |
+
+### ARCHITECTURE & PLANNING
+| Task | Agent |
+|------|-------|
+| System or API architecture | system-architect |
+| Enterprise integration design | enterprise-solutions-architect |
+| Initial project scaffolding | project-initializer |
+
+### RESEARCH & DATA
+| Task | Agent |
+|------|-------|
+| Business requirements | business-analyst |
+| Data analysis, ML models | data-scientist |
+| Data pipelines, ETL | data-engineer |
+
+### SECURITY
+| Task | Agent |
+|------|-------|
+| Security audit, compliance | security-compliance-officer |
+
+### ANTI-PATTERNS — NEVER DO THESE
+- NEVER use code-implementer for documentation — use documentation-technician
+- NEVER use code-implementer for git operations — use git-keeper
+- NEVER use code-implementer for running tests — use testing-engineer
+- NEVER use code-implementer for web research or vault clipping — use documentation-technician`);
     }
 
     // Inject per-task scope constraints when dispatched via delegate_to_agent
@@ -3880,7 +4149,7 @@ async function dispatchAgentAndAwait(agentName, task, taskScope = {}) {
 
     // Push task into the agent's history so it has context
     session.history.push({ role: 'user', content: task });
-    hub.broadcast('agent_message', { agentName, role: 'user', content: task, ts: Date.now() });
+    hub.broadcast('agent_message', { agentName, role: 'user', content: task, ts: Date.now(), speaker: 'orchestrator', speakerRole: 'orchestrator', to: agentName });
 
     // Save the previous orchestrator state and point it at this agent.
     // This is what lights up the agent card activity line in the Team panel.
@@ -3988,6 +4257,34 @@ async function dispatchAgentAndAwait(agentName, task, taskScope = {}) {
     return baseResult + verifyBlock + scopeCheckBlock;
 }
 
+/**
+ * Run an agent session triggered from within a chat room.
+ * The agent's first text response will be routed back to the room transcript.
+ */
+function runAgentSessionInRoom(agentName, userMessage, roomId, onComplete) {
+    const session = getOrCreateSession(agentName);
+    session._activeRoomId = roomId;             // cleared after first response in runAgentAICycle
+    session._roomResponseCallback = onComplete || null;  // fired after response added to room
+    runAgentSession(agentName, userMessage);
+}
+
+/**
+ * Stop the sequential agent chain for a room. Clears pending callbacks so no further
+ * agents in the sequence will be triggered after the current one finishes.
+ */
+function clearRoomAgentCallbacks(roomId) {
+    for (const session of agentSessions.values()) {
+        if (session._activeRoomId === roomId) {
+            session._activeRoomId = null;
+            session._roomResponseCallback = null;
+        } else if (session._roomResponseCallback) {
+            // May be a pending next-in-chain — clear it too
+            session._roomResponseCallback = null;
+        }
+    }
+    hub.log(`[Room ${roomId}] Sequential chain stopped by user`, 'info');
+}
+
 function runAgentSession(agentName, userMessage) {
     const session = getOrCreateSession(agentName);
 
@@ -4010,7 +4307,7 @@ function runAgentSession(agentName, userMessage) {
 
     // Push user message to session history
     session.history.push({ role: 'user', content: userMessage });
-    hub.broadcast('agent_message', { agentName, role: 'user', content: userMessage, ts: Date.now() });
+    hub.broadcast('agent_message', { agentName, role: 'user', content: userMessage, ts: Date.now(), speaker: 'orchestrator', speakerRole: 'orchestrator', to: agentName });
 
     // Fire and forget — true parallelism
     runAgentCycle(session).catch(err => {
@@ -4052,7 +4349,10 @@ async function runAgentCycle(session) {
             content: isNet
                 ? `[Network error: ${agentErrDesc} — check connection]`
                 : `[Error: ${agentErrDesc}]`,
-            ts: Date.now()
+            ts: Date.now(),
+            speaker: session.name,
+            speakerRole: session.name === 'orchestrator' ? 'orchestrator' : 'agent',
+            to: session._activeRoomId ? 'room' : 'user'
         });
     } finally {
         session.isProcessing = false;
@@ -4082,6 +4382,7 @@ async function runAgentCycle(session) {
 }
 
 async function runAgentAICycle(session) {
+    if (session.aborted || session.paused) return;
     session.cycleDepth++;
     if (session.cycleDepth > MAX_CYCLES) {
         hub.log(`[agent:${session.name}] Max cycles reached`, 'warning');
@@ -4089,7 +4390,10 @@ async function runAgentAICycle(session) {
             agentName: session.name,
             role: 'assistant',
             content: `⚠️ Cycle limit (${MAX_CYCLES}) reached. Stopping.`,
-            ts: Date.now()
+            ts: Date.now(),
+            speaker: session.name,
+            speakerRole: session.name === 'orchestrator' ? 'orchestrator' : 'agent',
+            to: session._activeRoomId ? 'room' : 'user'
         });
         return;
     }
@@ -4180,7 +4484,10 @@ async function runAgentAICycle(session) {
                 agentName: session.name,
                 role: 'assistant',
                 content: displayText,
-                ts: Date.now()
+                ts: Date.now(),
+                speaker: session.name,
+                speakerRole: session.name === 'orchestrator' ? 'orchestrator' : 'agent',
+                to: session._activeRoomId ? 'room' : (session.name === 'orchestrator' ? 'user' : 'orchestrator')
             });
             // Push to agent comms backchannel so orchestrator/user can see all agent responses
             hub.emit('backchannel_push', {
@@ -4190,12 +4497,26 @@ async function runAgentAICycle(session) {
                 ts: Date.now(),
                 type: 'agent_to_orchestrator'
             });
+            // Route response back to active room if this session was triggered from one
+            if (session._activeRoomId) {
+                const roomId = session._activeRoomId;
+                session._activeRoomId = null;   // clear before callback to avoid re-entry
+                addRoomMessage(roomId, session.name, displayText, 'message');
+                // Fire sequential-chain callback if set (allows next agent to respond after this one)
+                if (session._roomResponseCallback) {
+                    const cb = session._roomResponseCallback;
+                    session._roomResponseCallback = null;
+                    cb();
+                }
+            }
         }
     }
 
     if (toolCalls.length > 0) {
+        if (session.aborted || session.paused) return;
         await executeAgentTools(session, toolCalls, agentSystem, tools);
-        // Continue cycle after tools
+        // Continue cycle after tools (guard again — kill/pause may have arrived during tool execution)
+        if (session.aborted || session.paused) return;
         await runAgentAICycle(session);
     }
 }
@@ -4256,6 +4577,42 @@ async function executeAgentTools(session, toolCalls, agentSystem, tools) {
                     content: `⛔ GUARDRAIL: Tool "${tool.name}" is not in your permitted tool list. Stick to your authorized tools: ${[...permittedTools].join(', ')}. If you genuinely need this tool, use request_tool_exception with a clear justification.` }]
             });
             continue;
+        }
+
+        // ── SECURITY ROLE ENFORCEMENT ──────────────────────────────────────
+        // Check if the agent's security role allows this tool (category + blocklist).
+        const agentMgrForRole = hub.getService('agentManager');
+        if (agentMgrForRole && agentMgrForRole.isToolAllowedForRole) {
+            const agentRole = agentDef.securityRole || 'implementer';
+            const agentCfg = { overrideRoleRestrictions: agentDef.overrideRoleRestrictions || false };
+            if (!agentMgrForRole.isToolAllowedForRole(tool.name, agentRole, agentCfg)) {
+                const capable = agentMgrForRole.findCapableAgent ? agentMgrForRole.findCapableAgent(tool.name, session.name) : null;
+                const delegateHint = capable
+                    ? ` Agent "${capable.name}" (role: ${capable.securityRole}) can handle this.`
+                    : '';
+                hub.log(`⛔ [ROLE] ${session.name} (role: ${agentRole}) blocked from ${tool.name}`, 'warning');
+                session.history.push({
+                    role: 'tool',
+                    content: [{ type: 'tool_result', tool_use_id: tool.id,
+                        content: `⛔ ROLE RESTRICTION: Tool "${tool.name}" is not allowed for your security role "${agentRole}".${delegateHint}\nUse request_tool_exception with a clear justification if you need one-time access, or use message_agent to ask a capable agent for help.` }]
+                });
+                // Emit role_block event so the UI can show delegation suggestions
+                hub.broadcast('role_block', {
+                    agent: session.name,
+                    tool: tool.name,
+                    role: agentRole,
+                    suggestedDelegate: capable ? capable.name : null,
+                    timestamp: Date.now()
+                });
+                // Auto-create a chat room if a capable delegate was found
+                if (capable) {
+                    createChatRoom(session.name, capable.name, {
+                        tool: tool.name,
+                        reason: `Role "${agentRole}" blocked tool "${tool.name}" — delegating to ${capable.name}`
+                    });
+                }
+                continue;
+            }
         }
 
         broadcastActivity('tool_start', {
@@ -4467,11 +4824,12 @@ async function handleToolException(session, input, tools) {
             `Respond with EXACTLY one of these formats and nothing else:\n` +
             `APPROVE: <one sentence why>\n` +
             `DENY: <one sentence why>\n` +
+            `DELEGATE: <one sentence explaining why another agent should handle this>\n` +
             `DEFER: <one sentence explaining your uncertainty for the user>`;
 
         try {
             const evalResult = await ai.quickComplete(evalPrompt, { maxTokens: 200, temperature: 0.1 });
-            const match = evalResult.match(/^(APPROVE|DENY|DEFER):\s*(.+)/m);
+            const match = evalResult.match(/^(APPROVE|DENY|DELEGATE|DEFER):\s*(.+)/m);
             if (match) {
                 verdict = match[1];
                 reason  = match[2].trim();
@@ -4491,6 +4849,30 @@ async function handleToolException(session, input, tools) {
     // ── Step 2: DENY ────────────────────────────────────────────────────────
     if (verdict === 'DENY') {
         return `🚫 DENIED: ${reason}`;
+    }
+
+    // ── Step 2b: DELEGATE — find a capable agent and suggest delegation ────
+    if (verdict === 'DELEGATE') {
+        const agentMgrDel = hub.getService('agentManager');
+        const capable = (agentMgrDel && agentMgrDel.findCapableAgent)
+            ? agentMgrDel.findCapableAgent(toolName, session.name) : null;
+        if (capable) {
+            hub.broadcast('delegation_request', {
+                fromAgent: session.name,
+                toAgent: capable.name,
+                tool: toolName,
+                justification: justify,
+                reason,
+                timestamp: Date.now()
+            });
+            return `🔄 DELEGATE: ${reason}\n\n` +
+                `Agent "${capable.name}" (role: ${capable.securityRole}) can execute "${toolName}".\n` +
+                `Use message_agent(agent: "${capable.name}", message: "<describe what you need>") to request their help.`;
+        }
+        // No capable agent found — fall through to DEFER
+        hub.log(`[EXCEPTION] DELEGATE verdict but no capable agent found for ${toolName}`, 'warn');
+        verdict = 'DEFER';
+        reason = `Delegation suggested but no agent can handle "${toolName}". Deferring to user.`;
     }
 
     // ── Step 3: APPROVE — execute the tool on the agent's behalf ───────────
@@ -4545,4 +4927,315 @@ async function handleToolException(session, input, tools) {
     }
 }
 
-module.exports = { init };
+// ==================== AGENT CHAT ROOMS ====================
+// Inter-agent conversations that the user can watch in the UI.
+// Created when delegation-on-block triggers, or via message_agent.
+
+function createChatRoom(fromAgent, toAgent, opts = {}) {
+    const roomId = 'room_' + (_nextRoomId++);
+    const room = {
+        id: roomId,
+        fromAgent,
+        toAgent,
+        participants: [fromAgent, toAgent],  // full list of agents in this room
+        tool: opts.tool || null,
+        reason: opts.reason || '',
+        messages: [],
+        status: 'active', // active | completed | ended
+        isMeeting: false,           // true when orchestrator/PM is pulled in
+        meetingNotes: null,         // populated on meeting end
+        userPresent: false,         // true when user has joined
+        pulledInBy: {},             // { agentName: 'user' } — tracks who pulled which agent in
+        createdAt: Date.now()
+    };
+    agentChatRooms.set(roomId, room);
+    hub.broadcast('agent_room_opened', room);
+    hub.log(`💬 [ROOM] ${roomId}: ${fromAgent} ↔ ${toAgent} (tool: ${opts.tool || 'n/a'})`, 'info');
+    return room;
+}
+
+function addRoomMessage(roomId, from, content, type = 'message') {
+    const room = agentChatRooms.get(roomId);
+    if (!room) return;
+    const msg = { from, content, type, ts: Date.now() };
+    room.messages.push(msg);
+    hub.broadcast('agent_room_message', { roomId, message: msg });
+}
+
+function endChatRoom(roomId, status = 'completed') {
+    const room = agentChatRooms.get(roomId);
+    if (!room) return;
+    room.status = status;
+    hub.broadcast('agent_room_closed', { roomId, status });
+    hub.log(`💬 [ROOM] ${roomId} ${status}`, 'info');
+    // Keep room in map for history viewing — clean up after 10 minutes
+    setTimeout(() => agentChatRooms.delete(roomId), 10 * 60 * 1000);
+}
+
+function listChatRooms() {
+    return Array.from(agentChatRooms.values()).map(r => ({
+        id: r.id,
+        fromAgent: r.fromAgent,
+        toAgent: r.toAgent,
+        participants: r.participants || [r.fromAgent, r.toAgent],
+        tool: r.tool,
+        reason: r.reason,
+        status: r.status,
+        isMeeting: r.isMeeting || false,
+        userPresent: r.userPresent || false,
+        messageCount: r.messages.length,
+        createdAt: r.createdAt
+    }));
+}
+
+function getChatRoom(roomId) {
+    return agentChatRooms.get(roomId) || null;
+}
+
+// ── Meeting System — extends chat rooms with orchestrator/PM pull-in ─────────
+// A "meeting" is a chat room where the user has pulled in the orchestrator
+// and/or project-manager. Meetings get full notes (summary, RAID log, action items)
+// generated from the transcript when the meeting ends.
+
+const MEETING_AGENTS = ['orchestrator', 'project-manager'];
+
+/**
+ * Pull an agent into an existing room. Upgrades to a "meeting" if the agent
+ * is an orchestrator or project-manager.
+ */
+function pullAgentIntoRoom(roomId, agentName, pulledBy = 'user') {
+    const room = agentChatRooms.get(roomId);
+    if (!room) return { success: false, error: 'Room not found' };
+    if (room.status !== 'active') return { success: false, error: 'Room is not active' };
+
+    // Capacity check
+    if (room.participants.length >= MAX_ROOM_AGENTS) {
+        return { success: false, error: `Maximum ${MAX_ROOM_AGENTS} agents per room` };
+    }
+
+    // Already present?
+    if (room.participants.includes(agentName)) {
+        return { success: false, error: `${agentName} is already in this room` };
+    }
+
+    // If pulling a non-orchestrator/PM agent, require that orchestrator or PM is already in
+    const hasMeetingAgent = room.participants.some(p => MEETING_AGENTS.includes(p));
+    if (!MEETING_AGENTS.includes(agentName) && !hasMeetingAgent) {
+        return { success: false, error: 'Pull in orchestrator or project-manager first before adding other agents' };
+    }
+
+    // Add the agent
+    room.participants.push(agentName);
+    room.pulledInBy[agentName] = pulledBy;
+
+    // Upgrade to meeting if orchestrator/PM was added
+    if (MEETING_AGENTS.includes(agentName) && !room.isMeeting) {
+        room.isMeeting = true;
+        hub.log(`📋 [MEETING] Room ${roomId} upgraded to meeting (${agentName} joined)`, 'info');
+    }
+
+    // Mark user as present
+    if (pulledBy === 'user') room.userPresent = true;
+
+    // Notify the room
+    addRoomMessage(roomId, 'system', `${agentName} joined the room (pulled in by ${pulledBy})`, 'note');
+
+    // Broadcast the update
+    hub.broadcast('room_participant_joined', { roomId, agentName, pulledBy, participants: room.participants, isMeeting: room.isMeeting });
+
+    // Notify the pulled-in agent via backchannel
+    const transcript = room.messages
+        .filter(m => m.type !== 'note')
+        .slice(-20)
+        .map(m => `[${m.from}]: ${String(m.content).substring(0, 200)}`)
+        .join('\n');
+    hub.emit('backchannel_push', {
+        from: 'user',
+        to: agentName,
+        content: `[You have been added to meeting room ${roomId}]\nParticipants: ${room.participants.join(', ')}\nRecent context:\n${transcript}\n\nPlease contribute to the discussion.`,
+        type: 'agent_to_agent_task',
+        ts: Date.now()
+    });
+
+    return { success: true, participants: room.participants, isMeeting: room.isMeeting };
+}
+
+/**
+ * User leaves a room — any agents they pulled in also leave.
+ */
+function userLeaveRoom(roomId) {
+    const room = agentChatRooms.get(roomId);
+    if (!room) return { success: false, error: 'Room not found' };
+
+    // Find all agents pulled in by user
+    const agentsToRemove = Object.entries(room.pulledInBy)
+        .filter(([_, by]) => by === 'user')
+        .map(([name]) => name);
+
+    // Remove pulled-in agents
+    for (const agentName of agentsToRemove) {
+        room.participants = room.participants.filter(p => p !== agentName);
+        delete room.pulledInBy[agentName];
+        addRoomMessage(roomId, 'system', `${agentName} left the room (user departed)`, 'note');
+    }
+
+    room.userPresent = false;
+
+    // If the only remaining participants are the original pair, downgrade from meeting
+    const hasMeetingAgent = room.participants.some(p => MEETING_AGENTS.includes(p) && room.pulledInBy[p]);
+    if (!hasMeetingAgent && room.isMeeting) {
+        // Meeting agents were pulled in by user and removed — keep isMeeting for notes
+    }
+
+    addRoomMessage(roomId, 'system', 'User left the room', 'note');
+    hub.broadcast('room_participant_left', { roomId, agentsRemoved: agentsToRemove, participants: room.participants, userPresent: false });
+
+    return { success: true, agentsRemoved: agentsToRemove, participants: room.participants };
+}
+
+/**
+ * User joins a room as participant (sends messages, sees live feed).
+ */
+function userJoinRoom(roomId) {
+    const room = agentChatRooms.get(roomId);
+    if (!room) return { success: false, error: 'Room not found' };
+    room.userPresent = true;
+    addRoomMessage(roomId, 'system', 'User joined the room', 'note');
+    hub.broadcast('room_user_joined', { roomId, userPresent: true });
+    return { success: true };
+}
+
+/**
+ * Generate meeting notes from the transcript using AI.
+ * Called when a meeting ends or on-demand.
+ */
+async function generateMeetingNotes(roomId) {
+    const room = agentChatRooms.get(roomId);
+    if (!room) return { success: false, error: 'Room not found' };
+    if (!room.isMeeting) return { success: false, error: 'Not a meeting' };
+
+    const transcript = room.messages
+        .map(m => {
+            const time = new Date(m.ts).toISOString().substring(11, 19);
+            return `[${time}] ${m.from} (${m.type}): ${m.content}`;
+        })
+        .join('\n');
+
+    const participants = room.participants.join(', ');
+    const duration = room.messages.length > 0
+        ? Math.round((room.messages[room.messages.length - 1].ts - room.messages[0].ts) / 60000)
+        : 0;
+
+    // Use the AI provider to generate structured meeting notes
+    const aiService = hub.getService('ai');
+    if (!aiService || !aiService.chat) {
+        // Fallback: simple extraction without AI
+        const notes = {
+            title: `Meeting: ${room.reason || room.fromAgent + ' ↔ ' + room.toAgent}`,
+            date: new Date(room.createdAt).toISOString(),
+            duration: `${duration} minutes`,
+            participants: room.participants,
+            summary: `Meeting between ${participants} regarding: ${room.reason || 'general discussion'}. ${room.messages.length} messages exchanged.`,
+            raid: { risks: [], assumptions: [], issues: [], dependencies: [] },
+            actionItems: [],
+            transcript: transcript
+        };
+        room.meetingNotes = notes;
+        hub.broadcast('meeting_notes_generated', { roomId, notes });
+        return { success: true, notes };
+    }
+
+    try {
+        const prompt = `You are a meeting notes assistant. Analyze the following meeting transcript and generate structured meeting notes in JSON format.
+
+Meeting context:
+- Participants: ${participants}
+- Topic/Reason: ${room.reason || 'Not specified'}
+- Duration: ~${duration} minutes
+- Message count: ${room.messages.length}
+
+Transcript:
+${transcript}
+
+Generate a JSON object with this exact structure (no markdown, just valid JSON):
+{
+  "summary": "2-3 sentence summary of the meeting",
+  "keyDecisions": ["decision 1", "decision 2"],
+  "raid": {
+    "risks": ["risk 1"],
+    "assumptions": ["assumption 1"],
+    "issues": ["issue 1"],
+    "dependencies": ["dependency 1"]
+  },
+  "actionItems": [
+    { "action": "description", "assignee": "agent-name", "priority": "high|medium|low" }
+  ],
+  "nextSteps": ["step 1", "step 2"]
+}`;
+
+        const response = await aiService.chat([{ role: 'user', content: prompt }], {
+            model: 'fast',
+            maxTokens: 2000,
+            temperature: 0.3
+        });
+
+        let parsed;
+        try {
+            // Extract JSON from response
+            const jsonMatch = (response.content || response).match(/\{[\s\S]*\}/);
+            parsed = jsonMatch ? JSON.parse(jsonMatch[0]) : {};
+        } catch (_) {
+            parsed = { summary: String(response.content || response).substring(0, 500) };
+        }
+
+        const notes = {
+            title: `Meeting: ${room.reason || room.fromAgent + ' ↔ ' + room.toAgent}`,
+            date: new Date(room.createdAt).toISOString(),
+            duration: `${duration} minutes`,
+            participants: room.participants,
+            summary: parsed.summary || '',
+            keyDecisions: parsed.keyDecisions || [],
+            raid: parsed.raid || { risks: [], assumptions: [], issues: [], dependencies: [] },
+            actionItems: parsed.actionItems || [],
+            nextSteps: parsed.nextSteps || [],
+            transcript: transcript
+        };
+
+        room.meetingNotes = notes;
+
+        // Persist to DB if agent-manager has meeting_notes table
+        const agentMgr = hub.getService('agentManager');
+        if (agentMgr && agentMgr.saveMeetingNotes) {
+            agentMgr.saveMeetingNotes(roomId, notes);
+        }
+
+        hub.broadcast('meeting_notes_generated', { roomId, notes });
+        hub.log(`📋 [MEETING] Notes generated for ${roomId}`, 'info');
+        return { success: true, notes };
+    } catch (err) {
+        hub.log(`📋 [MEETING] Notes generation failed for ${roomId}: ${err.message}`, 'error');
+        return { success: false, error: err.message };
+    }
+}
+
+/**
+ * End a meeting — generates notes first if it's a meeting, then closes room.
+ */
+async function endMeeting(roomId) {
+    const room = agentChatRooms.get(roomId);
+    if (!room) return { success: false, error: 'Room not found' };
+
+    // Generate notes before closing if this is a meeting
+    if (room.isMeeting && !room.meetingNotes) {
+        await generateMeetingNotes(roomId);
+    }
+
+    endChatRoom(roomId, 'completed');
+    return { success: true, meetingNotes: room.meetingNotes };
+}
+
+module.exports = {
+    init, createChatRoom, addRoomMessage, endChatRoom, listChatRooms, getChatRoom,
+    pullAgentIntoRoom, userLeaveRoom, userJoinRoom, generateMeetingNotes, endMeeting,
+    runAgentSessionInRoom, clearRoomAgentCallbacks, MAX_ROOM_AGENTS
+};

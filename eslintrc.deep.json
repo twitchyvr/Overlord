@@ -1,7 +1,3 @@
-// Deep ESLint Configuration for Overlord Web - Focus on real issues
-// This config enables strict linting rules that catch real bugs and security issues.
-// Use: npx eslint --config eslintrc.deep.json .
-// Run as part of CI/CD pipeline for comprehensive static analysis.
 {
   "env": {
     "node": true,
@@ -12,11 +8,8 @@
     "ecmaVersion": 2022,
     "sourceType": "module"
   },
-  "extends": [
-    "eslint:recommended"
-  ],
+  "extends": ["eslint:recommended"],
   "rules": {
-    // Errors - Real bugs
     "no-unused-vars": "warn",
     "no-undef": "error",
     "no-debugger": "error",
@@ -72,11 +65,7 @@
     "no-unsafe-optional-chaining": "error",
     "require-yield": "error",
     "use-isnan": "error",
-    
-    // Security - Use === instead of ==
     "eqeqeq": ["error", "always"],
-    
-    // Best practices
     "curly": "off",
     "default-case": "off",
     "default-case-last": "off",
@@ -85,7 +74,6 @@
     "guard-for-in": "error",
     "no-caller": "error",
     "no-eval": "error",
-    "no-fallthrough": "error",
     "no-new": "off",
     "no-new-func": "error",
     "no-new-wrappers": "error",
@@ -96,8 +84,6 @@
     "prefer-promise-reject-errors": ["error", { "allowEmptyReject": false }],
     "radix": "error",
     "wrap-iife": "off",
-    
-    // Node.js specific
     "global-require": "off",
     "no-buffer-constructor": "error",
     "no-new-require": "error",

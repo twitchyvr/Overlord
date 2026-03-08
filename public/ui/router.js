@@ -146,26 +146,24 @@ export const Router = {
         const rightPanel = document.getElementById('right-panel');
 
         if (this._activeView === 'chat') {
-            // Show chat, hide right panel
-            if (chatPanel) chatPanel.style.display = '';
-            if (rightPanel) rightPanel.style.display = 'none';
+            // Show chat, hide right panel using CSS classes
+            if (chatPanel) chatPanel.classList.remove('mobile-hidden');
+            if (rightPanel) rightPanel.classList.remove('mobile-visible');
         } else {
-            // Hide chat, show right panel with only the active panel
-            if (chatPanel) chatPanel.style.display = 'none';
-            if (rightPanel) rightPanel.style.display = '';
+            // Hide chat, show right panel using CSS classes
+            if (chatPanel) chatPanel.classList.add('mobile-hidden');
+            if (rightPanel) rightPanel.classList.add('mobile-visible');
 
-            // Find the panel that matches this view and expand it
+            // Find the panel that matches this view; toggle mobile-panel-active class
             const targetPanelId = this._viewToPanelId(this._activeView);
             document.querySelectorAll('.panel[id]').forEach(panel => {
                 if (panel.id === targetPanelId) {
-                    panel.style.display = '';
+                    panel.classList.add('mobile-panel-active');
                     panel.classList.remove('collapsed');
                 } else {
-                    panel.style.display = 'none';
+                    panel.classList.remove('mobile-panel-active');
                 }
             });
-            // Hide dividers in mobile single-panel view
-            document.querySelectorAll('.panel-divider').forEach(d => d.style.display = 'none');
         }
 
         // Update mobile nav active state

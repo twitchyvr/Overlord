@@ -354,7 +354,7 @@ export class ChatView extends Component {
         const isUser = role === 'user';
         const roleLabel = isUser
             ? (hotInjected ? 'HOT INJECT' : 'USER')
-            : role === 'assistant' ? 'Assistant' : role;
+            : role === 'assistant' ? 'Overlord' : role;
 
         // Build message container
         const div = h('div', {
@@ -580,7 +580,7 @@ export class ChatView extends Component {
             }
             // Add role label if missing
             if (!last.querySelector('.role')) {
-                const roleEl = h('div', { class: 'role' }, 'Assistant');
+                const roleEl = h('div', { class: 'role' }, 'Overlord');
                 last.insertBefore(roleEl, last.firstChild);
             }
 
@@ -981,9 +981,9 @@ export class ChatView extends Component {
         }
     }
 
-    // Render tool output into bodyEl. For web_search, fetch_webpage, and tools
-    // that return markdown content, renders as formatted readable text.
-    // Falls back to raw text for everything else.
+    // Render tool output into bodyEl. For web_search and tools that return
+    // markdown content, renders as formatted readable text. Falls back to
+    // raw text for everything else.
     _renderToolOutput(bodyEl, name, output) {
         // Extract text content from output — handle objects with .content
         let text = output;
@@ -993,13 +993,12 @@ export class ChatView extends Component {
             text = String(output);
         }
 
-        // For web/fetch tools, delegate_to_agent, or any tool whose output
+        // For web_search, delegate_to_agent output, or any tool whose output
         // contains markdown indicators — render as formatted markdown.
         // Uses _renderMarkdown (marked.parse) — same pattern as all chat message
         // rendering throughout this file (safe: AI-generated content).
-        const markdownTools = ['web_search', 'search_web', 'google', 'fetch_webpage',
-                               'fetch_url', 'read_url', 'get_url', 'delegate_to_agent'];
-        if (markdownTools.includes(name) && typeof text === 'string' && this._looksLikeMarkdown(text)) {
+        const isSearchTool = ['web_search', 'search_web', 'google'].includes(name);
+        if ((isSearchTool || name === 'delegate_to_agent') && typeof text === 'string' && this._looksLikeMarkdown(text)) {
             const md = document.createElement('div');
             md.className = 'tc-pre tc-pre-readable tb-markdown';
             md.innerHTML = this._renderMarkdown(text);  // safe: AI-generated content

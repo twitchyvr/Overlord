@@ -155,14 +155,14 @@ html[data-theme="light"] .kanban-card { background: #ffffff; }
 html[data-theme="light"] .ms-card { background: rgba(255,255,255,0.9); }
 
 /* Dark-mode form field fix for Agent Manager */
-html[data-theme="light"] #agent-manager-modal input,
-html[data-theme="light"] #agent-manager-modal textarea,
-html[data-theme="light"] #agent-manager-modal select {
+html[data-theme="light"] .agent-manager-modal input,
+html[data-theme="light"] .agent-manager-modal textarea,
+html[data-theme="light"] .agent-manager-modal select {
     color: #0f172a !important;
     background: #ffffff !important;
     border-color: rgba(0,0,0,0.15) !important;
 }
-html[data-theme="light"] #agent-manager-modal select option {
+html[data-theme="light"] .agent-manager-modal select option {
     color: #0f172a;
     background: #ffffff;
 }

@@ -184,8 +184,8 @@ export class PanelComponent extends Component {
         _soloPanel = null;
         const rp = document.getElementById('right-panel');
 
-        // Show all panels and dividers
-        document.querySelectorAll('.panel[id], .panel-divider').forEach(el => {
+        // Show all panels (dividers will be corrected by applyPanelVisibility below)
+        document.querySelectorAll('.panel[id]').forEach(el => {
             el.style.display = '';
         });
 
@@ -203,6 +203,10 @@ export class PanelComponent extends Component {
 
         // Re-apply persisted heights
         applyPersistedHeights();
+
+        // Re-apply panel visibility so hidden panels stay hidden and dividers
+        // are shown only between visible panels
+        applyPanelVisibility();
     }
 
     /** Toggle maximize/restore. */
@@ -380,15 +384,8 @@ export function applyPanelVisibility() {
         else panel.hide();
     });
 
-    // Hide dividers adjacent to hidden panels
-    document.querySelectorAll('.panel-divider').forEach(div => {
-        const between = (div.dataset.between || '').split(',');
-        const anyHidden = between.some(id => {
-            const el = document.getElementById(id);
-            return el && el.classList.contains('panel-hidden');
-        });
-        div.style.display = anyHidden ? 'none' : '';
-    });
+    // Recompute which dividers should be visible based on visible panels
+    updateDividerVisibility();
 
     // Auto-hide right-panel if ALL panels are hidden or popped out
     const anyVisible = [...PANELS.values()].some(p =>
@@ -475,6 +472,41 @@ export function savePanelHeights() {
 }
 
 /**
+ * Recalculate which dividers should be visible based on which panels are
+ * currently shown. For each adjacent pair of visible panels, ensures exactly
+ * one divider is shown between them (the last one in DOM order). All others
+ * are hidden. Must be called after any panel show/hide operation.
+ */
+export function updateDividerVisibility() {
+    const container = document.getElementById('right-panel') || document.body;
+    const all = [...container.querySelectorAll('.panel[id], .panel-divider')];
+
+    // Step 1: hide every divider
+    all.forEach(el => {
+        if (el.classList.contains('panel-divider')) el.style.display = 'none';
+    });
+
+    // Step 2: collect visible panels in DOM order
+    const visible = all.filter(el =>
+        el.classList.contains('panel') &&
+        el.id &&
+        !el.classList.contains('panel-hidden')
+    );
+
+    // Step 3: for each adjacent pair of visible panels, show the last divider
+    // between them so the user can drag-resize across hidden panels
+    for (let i = 0; i < visible.length - 1; i++) {
+        const p1Idx = all.indexOf(visible[i]);
+        const p2Idx = all.indexOf(visible[i + 1]);
+        const dividers = all.slice(p1Idx + 1, p2Idx)
+            .filter(el => el.classList.contains('panel-divider'));
+        if (dividers.length > 0) {
+            dividers[dividers.length - 1].style.display = '';
+        }
+    }
+}
+
+/**
  * Initialize drag-resize behavior on all .panel-divider elements.
  * Allows users to vertically resize panels by dragging dividers.
  */
@@ -484,12 +516,12 @@ export function initPanelDividers() {
         let prevStart = 0, nextStart = 0;
 
         divider.addEventListener('mousedown', (e) => {
-            // Walk siblings to find surrounding non-collapsed panels
+            // Walk siblings to find surrounding visible, non-collapsed panels
             prevPanel = divider.previousElementSibling;
-            while (prevPanel && (prevPanel.classList.contains('panel-divider') || prevPanel.classList.contains('collapsed')))
+            while (prevPanel && (prevPanel.classList.contains('panel-divider') || prevPanel.classList.contains('collapsed') || prevPanel.classList.contains('panel-hidden')))
                 prevPanel = prevPanel.previousElementSibling;
             nextPanel = divider.nextElementSibling;
-            while (nextPanel && (nextPanel.classList.contains('panel-divider') || nextPanel.classList.contains('collapsed')))
+            while (nextPanel && (nextPanel.classList.contains('panel-divider') || nextPanel.classList.contains('collapsed') || nextPanel.classList.contains('panel-hidden')))
                 nextPanel = nextPanel.nextElementSibling;
             if (!prevPanel || !nextPanel) return;
 

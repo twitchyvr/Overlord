@@ -23,9 +23,9 @@
  */
 export function initSocketBridge(socket, store, engine) {
 
-    // ══════════════════════════════════════════════════════════════
+    // ══════════════════════════════════════════════════════════════════════
     //  CONNECTION LIFECYCLE
-    // ══════════════════════════════════════════════════════════════
+    // ══════════════════════════════════════════════════════════════════════
 
     socket.on('connect', () => {
         store.set('ui.connected', true);
@@ -82,9 +82,9 @@ export function initSocketBridge(socket, store, engine) {
         engine.dispatch('log', { message: 'Connection error: ' + err.message, type: 'error' });
     });
 
-    // ══════════════════════════════════════════════════════════════
+    // ══════════════════════════════════════════════════════════════════════
     //  INITIALIZATION & STATE SYNC
-    // ══════════════════════════════════════════════════════════════
+    // ══════════════════════════════════════════════════════════════════════
 
     socket.on('init', (data) => {
         store.batch(() => {
@@ -109,9 +109,9 @@ export function initSocketBridge(socket, store, engine) {
         engine.dispatch('process_state', state);
     });
 
-    // ══════════════════════════════════════════════════════════════
+    // ══════════════════════════════════════════════════════════════════════
     //  CORE STATE BROADCASTS
-    // ══════════════════════════════════════════════════════════════
+    // ══════════════════════════════════════════════════════════════════════
 
     socket.on('roadmap_update', (items) => {
         store.set('roadmap.items', items || []);
@@ -121,6 +121,11 @@ export function initSocketBridge(socket, store, engine) {
     socket.on('team_update', (agents) => {
         store.set('team.agents', agents || []);
         engine.dispatch('team_update', agents);
+    });
+
+    // Listen for agents_updated (e.g. from add_agent) and refresh team
+    socket.on('agents_updated', () => {
+        socket.emit('get_team');
     });
 
     socket.on('tasks_update', (taskList) => {
@@ -138,9 +143,9 @@ export function initSocketBridge(socket, store, engine) {
         engine.dispatch('working_dir_update', path);
     });
 
-    // ══════════════════════════════════════════════════════════════
+    // ══════════════════════════════════════════════════════════════════════
     //  MESSAGING & STREAMING
-    // ══════════════════════════════════════════════════════════════
+    // ══════════════════════════════════════════════════════════════════════
 
     socket.on('status_update', (data) => {
         // Derive processing state so Stop button enables and send-area aurora fires.
@@ -163,9 +168,9 @@ export function initSocketBridge(socket, store, engine) {
         engine.dispatch('stream_update', text);
     });
 
-    // ══════════════════════════════════════════════════════════════
+    // ══════════════════════════════════════════════════════════════════════
     //  CONVERSATIONS
-    // ══════════════════════════════════════════════════════════════
+    // ══════════════════════════════════════════════════════════════════════
 
     socket.on('conversations_list', (convs) => {
         store.set('conversations.list', convs || []);
@@ -193,9 +198,9 @@ export function initSocketBridge(socket, store, engine) {
         engine.dispatch('log', { message: 'Context cleared', type: 'success' });
     });
 
-    // ══════════════════════════════════════════════════════════════
+    // ══════════════════════════════════════════════════════════════════════
     //  TOOLS & EXECUTION
-    // ══════════════════════════════════════════════════════════════
+    // ══════════════════════════════════════════════════════════════════════
 
     socket.on('tool_result', (data) => {
         engine.dispatch('tool_result', data);
@@ -217,9 +222,9 @@ export function initSocketBridge(socket, store, engine) {
         engine.dispatch('approval_resolved', data);
     });
 
-    // ══════════════════════════════════════════════════════════════
+    // ══════════════════════════════════════════════════════════════════════
     //  AGENT CHAT ROOMS & DELEGATION
-    // ══════════════════════════════════════════════════════════════
+    // ══════════════════════════════════════════════════════════════════════
 
     socket.on('agent_room_opened', (room) => {
         engine.dispatch('agent_room_opened', room);
@@ -251,9 +256,9 @@ export function initSocketBridge(socket, store, engine) {
         engine.dispatch('meeting_notes_generated', data);
     });
 
-    // ══════════════════════════════════════════════════════════════
+    // ══════════════════════════════════════════════════════════════════════
     //  AGENT ORCHESTRATION
-    // ══════════════════════════════════════════════════════════════
+    // ══════════════════════════════════════════════════════════════════════
 
     socket.on('orchestration_state', (state) => {
         store.set('orchestration.state', state);
@@ -312,9 +317,9 @@ export function initSocketBridge(socket, store, engine) {
         engine.dispatch('task_recommendations_update', recs);
     });
 
-    // ══════════════════════════════════════════════════════════════
+    // ══════════════════════════════════════════════════════════════════════
     //  AI OUTPUTS
-    // ══════════════════════════════════════════════════════════════
+    // ══════════════════════════════════════════════════════════════════════
 
     socket.on('neural_thought', (thought) => {
         engine.dispatch('neural_thought', thought);
@@ -344,9 +349,9 @@ export function initSocketBridge(socket, store, engine) {
         engine.dispatch('show_chart', data);
     });
 
-    // ══════════════════════════════════════════════════════════════
+    // ══════════════════════════════════════════════════════════════════════
     //  MCP SERVERS
-    // ══════════════════════════════════════════════════════════════
+    // ══════════════════════════════════════════════════════════════════════
 
     socket.on('mcp_servers_updated', (data) => {
         store.set('mcp.servers', data);
@@ -357,18 +362,18 @@ export function initSocketBridge(socket, store, engine) {
         engine.dispatch('mcp_server_result', data);
     });
 
-    // ══════════════════════════════════════════════════════════════
+    // ══════════════════════════════════════════════════════════════════════
     //  OBSIDIAN VAULT
-    // ══════════════════════════════════════════════════════════════
+    // ══════════════════════════════════════════════════════════════════════
 
     socket.on('vaults_discovered', (vaults) => {
         store.set('obsidian.vaults', vaults || []);
         engine.dispatch('vaults_discovered', vaults);
     });
 
-    // ══════════════════════════════════════════════════════════════
+    // ══════════════════════════════════════════════════════════════════════
     //  CONTEXT & PROCESSING
-    // ══════════════════════════════════════════════════════════════
+    // ══════════════════════════════════════════════════════════════════════
 
     socket.on('context_info', (info) => {
         store.set('context.info', info);
@@ -407,9 +412,9 @@ export function initSocketBridge(socket, store, engine) {
         engine.dispatch('presence_update', { count });
     });
 
-    // ══════════════════════════════════════════════════════════════
+    // ══════════════════════════════════════════════════════════════════════
     //  PLAN SYSTEM
-    // ══════════════════════════════════════════════════════════════
+    // ══════════════════════════════════════════════════════════════════════
 
     socket.on('plan_ready', (d) => {
         engine.dispatch('plan_ready', d);
@@ -439,18 +444,18 @@ export function initSocketBridge(socket, store, engine) {
         engine.dispatch('approval_request_notice', d);
     });
 
-    // ══════════════════════════════════════════════════════════════
+    // ══════════════════════════════════════════════════════════════════════
     //  CHAT MODE
-    // ══════════════════════════════════════════════════════════════
+    // ══════════════════════════════════════════════════════════════════════
 
     socket.on('mode_changed', (d) => {
         if (d.mode) store.set('chat.mode', d.mode);
         engine.dispatch('mode_changed', d);
     });
 
-    // ══════════════════════════════════════════════════════════════
+    // ══════════════════════════════════════════════════════════════════════
     //  BACKCHANNEL
-    // ══════════════════════════════════════════════════════════════
+    // ══════════════════════════════════════════════════════════════════════
 
     socket.on('backchannel_msg', (msg) => {
         store.update('backchannel.messages', msgs => {
@@ -460,9 +465,9 @@ export function initSocketBridge(socket, store, engine) {
         engine.dispatch('backchannel_msg', msg);
     });
 
-    // ══════════════════════════════════════════════════════════════
+    // ══════════════════════════════════════════════════════════════════════
     //  MESSAGE QUEUE
-    // ══════════════════════════════════════════════════════════════
+    // ══════════════════════════════════════════════════════════════════════
 
     socket.on('queue_updated', (queue) => {
         store.set('queue.messages', queue || []);
@@ -473,9 +478,9 @@ export function initSocketBridge(socket, store, engine) {
         engine.dispatch('message_injected', data);
     });
 
-    // ══════════════════════════════════════════════════════════════
+    // ══════════════════════════════════════════════════════════════════════
     //  SETTINGS & CONFIG
-    // ══════════════════════════════════════════════════════════════
+    // ══════════════════════════════════════════════════════════════════════
 
     socket.on('config_data', (data) => {
         store.set('settings.config', data);
@@ -495,9 +500,9 @@ export function initSocketBridge(socket, store, engine) {
         engine.dispatch('input_request', d);
     });
 
-    // ══════════════════════════════════════════════════════════════
+    // ══════════════════════════════════════════════════════════════════════
     //  HOT INJECT
-    // ══════════════════════════════════════════════════════════════
+    // ══════════════════════════════════════════════════════════════════════
 
     socket.on('hot_inject_pending', (data) => {
         engine.dispatch('hot_inject_pending', data);
@@ -507,9 +512,9 @@ export function initSocketBridge(socket, store, engine) {
         engine.dispatch('hot_inject_applied', data);
     });
 
-    // ══════════════════════════════════════════════════════════════
+    // ══════════════════════════════════════════════════════════════════════
     //  MILESTONES
-    // ══════════════════════════════════════════════════════════════
+    // ══════════════════════════════════════════════════════════════════════
 
     socket.on('milestone_complete_celebration', (data) => {
         engine.dispatch('milestone_complete_celebration', data);
@@ -519,9 +524,9 @@ export function initSocketBridge(socket, store, engine) {
         engine.dispatch('milestone_all_tasks_done', data);
     });
 
-    // ══════════════════════════════════════════════════════════════
+    // ══════════════════════════════════════════════════════════════════════
     //  FILE STREAMING
-    // ══════════════════════════════════════════════════════════════
+    // ══════════════════════════════════════════════════════════════════════
 
     socket.on('file_write_start', (d) => {
         engine.dispatch('file_write_start', d);
@@ -535,9 +540,9 @@ export function initSocketBridge(socket, store, engine) {
         engine.dispatch('file_write_end', d);
     });
 
-    // ══════════════════════════════════════════════════════════════
+    // ══════════════════════════════════════════════════════════════════════
     //  PROJECTS
-    // ══════════════════════════════════════════════════════════════
+    // ══════════════════════════════════════════════════════════════════════
 
     socket.on('projects_updated', (projects) => {
         store.set('projects.list', projects || []);
@@ -548,9 +553,9 @@ export function initSocketBridge(socket, store, engine) {
         engine.dispatch('project_switched', data);
     });
 
-    // ══════════════════════════════════════════════════════════════
+    // ══════════════════════════════════════════════════════════════════════
     //  MISC
-    // ══════════════════════════════════════════════════════════════
+    // ══════════════════════════════════════════════════════════════════════
 
     socket.on('timeline_event', (event) => {
         engine.dispatch('timeline_event', event);

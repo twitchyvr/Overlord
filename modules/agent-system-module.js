@@ -45,6 +45,7 @@ const TOOL_TIER_REGISTRY = {
     'list_agents':          { tier: 1, category: 'read',      risk: 'none',     description: 'List available agents' },
     'get_agent_info':       { tier: 1, category: 'read',      risk: 'none',     description: 'Get agent details' },
     'web_search':           { tier: 1, category: 'read',      risk: 'none',     description: 'Search the web' },
+    'fetch_webpage':        { tier: 1, category: 'read',      risk: 'none',     description: 'Fetch webpage content (HTTPS only; HTTP requires human approval)' },
     'understand_image':     { tier: 1, category: 'read',      risk: 'none',     description: 'Analyze image content' },
     'qa_check_lint':        { tier: 1, category: 'diagnostic', risk: 'none',    description: 'Run lint check' },
     'qa_check_types':       { tier: 1, category: 'diagnostic', risk: 'none',    description: 'Run type check' },

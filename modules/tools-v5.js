@@ -11,7 +11,7 @@
 // Tool Categories:
 //   Shell:    bash, powershell, cmd
 //   Files:    read_file, read_file_lines, write_file, patch_file, append_file, list_dir
-//   AI/MCP:   web_search, understand_image
+//   AI/MCP:   web_search, fetch_webpage, understand_image
 //   System:   system_info, get_working_dir, set_working_dir, set_thinking_level
 //   Agents:   (managed via orchestration-module dynamic tools)
 //   QA:       qa_run_tests, qa_check_lint, qa_check_types, qa_check_coverage, qa_audit_deps
@@ -22,6 +22,7 @@ const path = require('path');
 const os = require('os');
 const { spawn } = require('child_process');
 const https = require('https');
+const http = require('http');  // Only used for explicitly user-approved local URLs
 
 let HUB = null;
 let CONFIG = null;
@@ -69,6 +70,12 @@ const TOOL_ALIASES = new Map([
     // AI/MCP aliases
     ['search_web',      'web_search'],
     ['google',          'web_search'],
+    ['fetch_url',       'fetch_webpage'],
+    ['get_url',         'fetch_webpage'],
+    ['read_url',        'fetch_webpage'],
+    ['read_webpage',    'fetch_webpage'],
+    ['get_webpage',     'fetch_webpage'],
+    ['curl',            'fetch_webpage'],
     ['analyze_image',   'understand_image'],
     ['read_image',      'understand_image'],
     ['describe_image',  'understand_image'],
@@ -252,6 +259,19 @@ const TOOL_DEFS = [
                 query: { type: 'string', description: 'The search query' }
             },
             required: ['query']
+        }
+    },
+    {
+        name: 'fetch_webpage',
+        description: 'Fetch and read the contents of a web page at the given URL. Returns the readable text content extracted from the HTML. Use when you need to read the actual content of a specific URL (articles, documentation, blog posts, etc.) rather than searching for information. For searching, use web_search instead.',
+        input_schema: {
+            type: 'object',
+            properties: {
+                url: { type: 'string', description: 'The full URL to fetch (must start with https://). Plain http:// requires explicit user approval.' },
+                raw_html: { type: 'boolean', description: 'If true, return raw HTML instead of extracted text. Default: false' },
+                max_length: { type: 'number', description: 'Maximum character length of returned content. Default: 50000' }
+            },
+            required: ['url']
         }
     },
     {
@@ -688,6 +708,11 @@ async function execute(tool, inputOverride) {
                 HUB.log(`[Tools] web_search called with query: ${input.query}`, 'info');
                 result = await webSearch(input.query); 
                 HUB.log(`[Tools] web_search result: ${result.success}`, 'info');
+                break;
+            case 'fetch_webpage':
+                HUB.log(`[Tools] fetch_webpage called with url: ${input.url}`, 'info');
+                result = await fetchWebpage(input.url, input.raw_html, input.max_length);
+                HUB.log(`[Tools] fetch_webpage result: ${result.success}`, 'info');
                 break;
             case 'understand_image': result = await understandImage(input.path, input.prompt); break;
 
@@ -1149,6 +1174,294 @@ async function webSearch(query) {
     }
 
     return { success: false, content: 'Web search unavailable (no API key or MCP service)' };
+}
+
+// ==================== FETCH WEBPAGE ====================
+
+async function fetchWebpage(url, rawHtml = false, maxLength = 50000) {
+    if (!url || typeof url !== 'string') {
+        return { success: false, content: 'Error: URL is required' };
+    }
+
+    // Validate URL format
+    let parsed;
+    try {
+        parsed = new URL(url);
+    } catch (e) {
+        return { success: false, content: 'Error: Invalid URL — must start with https://' };
+    }
+
+    // SECURITY: Only HTTPS is allowed by default. Plain HTTP exposes data in transit
+    // to interception (MITM). HTTP URLs require EXPLICIT user approval through the
+    // approval system — even in bypass mode. Local URLs (localhost/127.0.0.1) are
+    // also gated behind approval since they can probe internal services.
+    if (parsed.protocol === 'http:') {
+        const isLocal = ['localhost', '127.0.0.1', '0.0.0.0', '::1'].includes(parsed.hostname) ||
+                        parsed.hostname.endsWith('.local');
+        const agentSystem = HUB?.getService('agentSystem');
+        if (agentSystem) {
+            // Force HUMAN_REQUIRED approval regardless of bypass mode
+            const approval = await new Promise((resolve) => {
+                const approvalId = `http_url_${Date.now()}`;
+                HUB.emit('approval_request', {
+                    id: approvalId,
+                    type: 'http_url',
+                    tool: 'fetch_webpage',
+                    description: isLocal
+                        ? `Fetch LOCAL HTTP URL (no encryption): ${url}`
+                        : `⚠️ INSECURE: Fetch plain HTTP URL (data sent unencrypted): ${url}`,
+                    risk: 'high',
+                    requiresHuman: true
+                });
+                // Listen for approval response
+                const handler = (data) => {
+                    if (data.id === approvalId) {
+                        HUB.removeListener('approval_response', handler);
+                        resolve(data.approved);
+                    }
+                };
+                HUB.on('approval_response', handler);
+                // Auto-reject after 60s if no response
+                setTimeout(() => {
+                    HUB.removeListener('approval_response', handler);
+                    resolve(false);
+                }, 60000);
+            });
+
+            if (!approval) {
+                return { success: false, content: 'Error: Plain HTTP URL rejected — use HTTPS for security. HTTP requires explicit user approval.' };
+            }
+            HUB.log(`[fetch_webpage] User approved HTTP URL: ${url}`, 'warn');
+        } else {
+            return { success: false, content: 'Error: Plain HTTP URLs are not allowed — use HTTPS. HTTP requires explicit user approval and the approval system is not available.' };
+        }
+    } else if (parsed.protocol !== 'https:') {
+        return { success: false, content: 'Error: Only https:// URLs are supported. Plain http:// requires explicit user approval.' };
+    }
+
+    const transport = parsed.protocol === 'https:' ? https : http;
+    const MAX_SIZE = 5 * 1024 * 1024;  // 5 MB max download
+    const TIMEOUT = 15000;             // 15s timeout
+    const MAX_REDIRECTS = 5;
+
+    return new Promise((resolve) => {
+        let redirects = 0;
+        const fetchHeaders = {
+            'User-Agent': 'Overlord/2.0 (AI Assistant; +https://github.com/twitchyvr/Overlord)',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,text/plain;q=0.8,*/*;q=0.7',
+            'Accept-Language': 'en-US,en;q=0.9',
+            'Accept-Encoding': 'identity'  // No compression — keep it simple
+        };
+
+        function doFetch(fetchUrl) {
+            const fetchParsed = new URL(fetchUrl);
+            const fetchTransport = fetchParsed.protocol === 'https:' ? https : http;
+
+            const req = fetchTransport.get(fetchUrl, {
+                headers: fetchHeaders,
+                timeout: TIMEOUT
+            }, (res) => {
+                // Handle redirects
+                if ([301, 302, 303, 307, 308].includes(res.statusCode) && res.headers.location) {
+                    redirects++;
+                    if (redirects > MAX_REDIRECTS) {
+                        resolve({ success: false, content: `Error: Too many redirects (>${MAX_REDIRECTS})` });
+                        return;
+                    }
+                    const nextUrl = new URL(res.headers.location, fetchUrl).href;
+                    const nextParsed = new URL(nextUrl);
+
+                    // SECURITY: Block HTTPS→HTTP downgrade redirects
+                    if (nextParsed.protocol === 'http:' && parsed.protocol === 'https:') {
+                        resolve({ success: false, content: `Error: Refusing redirect to insecure HTTP URL: ${nextUrl} — the original request was HTTPS.` });
+                        return;
+                    }
+
+                    HUB.log(`[fetch_webpage] Redirect ${res.statusCode} → ${nextUrl}`, 'debug');
+                    doFetch(nextUrl);
+                    return;
+                }
+
+                handleResponse(res, fetchUrl);
+            });
+
+            req.on('error', (e) => {
+                resolve({ success: false, content: 'Error: Request failed — ' + e.message });
+            });
+
+            req.on('timeout', () => {
+                req.destroy();
+                resolve({ success: false, content: `Error: Request timed out after ${TIMEOUT / 1000}s` });
+            });
+        }
+
+        function handleResponse(res, finalUrl) {
+            if (res.statusCode < 200 || res.statusCode >= 400) {
+                resolve({ success: false, content: `Error: HTTP ${res.statusCode} — ${res.statusMessage || 'Request failed'}` });
+                return;
+            }
+
+            const contentType = (res.headers['content-type'] || '').toLowerCase();
+            // Reject binary content types
+            if (contentType.includes('image/') || contentType.includes('audio/') ||
+                contentType.includes('video/') || contentType.includes('application/octet-stream') ||
+                contentType.includes('application/zip') || contentType.includes('application/pdf')) {
+                resolve({ success: false, content: `Error: URL points to binary content (${contentType}), not a readable web page` });
+                return;
+            }
+
+            let body = '';
+            let bytesReceived = 0;
+
+            res.setEncoding('utf8');
+            res.on('data', (chunk) => {
+                bytesReceived += Buffer.byteLength(chunk, 'utf8');
+                if (bytesReceived > MAX_SIZE) {
+                    res.destroy();
+                    resolve({ success: false, content: `Error: Response too large (>${MAX_SIZE / 1024 / 1024}MB)` });
+                    return;
+                }
+                body += chunk;
+            });
+
+            res.on('end', () => {
+                try {
+                    if (rawHtml) {
+                        const truncated = body.length > maxLength
+                            ? body.substring(0, maxLength) + `\n\n[... Truncated at ${maxLength} chars (total: ${body.length}) ...]`
+                            : body;
+                        resolve({
+                            success: true,
+                            content: `# Fetched: ${finalUrl}\n\n\`\`\`html\n${truncated}\n\`\`\``
+                        });
+                        return;
+                    }
+
+                    // Extract readable text from HTML
+                    const text = extractReadableText(body, finalUrl);
+                    const truncated = text.length > maxLength
+                        ? text.substring(0, maxLength) + `\n\n[... Truncated at ${maxLength} chars (total: ${text.length}) ...]`
+                        : text;
+
+                    resolve({
+                        success: true,
+                        content: truncated
+                    });
+                } catch (e) {
+                    resolve({ success: false, content: 'Error: Failed to process page content — ' + e.message });
+                }
+            });
+
+            res.on('error', (e) => {
+                resolve({ success: false, content: 'Error: Stream error — ' + e.message });
+            });
+        }
+
+        doFetch(url);
+    });
+}
+
+// Extract readable text content from HTML — lightweight, no external dependencies.
+// Strips scripts, styles, nav, footer, ads; extracts title, headings, paragraphs, lists, links.
+function extractReadableText(html, url) {
+    const parts = [];
+
+    // Extract <title>
+    const titleMatch = html.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
+    if (titleMatch) {
+        parts.push('# ' + decodeHtmlEntities(titleMatch[1].trim()));
+    }
+    parts.push(`Source: ${url}\n`);
+
+    // Remove elements that aren't content
+    let cleaned = html
+        .replace(/<script[\s\S]*?<\/script>/gi, '')
+        .replace(/<style[\s\S]*?<\/style>/gi, '')
+        .replace(/<noscript[\s\S]*?<\/noscript>/gi, '')
+        .replace(/<nav[\s\S]*?<\/nav>/gi, '')
+        .replace(/<footer[\s\S]*?<\/footer>/gi, '')
+        .replace(/<header[\s\S]*?<\/header>/gi, '')
+        .replace(/<iframe[\s\S]*?<\/iframe>/gi, '')
+        .replace(/<svg[\s\S]*?<\/svg>/gi, '')
+        .replace(/<!--[\s\S]*?-->/g, '');
+
+    // Convert headings to markdown
+    cleaned = cleaned.replace(/<h([1-6])[^>]*>([\s\S]*?)<\/h\1>/gi, (_, level, text) => {
+        return '\n' + '#'.repeat(parseInt(level)) + ' ' + stripTags(text).trim() + '\n';
+    });
+
+    // Convert links to markdown (preserve href)
+    cleaned = cleaned.replace(/<a\s[^>]*href=["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi, (_, href, text) => {
+        const linkText = stripTags(text).trim();
+        if (!linkText) return '';
+        // Make relative URLs absolute
+        try {
+            const absHref = new URL(href, url).href;
+            return `[${linkText}](${absHref})`;
+        } catch {
+            return `[${linkText}](${href})`;
+        }
+    });
+
+    // Convert list items
+    cleaned = cleaned.replace(/<li[^>]*>([\s\S]*?)<\/li>/gi, (_, text) => {
+        return '\n- ' + stripTags(text).trim();
+    });
+
+    // Convert <br> and block elements to newlines
+    cleaned = cleaned.replace(/<br\s*\/?>/gi, '\n');
+    cleaned = cleaned.replace(/<\/(?:p|div|section|article|blockquote|tr)>/gi, '\n\n');
+    cleaned = cleaned.replace(/<(?:p|div|section|article|blockquote)[^>]*>/gi, '\n');
+
+    // Convert <pre>/<code> blocks (preserve formatting)
+    cleaned = cleaned.replace(/<pre[^>]*>([\s\S]*?)<\/pre>/gi, (_, code) => {
+        return '\n```\n' + stripTags(code).trim() + '\n```\n';
+    });
+
+    // Bold/italic
+    cleaned = cleaned.replace(/<(?:b|strong)[^>]*>([\s\S]*?)<\/(?:b|strong)>/gi, '**$1**');
+    cleaned = cleaned.replace(/<(?:i|em)[^>]*>([\s\S]*?)<\/(?:i|em)>/gi, '*$1*');
+
+    // Strip remaining tags
+    cleaned = stripTags(cleaned);
+
+    // Decode HTML entities
+    cleaned = decodeHtmlEntities(cleaned);
+
+    // Clean up whitespace: collapse multiple blank lines, trim lines
+    cleaned = cleaned
+        .split('\n')
+        .map(line => line.trim())
+        .join('\n')
+        .replace(/\n{3,}/g, '\n\n')
+        .trim();
+
+    parts.push(cleaned);
+    return parts.join('\n');
+}
+
+function stripTags(html) {
+    return html.replace(/<[^>]+>/g, '');
+}
+
+function decodeHtmlEntities(text) {
+    return text
+        .replace(/&amp;/g, '&')
+        .replace(/&lt;/g, '<')
+        .replace(/&gt;/g, '>')
+        .replace(/&quot;/g, '"')
+        .replace(/&#39;/g, "'")
+        .replace(/&apos;/g, "'")
+        .replace(/&#(\d+);/g, (_, n) => String.fromCharCode(parseInt(n)))
+        .replace(/&#x([0-9a-f]+);/gi, (_, n) => String.fromCharCode(parseInt(n, 16)))
+        .replace(/&nbsp;/g, ' ')
+        .replace(/&mdash;/g, '—')
+        .replace(/&ndash;/g, '–')
+        .replace(/&hellip;/g, '…')
+        .replace(/&rsquo;/g, '\u2019')
+        .replace(/&lsquo;/g, '\u2018')
+        .replace(/&rdquo;/g, '\u201D')
+        .replace(/&ldquo;/g, '\u201C');
 }
 
 // ==================== IMAGE UNDERSTANDING ====================

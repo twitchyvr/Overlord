@@ -981,6 +981,48 @@ export class ChatView extends Component {
         }
     }
 
+    // Render tool output into bodyEl. For web_search, fetch_webpage, and tools
+    // that return markdown content, renders as formatted readable text.
+    // Falls back to raw text for everything else.
+    _renderToolOutput(bodyEl, name, output) {
+        // Extract text content from output — handle objects with .content
+        let text = output;
+        if (typeof output === 'object' && output !== null) {
+            text = output.content || output.result || output.text || JSON.stringify(output, null, 2);
+        } else {
+            text = String(output);
+        }
+
+        // For web/fetch tools, delegate_to_agent, or any tool whose output
+        // contains markdown indicators — render as formatted markdown.
+        // Uses _renderMarkdown (marked.parse) — same pattern as all chat message
+        // rendering throughout this file (safe: AI-generated content).
+        const markdownTools = ['web_search', 'search_web', 'google', 'fetch_webpage',
+                               'fetch_url', 'read_url', 'get_url', 'delegate_to_agent'];
+        if (markdownTools.includes(name) && typeof text === 'string' && this._looksLikeMarkdown(text)) {
+            const md = document.createElement('div');
+            md.className = 'tc-pre tc-pre-readable tb-markdown';
+            md.innerHTML = this._renderMarkdown(text);  // safe: AI-generated content
+            bodyEl.appendChild(md);
+            return;
+        }
+
+        // General case: if text looks like markdown, render it nicely
+        if (typeof text === 'string' && text.length > 0 && this._looksLikeMarkdown(text)) {
+            const md = document.createElement('div');
+            md.className = 'tc-pre tc-pre-readable tb-markdown';
+            md.innerHTML = this._renderMarkdown(text);  // safe: AI-generated content
+            bodyEl.appendChild(md);
+            return;
+        }
+
+        // Default: plain text in <pre>
+        const outPre = document.createElement('pre');
+        outPre.className = 'tc-pre';
+        outPre.textContent = typeof text === 'string' ? text : String(text);
+        bodyEl.appendChild(outPre);
+    }
+
     // Apply input/output data to a chip's DOM elements by safeId.
     // For delegate_to_agent, adds agent name with aurora class.
     // Ported from index-ori.html:10558-10601.
@@ -1015,8 +1057,8 @@ export class ChatView extends Component {
                 this._renderToolInput(bodyEl, name, input);
             }
             const outLbl = document.createElement('span'); outLbl.className = 'tc-lbl'; outLbl.textContent = 'Output';
-            const outPre = document.createElement('pre'); outPre.className = 'tc-pre'; outPre.textContent = String(output);
-            bodyEl.appendChild(outLbl); bodyEl.appendChild(outPre);
+            bodyEl.appendChild(outLbl);
+            this._renderToolOutput(bodyEl, name, output);
         } else if (input) {
             bodyEl.replaceChildren();
             this._renderToolInput(bodyEl, name, input);

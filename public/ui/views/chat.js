@@ -782,7 +782,8 @@ export class ChatView extends Component {
 
         parts.forEach(part => {
             if (part.t === 'text' && part.v) {
-                frag.appendChild(h('pre', { class: 'tb-text-seg' }, part.v));
+                const structured = this._tryRenderThoughtJSON(part.v);
+                frag.appendChild(structured || h('pre', { class: 'tb-text-seg' }, part.v));
             } else if (part.t === 'chip') {
                 try {
                     const chip = JSON.parse(part.j);
@@ -798,6 +799,84 @@ export class ChatView extends Component {
         });
 
         container.appendChild(frag);
+    }
+
+    // Detect structured thinking content (JSON or markdown) and render readably.
+    // Handles complete JSON, incomplete/streaming JSON, and markdown text.
+    // Returns a DOM element or null (falls back to raw <pre>).
+    _tryRenderThoughtJSON(text) {
+        const trimmed = text.trim();
+        const knownFields = ['agent', 'context', 'task'];
+
+        if (trimmed.startsWith('{')) {
+            // Attempt 1: complete JSON parse
+            let obj;
+            try { obj = JSON.parse(trimmed); } catch (_) { obj = null; }
+
+            if (obj && typeof obj === 'object' && !Array.isArray(obj)) {
+                if (knownFields.some(f => f in obj)) {
+                    return this._buildStructuredThought(obj, knownFields);
+                }
+            }
+
+            // Attempt 2: incomplete/streaming JSON — extract "key": "value" pairs
+            const fields = this._extractPartialJSONFields(trimmed);
+            if (fields.size > 0 && [...fields.keys()].some(k => knownFields.includes(k))) {
+                return this._buildStructuredThought(Object.fromEntries(fields), knownFields);
+            }
+        }
+
+        // Attempt 3: if text has markdown indicators, render as markdown
+        if (this._looksLikeMarkdown(text)) {
+            const wrapper = document.createElement('div');
+            wrapper.className = 'tb-text-seg tb-markdown';
+            wrapper.innerHTML = this._renderMarkdown(text);
+            return wrapper;
+        }
+
+        return null;
+    }
+
+    // Extract "key": "value" pairs from partial/malformed JSON via regex.
+    // Handles incomplete trailing values and escaped quotes.
+    _extractPartialJSONFields(text) {
+        const fields = new Map();
+        const pairRe = /"([^"]+)"\s*:\s*"((?:[^"\\]|\\.)*)("?)/g;
+        let m;
+        while ((m = pairRe.exec(text)) !== null) {
+            const key = m[1];
+            const val = m[2].replace(/\\n/g, '\n').replace(/\\"/g, '"').replace(/\\\\/g, '\\');
+            const isComplete = m[3] === '"';
+            fields.set(key, val + (isComplete ? '' : '\u2026'));
+        }
+        return fields;
+    }
+
+    // Check whether text contains markdown formatting indicators.
+    _looksLikeMarkdown(text) {
+        return /^#{1,6}\s|^\s*[-*]\s|\*\*|__|\[.*\]\(|```|^\d+\.\s/m.test(text);
+    }
+
+    // Build a labeled structured thought DOM from an object with known fields.
+    _buildStructuredThought(obj, knownFields) {
+        const wrapper = h('div', { class: 'tb-structured' });
+        const orderedKeys = [...knownFields.filter(f => f in obj),
+                             ...Object.keys(obj).filter(k => !knownFields.includes(k))];
+
+        for (const key of orderedKeys) {
+            const val = obj[key];
+            wrapper.appendChild(h('span', { class: 'tc-lbl' }, key));
+            const valText = typeof val === 'string' ? val : JSON.stringify(val, null, 2);
+            if (typeof val === 'string' && this._looksLikeMarkdown(val)) {
+                const md = document.createElement('div');
+                md.className = 'tb-text-seg tb-markdown';
+                md.innerHTML = this._renderMarkdown(val);
+                wrapper.appendChild(md);
+            } else {
+                wrapper.appendChild(h('pre', { class: 'tb-text-seg' }, valText));
+            }
+        }
+        return wrapper;
     }
 
     _createToolChipEl(chip) {
@@ -861,6 +940,47 @@ export class ChatView extends Component {
         return first != null ? String(first).substring(0, 50) : '';
     }
 
+    // Render tool input into bodyEl. For delegate_to_agent, renders
+    // fields as labeled readable text. For all others, JSON dump.
+    _renderToolInput(bodyEl, name, input) {
+        const inLbl = document.createElement('span');
+        inLbl.className = 'tc-lbl';
+        inLbl.textContent = 'Input';
+        bodyEl.appendChild(inLbl);
+
+        if (name === 'delegate_to_agent' && typeof input === 'object') {
+            const fieldOrder = ['agent', 'task', 'context'];
+            const orderedKeys = [...fieldOrder.filter(f => f in input),
+                                 ...Object.keys(input).filter(k => !fieldOrder.includes(k))];
+            for (const key of orderedKeys) {
+                const val = input[key];
+                const lbl = document.createElement('span');
+                lbl.className = 'tc-lbl tc-lbl-field';
+                lbl.textContent = key;
+                bodyEl.appendChild(lbl);
+                const valText = typeof val === 'string' ? val : JSON.stringify(val, null, 2);
+                // Render markdown in delegate values (same renderer used for all chat messages)
+                if (typeof val === 'string' && this._looksLikeMarkdown(val)) {
+                    const md = document.createElement('div');
+                    md.className = 'tc-pre tc-pre-readable tb-markdown';
+                    // _renderMarkdown uses marked.parse with escapeHtml fallback
+                    md.innerHTML = this._renderMarkdown(val);  // safe: AI-generated content
+                    bodyEl.appendChild(md);
+                } else {
+                    const pre = document.createElement('pre');
+                    pre.className = 'tc-pre tc-pre-readable';
+                    pre.textContent = valText;
+                    bodyEl.appendChild(pre);
+                }
+            }
+        } else {
+            const inPre = document.createElement('pre');
+            inPre.className = 'tc-pre';
+            inPre.textContent = JSON.stringify(input, null, 2);
+            bodyEl.appendChild(inPre);
+        }
+    }
+
     // Apply input/output data to a chip's DOM elements by safeId.
     // For delegate_to_agent, adds agent name with aurora class.
     // Ported from index-ori.html:10558-10601.
@@ -892,19 +1012,16 @@ export class ChatView extends Component {
         if (output != null) {
             bodyEl.replaceChildren();
             if (input) {
-                const inLbl = document.createElement('span'); inLbl.className = 'tc-lbl'; inLbl.textContent = 'Input';
-                const inPre = document.createElement('pre'); inPre.className = 'tc-pre'; inPre.textContent = JSON.stringify(input, null, 2);
-                bodyEl.appendChild(inLbl); bodyEl.appendChild(inPre);
+                this._renderToolInput(bodyEl, name, input);
             }
             const outLbl = document.createElement('span'); outLbl.className = 'tc-lbl'; outLbl.textContent = 'Output';
             const outPre = document.createElement('pre'); outPre.className = 'tc-pre'; outPre.textContent = String(output);
             bodyEl.appendChild(outLbl); bodyEl.appendChild(outPre);
         } else if (input) {
             bodyEl.replaceChildren();
-            const inLbl = document.createElement('span'); inLbl.className = 'tc-lbl'; inLbl.textContent = 'Input';
-            const inPre = document.createElement('pre'); inPre.className = 'tc-pre'; inPre.textContent = JSON.stringify(input, null, 2);
+            this._renderToolInput(bodyEl, name, input);
             const runLbl = document.createElement('span'); runLbl.className = 'tc-lbl'; runLbl.style.opacity = '0.4'; runLbl.textContent = 'Running\u2026';
-            bodyEl.appendChild(inLbl); bodyEl.appendChild(inPre); bodyEl.appendChild(runLbl);
+            bodyEl.appendChild(runLbl);
         }
         return true;
     }

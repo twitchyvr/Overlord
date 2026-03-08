@@ -19,7 +19,7 @@ let db = null;
 const TOOL_CATEGORIES = {
     shell: ['bash', 'powershell', 'cmd'],
     files: ['read_file', 'read_file_lines', 'write_file', 'patch_file', 'append_file', 'list_dir'],
-    ai: ['web_search', 'understand_image'],
+    ai: ['web_search', 'understand_image', 'fetch_webpage'],
     system: ['system_info', 'get_working_dir', 'set_working_dir', 'set_thinking_level'],
     agents: ['list_agents', 'get_agent_info', 'assign_task'],
     qa: ['qa_run_tests', 'qa_check_lint', 'qa_check_types', 'qa_check_coverage', 'qa_audit_deps'],
@@ -71,6 +71,48 @@ const SECURITY_ROLES = {
 
 // Default agent templates
 const DEFAULT_AGENTS = {
+    // ==================== BUILT-IN SYSTEM AGENTS ====================
+    // builtIn:true → deletion blocked at all layers
+    // forcedTools  → always present; user cannot uncheck
+    // blockedTools → never present; user cannot add
+    'orchestrator': {
+        name: 'orchestrator',
+        role: 'Orchestrator',
+        description: 'Master coordinator for all multi-agent workflows. Decomposes goals into tasks, delegates work to specialist agents, tracks progress, and closes milestones. Never implements code directly — always delegates to the right specialist.',
+        group: 'System',
+        languages: ['English'],
+        tools: [
+            'delegate_to_agent', 'delegate_to_team', 'create_task', 'message_agent',
+            'recommend_task', 'close_milestone', 'request_tool_exception',
+            'read_file', 'list_dir', 'list_agents', 'get_agent_info',
+            'web_search', 'fetch_webpage', 'system_info', 'record_note', 'recall_notes'
+        ],
+        autoAddTools: false,
+        securityRole: 'developer',
+        builtIn: true,
+        forcedTools: ['delegate_to_agent', 'delegate_to_team', 'create_task', 'message_agent', 'recommend_task', 'close_milestone', 'request_tool_exception'],
+        blockedTools: ['bash', 'write_file', 'patch_file', 'edit_file'],
+        capabilities: ['orchestration', 'task-delegation', 'multi-agent-coordination', 'milestone-management', 'workflow-design']
+    },
+    'project-manager': {
+        name: 'project-manager',
+        role: 'Project Manager',
+        description: 'Plans projects, creates milestones, and hands execution plans to the orchestrator. Coordinates scope, timelines, and requirements. Must coordinate and plan rather than implement directly.',
+        group: 'System',
+        languages: ['English'],
+        tools: [
+            'handoff_to_orchestrator', 'recommend_task', 'create_task',
+            'read_file', 'list_dir', 'list_agents',
+            'web_search', 'fetch_webpage', 'system_info', 'record_note', 'recall_notes'
+        ],
+        autoAddTools: false,
+        securityRole: 'developer',
+        builtIn: true,
+        forcedTools: ['handoff_to_orchestrator', 'recommend_task', 'create_task'],
+        blockedTools: ['bash', 'write_file', 'patch_file', 'edit_file'],
+        capabilities: ['project-planning', 'milestone-creation', 'scope-management', 'stakeholder-communication', 'roadmap-design']
+    },
+
     // ==================== ENGINEERING - DEVELOPMENT ====================
     'frontend-developer': {
         name: 'frontend-developer',
@@ -645,7 +687,10 @@ function initializeAgentTables() {
         try { db.run(`ALTER TABLE agents ADD COLUMN scope TEXT DEFAULT 'global'`); } catch (_) {}
         try { db.run(`ALTER TABLE agents ADD COLUMN thinking_enabled INTEGER DEFAULT 0`); } catch (_) {}
         try { db.run(`ALTER TABLE agents ADD COLUMN thinking_budget INTEGER DEFAULT 0`); } catch (_) {}
-        
+        try { db.run(`ALTER TABLE agents ADD COLUMN built_in INTEGER DEFAULT 0`); } catch (_) {}
+        try { db.run(`ALTER TABLE agents ADD COLUMN forced_tools TEXT DEFAULT '[]'`); } catch (_) {}
+        try { db.run(`ALTER TABLE agents ADD COLUMN blocked_tools TEXT DEFAULT '[]'`); } catch (_) {}
+
         // Agent groups table
         db.run(`
             CREATE TABLE IF NOT EXISTS agent_groups (
@@ -708,7 +753,10 @@ function initializeDefaultAgents() {
                     tools: agent.tools,
                     autoAddTools: agent.autoAddTools,
                     securityRole: agent.securityRole,
-                    capabilities: agent.capabilities
+                    capabilities: agent.capabilities,
+                    builtIn: agent.builtIn || false,
+                    forcedTools: agent.forcedTools || [],
+                    blockedTools: agent.blockedTools || []
                 });
             }
             HUB?.log('✅ Default agents initialized', 'info');
@@ -758,8 +806,8 @@ function createAgent(agentData) {
     try {
         if (db) {
             db.run(`
-                INSERT INTO agents (id, name, role, description, instructions, group_id, languages, tools, tool_policy, auto_add_tools, security_role, capabilities, metadata, status, scope, thinking_enabled, thinking_budget, created_at, updated_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO agents (id, name, role, description, instructions, group_id, languages, tools, tool_policy, auto_add_tools, security_role, capabilities, metadata, status, scope, thinking_enabled, thinking_budget, built_in, forced_tools, blocked_tools, created_at, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             `, [
                 id,
                 agentData.name,
@@ -779,6 +827,9 @@ function createAgent(agentData) {
                 agentData.thinkingEnabled ? 1 : 0,
                 // radix parameter added for strict lint compliance (ESLint rule radix)
                 parseInt(agentData.thinkingBudget, 10) || 0,
+                agentData.builtIn ? 1 : 0,
+                JSON.stringify(agentData.forcedTools || []),
+                JSON.stringify(agentData.blockedTools || []),
                 now,
                 now
             ]);
@@ -814,12 +865,21 @@ function updateAgent(agentId, updates) {
             const newId      = generateId();
             const now        = new Date().toISOString();
             const safeName   = defName.toLowerCase().replace(/[^a-z0-9-]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
+            // Enforce built-in tool constraints on first upsert too
+            let mergedTools = merged.tools || [];
+            if (defAgent.builtIn) {
+                const forced  = defAgent.forcedTools  || [];
+                const blocked = defAgent.blockedTools || [];
+                for (const t of forced) { if (!mergedTools.includes(t)) mergedTools.push(t); }
+                mergedTools = mergedTools.filter(t => !blocked.includes(t));
+            }
             db.run(`
                 INSERT INTO agents
                     (id, name, role, description, instructions, group_id, languages, tools, tool_policy,
                      auto_add_tools, security_role, capabilities, metadata, status, scope,
-                     thinking_enabled, thinking_budget, created_at, updated_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                     thinking_enabled, thinking_budget, built_in, forced_tools, blocked_tools,
+                     created_at, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             `, [
                 newId, safeName,
                 merged.role        || '',
@@ -827,7 +887,7 @@ function updateAgent(agentId, updates) {
                 merged.instructions || '',
                 merged.group       || null,
                 JSON.stringify(merged.languages   || []),
-                JSON.stringify(merged.tools       || []),
+                JSON.stringify(mergedTools),
                 merged.toolPolicy  || 'allowlist',
                 merged.autoAddTools !== false ? 1 : 0,
                 merged.securityRole || 'developer',
@@ -836,6 +896,9 @@ function updateAgent(agentId, updates) {
                 'active', 'global',
                 merged.thinkingEnabled ? 1 : 0,
                 parseInt(merged.thinkingBudget, 10) || 0,
+                defAgent.builtIn ? 1 : 0,
+                JSON.stringify(defAgent.forcedTools  || []),
+                JSON.stringify(defAgent.blockedTools || []),
                 now, now
             ]);
             return { success: true, id: newId, created: true };
@@ -843,6 +906,20 @@ function updateAgent(agentId, updates) {
 
         // ── Agent exists — UPDATE using the real DB id (passed-in agentId may be a name)
         const actualId = existingResult.results[0].id;
+
+        // Enforce built-in tool constraints before building the UPDATE
+        if (updates.tools !== undefined) {
+            const builtInRow = db.query('SELECT built_in, forced_tools, blocked_tools FROM agents WHERE id = ?', [actualId]);
+            if (builtInRow.success && builtInRow.results.length > 0 && builtInRow.results[0].built_in) {
+                const forced  = JSON.parse(builtInRow.results[0].forced_tools  || '[]');
+                const blocked = JSON.parse(builtInRow.results[0].blocked_tools || '[]');
+                let sanitized = [...updates.tools];
+                for (const t of forced) { if (!sanitized.includes(t)) sanitized.push(t); }
+                sanitized = sanitized.filter(t => !blocked.includes(t));
+                updates = { ...updates, tools: sanitized };
+            }
+        }
+
         const fields = [];
         const values = [];
 
@@ -874,7 +951,16 @@ function updateAgent(agentId, updates) {
 
 function deleteAgent(agentId) {
     try {
+        // Guard: built-in agents cannot be deleted
+        const nameKey = (agentId || '').toString();
+        if (DEFAULT_AGENTS[nameKey] && DEFAULT_AGENTS[nameKey].builtIn) {
+            return { success: false, error: 'Built-in agents cannot be deleted' };
+        }
         if (db) {
+            const check = db.query('SELECT built_in FROM agents WHERE id = ? OR name = ? LIMIT 1', [agentId, agentId]);
+            if (check.success && check.results.length > 0 && check.results[0].built_in) {
+                return { success: false, error: 'Built-in agents cannot be deleted' };
+            }
             db.run('UPDATE agents SET status = ? WHERE id = ?', ['deleted', agentId]);
         }
         return { success: true };
@@ -918,6 +1004,9 @@ function listAgents(includeProjectAgents = []) {
                 securityRole: agent.securityRole,
                 capabilities: agent.capabilities,
                 scope: 'global',
+                builtIn: agent.builtIn || false,
+                forcedTools: agent.forcedTools || [],
+                blockedTools: agent.blockedTools || [],
                 isDefault: true
             }));
         } else {
@@ -957,6 +1046,9 @@ function parseAgentRow(row) {
         scope: row.scope || 'global',
         thinkingEnabled: !!row.thinking_enabled,
         thinkingBudget: row.thinking_budget || 0,
+        builtIn: !!row.built_in,
+        forcedTools: JSON.parse(row.forced_tools  || '[]'),
+        blockedTools: JSON.parse(row.blocked_tools || '[]'),
         isDefault: false
     };
 }

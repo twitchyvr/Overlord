@@ -67,6 +67,13 @@ export class TeamPanel extends PanelComponent {
             // Subscribe to team agents list
             this.subscribe(OverlordUI._store, 'team.agents', (agents) => {
                 this._agents = agents || [];
+                // Ensure every agent has an initialized session state so filter
+                // logic never encounters undefined (which would break comparisons).
+                for (const a of this._agents) {
+                    if (!this._sessionStates[a.name]) {
+                        this._sessionStates[a.name] = { isProcessing: false, paused: false, inboxCount: 0 };
+                    }
+                }
                 this.render(this._agents);
             });
 
@@ -136,17 +143,13 @@ export class TeamPanel extends PanelComponent {
             return;
         }
 
-        // Sort: working agents first, then on-deck (inbox > 0), then idle.
-        // Ported from index-ori.html:8385-8410 (activeNames → sections → concat).
+        // Sort: Active first (isProcessing), then On Deck (inbox > 0), then Idle.
         const sorted = [...filtered].sort((a, b) => {
             const rankOf = (agent) => {
-                if (this._isAgentWorking(agent)) return 0;
-                const ses = this._sessionStates[agent.name] || {};
-                const st = (agent.status || '').toLowerCase();
-                const isOnDeck = (ses.inboxCount || 0) > 0 ||
-                    ['on_deck', 'standby', 'ready'].includes(st);
-                if (isOnDeck) return 1;
-                return 2;
+                const ses = this._sessionStates[agent.name] || { isProcessing: false, paused: false, inboxCount: 0 };
+                if (ses.isProcessing === true && !ses.paused) return 0;  // Active
+                if ((ses.inboxCount || 0) > 0 && !ses.paused)           return 1;  // On Deck
+                return 2;                                                            // Idle
             };
             return rankOf(a) - rankOf(b);
         });
@@ -225,19 +228,17 @@ export class TeamPanel extends PanelComponent {
     _filterAgents(agents) {
         if (this._filter === 'all') return agents;
         return agents.filter(a => {
-            const isWorking = this._isAgentWorking(a);
-            const ses = this._sessionStates[a.name] || {};
+            // Always normalize ses so filter logic never hits undefined comparisons
+            const ses = this._sessionStates[a.name] || { isProcessing: false, paused: false, inboxCount: 0 };
+            const isWorking = ses.isProcessing === true;
             switch (this._filter) {
                 case 'active':
                     return isWorking && !ses.paused;
                 case 'on_deck':
                     // "On deck" = agent has queued work (inbox items) but is not currently
                     // processing. The backend never emits 'on_deck' status explicitly —
-                    // it must be derived from inboxCount. Also accept explicit status values.
-                    return !isWorking && !ses.paused && (
-                        (ses.inboxCount || 0) > 0 ||
-                        ['on_deck', 'standby', 'ready'].includes((a.status || '').toLowerCase())
-                    );
+                    // it must be derived from inboxCount.
+                    return !isWorking && !ses.paused && (ses.inboxCount || 0) > 0;
                 case 'idle':
                     // Idle = not working, not paused, nothing in inbox
                     return !isWorking && !ses.paused && (ses.inboxCount || 0) === 0;
@@ -248,17 +249,18 @@ export class TeamPanel extends PanelComponent {
     }
 
     // Single source of truth: is this agent currently processing work?
+    // Only trust live session state (isProcessing flag from agent_session_state events).
+    // Deliberately ignores agent.status from DB — that field can be stale across restarts.
     _isAgentWorking(agent) {
         const ses = this._sessionStates[agent.name] || {};
-        const status = (agent.status || '').toLowerCase();
-        return ses.isProcessing || status === 'working' || status === 'thinking' || status === 'active';
+        return ses.isProcessing === true;
     }
 
     _buildAgentCard(agent) {
         const ses = this._sessionStates[agent.name] || {};
         const isWorking = this._isAgentWorking(agent);
-        const dotCls = ses.paused ? 'paused' : (isWorking ? 'working' : (agent.status || 'idle').toLowerCase());
-        const effectiveStatus = ses.paused ? 'PAUSED' : isWorking ? 'WORKING' : (agent.status || 'IDLE').toUpperCase();
+        const dotCls = ses.paused ? 'paused' : (isWorking ? 'working' : 'idle');
+        const effectiveStatus = ses.paused ? 'PAUSED' : isWorking ? 'WORKING' : 'IDLE';
         const safeName = agent.name.replace(/\s+/g, '_');
 
         const card = h('div', {

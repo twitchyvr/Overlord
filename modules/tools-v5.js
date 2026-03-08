@@ -11,7 +11,7 @@
 // Tool Categories:
 //   Shell:    bash, powershell, cmd
 //   Files:    read_file, read_file_lines, write_file, patch_file, append_file, list_dir
-//   AI/MCP:   web_search, understand_image
+//   AI/MCP:   web_search, understand_image, fetch_webpage
 //   System:   system_info, get_working_dir, set_working_dir, set_thinking_level
 //   Agents:   (managed via orchestration-module dynamic tools)
 //   QA:       qa_run_tests, qa_check_lint, qa_check_types, qa_check_coverage, qa_audit_deps
@@ -72,6 +72,13 @@ const TOOL_ALIASES = new Map([
     ['analyze_image',   'understand_image'],
     ['read_image',      'understand_image'],
     ['describe_image',  'understand_image'],
+    // Web fetch aliases
+    ['fetch_url',       'fetch_webpage'],
+    ['get_url',         'fetch_webpage'],
+    ['read_url',        'fetch_webpage'],
+    ['read_webpage',    'fetch_webpage'],
+    ['get_webpage',     'fetch_webpage'],
+    ['curl',            'fetch_webpage'],
     // Notes aliases
     ['get_notes',       'recall_notes'],
     ['read_notes',      'recall_notes'],
@@ -287,6 +294,18 @@ const TOOL_DEFS = [
                 prompt: { type: 'string', description: 'What to analyze about the image (default: general description)' }
             },
             required: ['path']
+        }
+    },
+    {
+        name: 'fetch_webpage',
+        category: 'ai',
+        description: 'Fetch the text content of a webpage by URL. Extracts headings, paragraphs, links, lists, and code blocks into readable text. HTTPS-only. 5 MB max download, 15 s timeout. Use to read documentation, reference pages, GitHub READMEs, or any publicly-accessible URL.',
+        input_schema: {
+            type: 'object',
+            properties: {
+                url: { type: 'string', description: 'The full HTTPS URL to fetch (must start with https://)' }
+            },
+            required: ['url']
         }
     },
 
@@ -738,6 +757,7 @@ async function execute(tool, inputOverride) {
                 HUB.log(`[Tools] web_search result: ${result.success}`, 'info');
                 break;
             case 'understand_image': result = await understandImage(input.path, input.prompt); break;
+            case 'fetch_webpage':    result = await fetchWebpage(input.url); break;
 
             // System
             case 'system_info':       result = await systemInfo(); break;
@@ -1215,6 +1235,116 @@ async function understandImage(imagePath, prompt) {
         }
     }
     return { success: false, content: 'Image understanding not available. MCP module not loaded or not registered.' };
+}
+
+// ==================== WEBPAGE FETCH ====================
+
+async function fetchWebpage(url) {
+    if (!url || typeof url !== 'string') {
+        return { success: false, content: 'fetch_webpage: url is required' };
+    }
+    const trimmed = url.trim();
+    // HTTPS-only enforcement — upgrade http to https
+    if (!trimmed.startsWith('https://') && !trimmed.startsWith('http://')) {
+        return { success: false, content: 'fetch_webpage: URL must start with https:// (HTTP not allowed)' };
+    }
+    const finalUrl = trimmed.startsWith('http://') ? 'https://' + trimmed.slice(7) : trimmed;
+
+    const MAX_BYTES  = 5 * 1024 * 1024; // 5 MB
+    const TIMEOUT_MS = 15000;
+
+    return new Promise((resolve) => {
+        let settled = false;
+        const done = (val) => { if (!settled) { settled = true; resolve(val); } };
+
+        const timer = setTimeout(() => {
+            req.destroy();
+            done({ success: false, content: 'fetch_webpage: request timed out after 15 seconds' });
+        }, TIMEOUT_MS);
+
+        const req = https.get(finalUrl, {
+            headers: {
+                'User-Agent': 'Overlord-Agent/1.0',
+                'Accept': 'text/html,text/plain,*/*'
+            }
+        }, (res) => {
+            clearTimeout(timer);
+            // Follow one redirect
+            if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
+                res.resume();
+                fetchWebpage(res.headers.location).then(done);
+                return;
+            }
+            if (res.statusCode !== 200) {
+                res.resume();
+                done({ success: false, content: `fetch_webpage: HTTP ${res.statusCode} for ${finalUrl}` });
+                return;
+            }
+            const chunks = [];
+            let totalBytes = 0;
+            res.on('data', (chunk) => {
+                totalBytes += chunk.length;
+                if (totalBytes > MAX_BYTES) {
+                    res.destroy();
+                    done({ success: false, content: 'fetch_webpage: response exceeds 5 MB limit' });
+                    return;
+                }
+                chunks.push(chunk);
+            });
+            res.on('end', () => {
+                const raw  = Buffer.concat(chunks).toString('utf8');
+                const text = extractTextFromHtml(raw, finalUrl);
+                done({ success: true, content: text });
+            });
+            res.on('error', (e) => done({ success: false, content: 'fetch_webpage: response error: ' + e.message }));
+        });
+
+        req.on('error', (e) => {
+            clearTimeout(timer);
+            done({ success: false, content: 'fetch_webpage: request error: ' + e.message });
+        });
+    });
+}
+
+function extractTextFromHtml(html, url) {
+    // Strip script/style/comments entirely
+    let text = html
+        .replace(/<script[\s\S]*?<\/script>/gi, '')
+        .replace(/<style[\s\S]*?<\/style>/gi, '')
+        .replace(/<!--[\s\S]*?-->/g, '');
+
+    // Extract page title
+    const titleMatch = text.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
+    const title = titleMatch ? titleMatch[1].replace(/<[^>]+>/g, '').trim() : '';
+
+    // Convert semantic block tags → markdown-like text
+    text = text
+        .replace(/<h([1-6])[^>]*>([\s\S]*?)<\/h\1>/gi, (_, lvl, inner) =>
+            '\n' + '#'.repeat(Number(lvl)) + ' ' + inner.replace(/<[^>]+>/g, '').trim() + '\n')
+        .replace(/<p[^>]*>([\s\S]*?)<\/p>/gi, (_, inner) =>
+            '\n' + inner.replace(/<[^>]+>/g, '').trim() + '\n')
+        .replace(/<li[^>]*>([\s\S]*?)<\/li>/gi, (_, inner) =>
+            '\n- ' + inner.replace(/<[^>]+>/g, '').trim())
+        .replace(/<br\s*\/?>/gi, '\n')
+        .replace(/<pre[^>]*>([\s\S]*?)<\/pre>/gi, (_, inner) =>
+            '\n```\n' + inner.replace(/<[^>]+>/g, '').trim() + '\n```\n')
+        .replace(/<code[^>]*>([\s\S]*?)<\/code>/gi, (_, inner) =>
+            '`' + inner.replace(/<[^>]+>/g, '') + '`')
+        .replace(/<a[^>]*href="([^"]*)"[^>]*>([\s\S]*?)<\/a>/gi, (_, href, inner) =>
+            inner.replace(/<[^>]+>/g, '').trim() + (href ? ' [' + href + ']' : ''))
+        .replace(/<[^>]+>/g, ' ');
+
+    // Decode common HTML entities
+    text = text
+        .replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>')
+        .replace(/&quot;/g, '"').replace(/&apos;/g, "'").replace(/&nbsp;/g, ' ')
+        .replace(/&#(\d+);/g, (_, n) => String.fromCharCode(Number(n)))
+        .replace(/&#x([0-9a-f]+);/gi, (_, h) => String.fromCharCode(parseInt(h, 16)));
+
+    // Collapse excessive whitespace / blank lines
+    text = text.replace(/[ \t]{2,}/g, ' ').replace(/\n{3,}/g, '\n\n').trim();
+
+    return `# ${title || url}\nSource: ${url}\n\n${text}`;
 }
 
 // ==================== SYSTEM INFO ====================

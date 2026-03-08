@@ -191,13 +191,17 @@ export class AgentManagerView extends Component {
         for (const agent of this._agents) {
             const id = agent.id || agent.name;
             const selected = id === this._currentAgentId;
+            const nameEl = h('div', { style: { fontWeight: '600', fontSize: '11px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', display: 'flex', alignItems: 'center', gap: '4px' } },
+                agent.name || id,
+                agent.builtIn ? h('span', { style: { fontSize: '9px', background: 'rgba(88,166,255,0.2)', color: 'var(--accent-primary,#58a6ff)', borderRadius: '3px', padding: '1px 4px', letterSpacing: '0.04em', flexShrink: '0' } }, 'BUILT-IN') : null
+            );
             const row = h('div', {
                 class: 'am-agent-row' + (selected ? ' selected' : ''),
                 onClick: () => this._selectAgent(id)
             },
                 h('div', { class: 'am-agent-dot' }),
                 h('div', { style: { flex: '1', overflow: 'hidden' } },
-                    h('div', { style: { fontWeight: '600', fontSize: '11px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' } }, agent.name || id),
+                    nameEl,
                     h('div', { style: { fontSize: '10px', color: 'var(--text-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' } }, agent.role || '')
                 )
             );
@@ -213,6 +217,7 @@ export class AgentManagerView extends Component {
         if (!this._socket) return;
         this._socket.emit('get_agent', agentId, (agent) => {
             if (!agent) return;
+            this._currentAgent = agent;
             this._emptyEl.style.display = 'none';
             this._editorEl.style.display = 'block';
             this._renderEditor(agent);
@@ -249,8 +254,11 @@ export class AgentManagerView extends Component {
         ed.textContent = '';
 
         const title = h('h3', {
-            style: { margin: '0 0 14px', fontSize: '12px', fontWeight: '700', letterSpacing: '0.06em', color: 'var(--text-secondary)' }
-        }, isNew ? 'NEW AGENT' : 'EDIT AGENT');
+            style: { margin: '0 0 14px', fontSize: '12px', fontWeight: '700', letterSpacing: '0.06em', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '6px' }
+        },
+            isNew ? 'NEW AGENT' : 'EDIT AGENT',
+            (!isNew && agent.builtIn) ? h('span', { style: { fontSize: '10px', background: 'rgba(88,166,255,0.15)', color: 'var(--accent-primary,#58a6ff)', borderRadius: '4px', padding: '2px 7px', fontWeight: '600' } }, '🔒 BUILT-IN') : null
+        );
 
         const fields = h('div', { style: { display: 'flex', flexDirection: 'column', gap: '10px' } });
 
@@ -342,7 +350,7 @@ export class AgentManagerView extends Component {
         }, 'Cancel');
         const deleteBtn = h('button', {
             id: 'am-delete-btn',
-            style: { padding: '7px', background: 'none', border: '1px solid var(--accent-red)', borderRadius: '4px', cursor: 'pointer', color: 'var(--accent-red)', fontSize: '12px', display: isNew ? 'none' : '' },
+            style: { padding: '7px', background: 'none', border: '1px solid var(--accent-red)', borderRadius: '4px', cursor: 'pointer', color: 'var(--accent-red)', fontSize: '12px', display: (isNew || agent.builtIn) ? 'none' : '' },
             onClick: () => this._deleteAgent()
         }, 'Delete');
 
@@ -432,6 +440,10 @@ export class AgentManagerView extends Component {
         if (!el) return;
         while (el.firstChild) el.removeChild(el.firstChild);
 
+        const agent       = this._currentAgent || {};
+        const forcedTools  = agent.forcedTools  || [];
+        const blockedTools = agent.blockedTools || [];
+
         const categories = this._toolCategories;
         for (const [cat, tools] of Object.entries(categories)) {
             const catDiv = document.createElement('div');
@@ -444,23 +456,33 @@ export class AgentManagerView extends Component {
             const wrap = document.createElement('div');
             wrap.style.cssText = 'display:flex;flex-wrap:wrap;gap:5px;';
             for (const tool of tools) {
-                const inCurrent = currentTools.includes(tool);
+                const isForced   = forcedTools.includes(tool);
+                const isBlocked  = blockedTools.includes(tool);
+                const inCurrent  = currentTools.includes(tool);
                 const inProposed = proposedTools ? proposedTools.includes(tool) : inCurrent;
-                const changed = proposedTools && (inProposed !== inCurrent);
+                const changed    = !isForced && !isBlocked && proposedTools && (inProposed !== inCurrent);
 
                 const lbl = document.createElement('label');
-                lbl.style.cssText = 'display:flex;align-items:center;gap:3px;font-size:10px;color:var(--text-primary);cursor:pointer;white-space:nowrap;';
-                if (changed) { lbl.style.outline = '1px solid #d29922'; lbl.style.borderRadius = '3px'; lbl.style.padding = '1px 3px'; }
+                lbl.style.cssText = 'display:flex;align-items:center;gap:3px;font-size:10px;cursor:pointer;white-space:nowrap;';
+                if (isForced)  { lbl.style.color = 'var(--accent-primary,#58a6ff)'; lbl.title = 'Required — cannot remove'; }
+                else if (isBlocked) { lbl.style.opacity = '0.35'; lbl.title = 'Blocked — cannot add'; }
+                else           { lbl.style.color = 'var(--text-primary)'; }
+                if (changed)   { lbl.style.outline = '1px solid #d29922'; lbl.style.borderRadius = '3px'; lbl.style.padding = '1px 3px'; }
 
                 const chk = document.createElement('input');
                 chk.type = 'checkbox';
                 chk.className = 'am-tool-chk';
                 chk.value = tool;
-                chk.checked = inProposed;
-                chk.style.accentColor = 'var(--accent-green)';
+                chk.style.accentColor = isForced ? 'var(--accent-primary,#58a6ff)' : 'var(--accent-green)';
+
+                if (isForced)  { chk.checked = true;  chk.disabled = true; }
+                else if (isBlocked) { chk.checked = false; chk.disabled = true; }
+                else           { chk.checked = inProposed; }
 
                 lbl.appendChild(chk);
                 lbl.appendChild(document.createTextNode(tool));
+                if (isForced)  { const ic = document.createElement('span'); ic.textContent = '🔒'; ic.style.fontSize = '9px'; lbl.appendChild(ic); }
+                else if (isBlocked) { const ic = document.createElement('span'); ic.textContent = '⛔'; ic.style.fontSize = '9px'; lbl.appendChild(ic); }
                 wrap.appendChild(lbl);
             }
             catDiv.appendChild(wrap);
@@ -470,7 +492,16 @@ export class AgentManagerView extends Component {
 
     _getSelectedTools() {
         if (!this._editorEl) return [];
-        return [...this._editorEl.querySelectorAll('.am-tool-chk:checked')].map(cb => cb.value);
+        const agent       = this._currentAgent || {};
+        const forcedTools  = agent.forcedTools  || [];
+        const blockedTools = agent.blockedTools || [];
+        // Collect all checked non-disabled checkboxes
+        let selected = [...this._editorEl.querySelectorAll('.am-tool-chk:checked:not(:disabled)')].map(cb => cb.value);
+        // Always include forced tools (they are disabled/checked, not captured above)
+        for (const t of forcedTools) { if (!selected.includes(t)) selected.push(t); }
+        // Strip any blocked tools (defensive)
+        selected = selected.filter(t => !blockedTools.includes(t));
+        return selected;
     }
 
     // ── Dirty state ───────────────────────────────────────────
@@ -548,10 +579,16 @@ export class AgentManagerView extends Component {
     _deleteAgent() {
         if (!this._currentAgentId || !this._socket) return;
         if (!confirm('Delete this agent?')) return;
-        this._socket.emit('remove_agent', this._currentAgentId);
-        Toast.info('Agent deleted');
-        this._cancelEdit();
-        setTimeout(() => this._loadAgentList(), 300);
+        this._socket.emit('remove_agent', this._currentAgentId, (result) => {
+            if (result && result.success === false) {
+                Toast.error(result.error || 'Cannot delete this agent');
+            } else {
+                Toast.info('Agent deleted');
+                this._currentAgent = null;
+                this._cancelEdit();
+                setTimeout(() => this._loadAgentList(), 300);
+            }
+        });
     }
 
     // ══════════════════════════════════════════════════════════════

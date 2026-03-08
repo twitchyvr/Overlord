@@ -1046,12 +1046,18 @@ class Hub extends EventEmitter {
                 if (typeof cb === 'function') cb(result);
             });
 
-            socket.on('remove_agent', (agentId) => {
+            socket.on('remove_agent', (agentId, cb) => {
                 const agentMgr = this.getService('agentManager');
                 if (agentMgr && agentMgr.deleteAgent) {
-                    agentMgr.deleteAgent(agentId);
-                    socket.emit('agent_removed', { success: true, id: agentId });
-                    this.broadcastTeamFromDB();
+                    const result = agentMgr.deleteAgent(agentId);
+                    if (result && result.success === false) {
+                        if (typeof cb === 'function') cb({ success: false, error: result.error });
+                        else socket.emit('agent_removed', { success: false, error: result.error });
+                    } else {
+                        if (typeof cb === 'function') cb({ success: true, id: agentId });
+                        else socket.emit('agent_removed', { success: true, id: agentId });
+                        this.broadcastTeamFromDB();
+                    }
                 }
             });
 
@@ -1879,8 +1885,11 @@ Rules:
             role: a.role,
             description: a.description || '',
             capabilities: a.capabilities || [],
-            status: a.status || 'IDLE',
-            scope: a.scope || 'global'
+            status: 'idle',   // always idle on broadcast — live state sent via agent_session_state events
+            scope: a.scope || 'global',
+            builtIn: a.builtIn || false,
+            forcedTools: a.forcedTools || [],
+            blockedTools: a.blockedTools || []
         }));
         this.broadcastAll('team_update', team);
     }

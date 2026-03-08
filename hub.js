@@ -1140,18 +1140,29 @@ class Hub extends EventEmitter {
                 // Add user message to room transcript
                 orch.addRoomMessage(data.roomId, 'user', data.message, 'message');
 
-                // Relay message to all agents in the room as a user directive
-                const agentNames = room.participants || [room.fromAgent, room.toAgent];
+                // Relay message to all agents in the room and trigger AI response
+                const allParticipants = room.participants || [room.fromAgent, room.toAgent];
+                const agentNames = allParticipants.filter(n => n !== 'user');
+                const participantList = allParticipants.join(', ');
+
                 for (const agentName of agentNames) {
-                    this.log(`[Room ${data.roomId}] User message relayed to ${agentName}: ${(data.message || '').substring(0, 80)}`, 'info');
-                    // Push to agent's backchannel so it appears in their context
+                    this.log(`[Room ${data.roomId}] User message → ${agentName}: ${(data.message || '').substring(0, 80)}`, 'info');
+                    // Visibility in Activity feed
                     this.emit('backchannel_push', {
                         from: 'user',
                         to: agentName,
-                        content: `[User joined room ${data.roomId}]: ${data.message}`,
+                        content: `[Room message]: ${data.message}`,
                         type: 'agent_to_agent_task',
                         ts: Date.now()
                     });
+                    // Actually trigger the agent to process and respond (response routes back to room)
+                    const roomContext = `[Meeting room ${data.roomId}] Participants: ${participantList}`;
+                    const prompt = `${roomContext}\n[User says]: ${data.message}\n\nPlease respond to the user's message. Be concise and collaborative — you are in a group meeting with other agents and the user.`;
+                    if (orch.runAgentSessionInRoom) {
+                        orch.runAgentSessionInRoom(agentName, prompt, data.roomId);
+                    } else if (orch.runAgentSession) {
+                        orch.runAgentSession(agentName, prompt);
+                    }
                 }
                 if (typeof cb === 'function') cb({ success: true });
             });

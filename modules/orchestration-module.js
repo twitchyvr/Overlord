@@ -468,6 +468,7 @@ async function init(h) {
             if (cfg.maxParallelAgents !== null) maxParallelAgents = Math.max(1, Math.min(8, parseInt(cfg.maxParallelAgents, 10) || 3));
         },
         runAgentSession,
+        runAgentSessionInRoom,
         pauseAgent,
         resumeAgent,
         getAgentSessionState,
@@ -4083,6 +4084,16 @@ async function dispatchAgentAndAwait(agentName, task, taskScope = {}) {
     return baseResult + verifyBlock + scopeCheckBlock;
 }
 
+/**
+ * Run an agent session triggered from within a chat room.
+ * The agent's first text response will be routed back to the room transcript.
+ */
+function runAgentSessionInRoom(agentName, userMessage, roomId) {
+    const session = getOrCreateSession(agentName);
+    session._activeRoomId = roomId;  // cleared after first response in runAgentAICycle
+    runAgentSession(agentName, userMessage);
+}
+
 function runAgentSession(agentName, userMessage) {
     const session = getOrCreateSession(agentName);
 
@@ -4285,6 +4296,11 @@ async function runAgentAICycle(session) {
                 ts: Date.now(),
                 type: 'agent_to_orchestrator'
             });
+            // Route response back to active room if this session was triggered from one
+            if (session._activeRoomId) {
+                addRoomMessage(session._activeRoomId, session.name, displayText, 'message');
+                session._activeRoomId = null;  // clear — one response per trigger
+            }
         }
     }
 
@@ -5011,5 +5027,5 @@ async function endMeeting(roomId) {
 module.exports = {
     init, createChatRoom, addRoomMessage, endChatRoom, listChatRooms, getChatRoom,
     pullAgentIntoRoom, userLeaveRoom, userJoinRoom, generateMeetingNotes, endMeeting,
-    MAX_ROOM_AGENTS
+    runAgentSessionInRoom, MAX_ROOM_AGENTS
 };

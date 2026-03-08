@@ -22,6 +22,7 @@ const path = require('path');
 const os = require('os');
 const { spawn } = require('child_process');
 const https = require('https');
+const zlib  = require('zlib');
 
 let HUB = null;
 let CONFIG = null;
@@ -1264,8 +1265,9 @@ async function fetchWebpage(url) {
 
         const req = https.get(finalUrl, {
             headers: {
-                'User-Agent': 'Overlord-Agent/1.0',
-                'Accept': 'text/html,text/plain,*/*'
+                'User-Agent': 'Mozilla/5.0 (compatible; Overlord-Agent/1.0)',
+                'Accept': 'text/html,text/plain,*/*',
+                'Accept-Encoding': 'gzip, deflate, identity'
             }
         }, (res) => {
             clearTimeout(timer);
@@ -1280,9 +1282,19 @@ async function fetchWebpage(url) {
                 done({ success: false, content: `fetch_webpage: HTTP ${res.statusCode} for ${finalUrl}` });
                 return;
             }
+
+            // Decompress if server returned compressed content
+            const encoding = (res.headers['content-encoding'] || '').toLowerCase();
+            let stream = res;
+            if (encoding === 'gzip') {
+                stream = res.pipe(zlib.createGunzip());
+            } else if (encoding === 'deflate') {
+                stream = res.pipe(zlib.createInflate());
+            }
+
             const chunks = [];
             let totalBytes = 0;
-            res.on('data', (chunk) => {
+            stream.on('data', (chunk) => {
                 totalBytes += chunk.length;
                 if (totalBytes > MAX_BYTES) {
                     res.destroy();
@@ -1291,12 +1303,17 @@ async function fetchWebpage(url) {
                 }
                 chunks.push(chunk);
             });
-            res.on('end', () => {
+            stream.on('end', () => {
                 const raw  = Buffer.concat(chunks).toString('utf8');
                 const text = extractTextFromHtml(raw, finalUrl);
+                // Warn if page appears to be JavaScript-rendered (SPA) with no readable content
+                if (text.length < 300 && raw.length > 2000) {
+                    done({ success: true, content: text + '\n\n[Note: This page appears to be JavaScript-rendered (SPA). The server-side HTML has minimal readable content. Try web_search for information from this page instead.]' });
+                    return;
+                }
                 done({ success: true, content: text });
             });
-            res.on('error', (e) => done({ success: false, content: 'fetch_webpage: response error: ' + e.message }));
+            stream.on('error', (e) => done({ success: false, content: 'fetch_webpage: response error: ' + e.message }));
         });
 
         req.on('error', (e) => {

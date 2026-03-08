@@ -3913,3 +3913,17 @@
 .rv-notes-raid-title   { color: var(--accent-cyan) !important; }
 .rv-notes-raid-grid    { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 @media (max-width: 600px) { .rv-notes-raid-grid { grid-template-columns: 1fr; } }
+
+/* ── RoomView mobile adjustments (mobile-forward) ── */
+@media (max-width: 768px) {
+    .rv-header          { padding: 10px 14px 8px; }
+    .rv-header-title    { flex-wrap: wrap; gap: 8px; }
+    .rv-header-controls button { padding: 6px 12px; font-size: 12px; min-height: 36px; }
+    .rv-pullin-bar      { padding: 8px 14px; }
+    .rv-messages        { padding: 10px 14px; }
+    .rv-input-area      { padding: 10px 14px; }
+    .rv-input           { font-size: 16px; /* prevent iOS zoom on focus */ }
+    .rv-send-btn        { padding: 10px 18px; min-width: 64px; }
+    .rv-msg             { max-width: 92%; }
+    .rv-notes-panel     { margin: 0 10px 10px; }
+}

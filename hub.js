@@ -1662,42 +1662,42 @@ User description: "${data.description.replace(/"/g, '\\"')}"`;
             const TOOL_WEIGHT_PROFILES = {
                 engineering: {
                     always:  ['read_file','read_file_lines','write_file','patch_file','list_dir','bash','recall_notes','record_note'],
-                    likely:  ['append_file','web_search','system_info','get_working_dir','set_working_dir','git_diff','file_tree','project_info'],
+                    likely:  ['append_file','web_search','fetch_webpage','save_webpage_to_vault','system_info','get_working_dir','set_working_dir','git_diff','file_tree','project_info'],
                     rarely:  ['powershell','understand_image','generate_image','speak']
                 },
                 qa: {
                     always:  ['qa_run_tests','qa_check_lint','qa_check_types','qa_check_coverage','read_file','list_dir','bash','recall_notes','record_note'],
-                    likely:  ['write_file','patch_file','web_search','qa_audit_deps','file_tree'],
-                    rarely:  ['powershell','understand_image']
+                    likely:  ['write_file','patch_file','web_search','fetch_webpage','qa_audit_deps','file_tree'],
+                    rarely:  ['powershell','understand_image','save_webpage_to_vault']
                 },
                 devops: {
                     always:  ['bash','read_file','write_file','list_dir','recall_notes','record_note','system_info'],
-                    likely:  ['patch_file','get_working_dir','qa_run_tests','powershell','git_diff','file_tree'],
+                    likely:  ['patch_file','get_working_dir','qa_run_tests','powershell','git_diff','file_tree','fetch_webpage','save_webpage_to_vault'],
                     rarely:  ['understand_image','generate_image']
                 },
                 management: {
                     always:  ['recall_notes','record_note','list_agents','get_agent_info','read_file','list_dir','web_search'],
-                    likely:  ['get_working_dir','recommend_task','create_task','list_tasks','list_milestones','project_info','message_agent'],
+                    likely:  ['get_working_dir','recommend_task','create_task','list_tasks','list_milestones','project_info','message_agent','fetch_webpage','save_webpage_to_vault'],
                     rarely:  ['bash','write_file','delegate_to_agent']
                 },
                 orchestration: {
                     always:  ['delegate_to_agent','delegate_to_team','create_task','message_agent','recommend_task','close_milestone','request_tool_exception'],
-                    likely:  ['read_file','list_dir','list_agents','get_agent_info','web_search','fetch_webpage','recall_notes','record_note'],
+                    likely:  ['read_file','list_dir','list_agents','get_agent_info','web_search','fetch_webpage','save_webpage_to_vault','recall_notes','record_note'],
                     rarely:  ['bash','write_file','patch_file']
                 },
                 security: {
                     always:  ['read_file','read_file_lines','list_dir','bash','recall_notes','record_note'],
-                    likely:  ['qa_check_lint','qa_run_tests','web_search','qa_audit_deps'],
+                    likely:  ['qa_check_lint','qa_run_tests','web_search','fetch_webpage','save_webpage_to_vault','qa_audit_deps'],
                     rarely:  ['write_file','patch_file']
                 },
                 design: {
                     always:  ['read_file','write_file','patch_file','list_dir','understand_image','recall_notes','record_note','bash'],
-                    likely:  ['web_search','append_file','generate_image','take_screenshot'],
+                    likely:  ['web_search','fetch_webpage','save_webpage_to_vault','append_file','generate_image','take_screenshot'],
                     rarely:  ['powershell','qa_run_tests']
                 },
                 documentation: {
                     always:  ['read_file','write_file','patch_file','list_dir','recall_notes','record_note'],
-                    likely:  ['web_search','file_tree','project_info','append_file'],
+                    likely:  ['web_search','fetch_webpage','save_webpage_to_vault','file_tree','project_info','append_file'],
                     rarely:  ['bash','powershell','understand_image']
                 },
                 default: {

@@ -19,7 +19,7 @@ let db = null;
 const TOOL_CATEGORIES = {
     shell: ['bash', 'powershell', 'cmd'],
     files: ['read_file', 'read_file_lines', 'write_file', 'patch_file', 'append_file', 'list_dir'],
-    ai: ['web_search', 'understand_image', 'fetch_webpage'],
+    ai: ['web_search', 'understand_image', 'fetch_webpage', 'save_webpage_to_vault'],
     system: ['system_info', 'get_working_dir', 'set_working_dir', 'set_thinking_level'],
     agents: ['list_agents', 'get_agent_info', 'assign_task'],
     qa: ['qa_run_tests', 'qa_check_lint', 'qa_check_types', 'qa_check_coverage', 'qa_audit_deps'],
@@ -116,7 +116,7 @@ const DEFAULT_AGENTS = {
             'delegate_to_agent', 'delegate_to_team', 'create_task', 'message_agent',
             'recommend_task', 'close_milestone', 'request_tool_exception',
             'read_file', 'list_dir', 'list_agents', 'get_agent_info',
-            'web_search', 'fetch_webpage', 'system_info', 'record_note', 'recall_notes'
+            'web_search', 'fetch_webpage', 'save_webpage_to_vault', 'system_info', 'record_note', 'recall_notes'
         ],
         autoAddTools: false,
         securityRole: 'full-access',
@@ -134,7 +134,7 @@ const DEFAULT_AGENTS = {
         tools: [
             'handoff_to_orchestrator', 'recommend_task', 'create_task',
             'read_file', 'list_dir', 'list_agents',
-            'web_search', 'fetch_webpage', 'system_info', 'record_note', 'recall_notes'
+            'web_search', 'fetch_webpage', 'save_webpage_to_vault', 'system_info', 'record_note', 'recall_notes'
         ],
         autoAddTools: false,
         securityRole: 'full-access',
@@ -151,7 +151,7 @@ const DEFAULT_AGENTS = {
         description: 'Specializes in building user-facing applications and interfaces using modern frontend frameworks. Implements responsive, accessible, and performant web components following best practices and design patterns.',
         group: 'Engineering',
         languages: ['JavaScript', 'TypeScript', 'HTML', 'CSS', 'React', 'Vue', 'Angular'],
-        tools: ['read_file', 'write_file', 'patch_file', 'list_dir', 'bash', 'understand_image'],
+        tools: ['read_file', 'write_file', 'patch_file', 'list_dir', 'bash', 'understand_image', 'fetch_webpage', 'save_webpage_to_vault'],
         autoAddTools: true,
         securityRole: 'implementer',
         capabilities: ['html', 'css', 'javascript', 'typescript', 'react', 'vue', 'angular', 'responsive-design', 'frontend-optimization', 'cross-browser', 'accessibility', 'web-performance', 'progressive-web-apps']
@@ -162,7 +162,7 @@ const DEFAULT_AGENTS = {
         description: 'Focuses on server-side logic, APIs, database management, and system integration. Builds robust, scalable, and secure backend services using appropriate frameworks and technologies.',
         group: 'Engineering',
         languages: ['JavaScript', 'TypeScript', 'Python', 'Java', 'Go', 'Rust', 'SQL'],
-        tools: ['read_file', 'write_file', 'patch_file', 'list_dir', 'bash'],
+        tools: ['read_file', 'write_file', 'patch_file', 'list_dir', 'bash', 'fetch_webpage', 'save_webpage_to_vault'],
         autoAddTools: true,
         securityRole: 'implementer',
         capabilities: ['nodejs', 'python', 'java', 'go', 'rust', 'sql', 'nosql', 'api-design', 'microservices', 'server-optimization', 'security', 'caching']
@@ -173,7 +173,7 @@ const DEFAULT_AGENTS = {
         description: 'Senior technical leader responsible for architectural decisions, mentoring engineers, and driving technical strategy across multiple teams and projects.',
         group: 'Engineering',
         languages: ['JavaScript', 'TypeScript', 'Python', 'Go', 'Rust'],
-        tools: ['read_file', 'write_file', 'patch_file', 'list_dir', 'bash', 'git_diff'],
+        tools: ['read_file', 'write_file', 'patch_file', 'list_dir', 'bash', 'git_diff', 'fetch_webpage', 'save_webpage_to_vault'],
         autoAddTools: false,
         securityRole: 'implementer',
         capabilities: ['architecture', 'system-design', 'technical-leadership', 'mentoring', 'code-review', 'standards', 'innovation', 'strategic-planning']
@@ -184,7 +184,7 @@ const DEFAULT_AGENTS = {
         description: 'Coordinates development activities across teams, manages technical dependencies, and ensures smooth execution of development tasks and sprints.',
         group: 'Engineering',
         languages: ['English'],
-        tools: ['read_file', 'write_file', 'list_dir', 'bash'],
+        tools: ['read_file', 'write_file', 'list_dir', 'bash', 'fetch_webpage', 'save_webpage_to_vault'],
         autoAddTools: false,
         securityRole: 'coordinator',
         capabilities: ['project-coordination', 'resource-management', 'dependency-tracking', 'communication', 'timeline-management', 'risk-management', 'stakeholder-management']
@@ -197,7 +197,7 @@ const DEFAULT_AGENTS = {
         description: 'Leads frontend development teams, establishes coding standards, ensures quality code delivery, and mentors junior frontend developers.',
         group: 'Engineering',
         languages: ['JavaScript', 'TypeScript', 'HTML', 'CSS', 'React', 'Vue'],
-        tools: ['read_file', 'write_file', 'patch_file', 'list_dir', 'bash', 'git_diff', 'understand_image'],
+        tools: ['read_file', 'write_file', 'patch_file', 'list_dir', 'bash', 'git_diff', 'understand_image', 'fetch_webpage', 'save_webpage_to_vault'],
         autoAddTools: false,
         securityRole: 'implementer',
         capabilities: ['frontend-architecture', 'team-leadership', 'code-quality', 'performance-optimization', 'design-systems', 'accessibility', 'cross-functional-collaboration']
@@ -208,7 +208,7 @@ const DEFAULT_AGENTS = {
         description: 'Leads backend development efforts, designs scalable server architectures, and ensures robust API design and database optimization.',
         group: 'Engineering',
         languages: ['JavaScript', 'TypeScript', 'Python', 'Go', 'Rust', 'SQL'],
-        tools: ['read_file', 'write_file', 'patch_file', 'list_dir', 'bash', 'git_diff'],
+        tools: ['read_file', 'write_file', 'patch_file', 'list_dir', 'bash', 'git_diff', 'fetch_webpage', 'save_webpage_to_vault'],
         autoAddTools: false,
         securityRole: 'implementer',
         capabilities: ['backend-architecture', 'api-design', 'database-optimization', 'team-leadership', 'security', 'scalability', 'microservices']
@@ -267,7 +267,7 @@ const DEFAULT_AGENTS = {
         description: 'Implements and maintains CI/CD pipelines, manages infrastructure as code, and ensures reliable deployment and operations.',
         group: 'DevOps',
         languages: ['Bash', 'Python', 'JavaScript', 'TypeScript', 'YAML'],
-        tools: ['bash', 'read_file', 'write_file', 'list_dir', 'git_diff'],
+        tools: ['bash', 'read_file', 'write_file', 'list_dir', 'git_diff', 'fetch_webpage', 'save_webpage_to_vault'],
         autoAddTools: true,
         securityRole: 'implementer',
         capabilities: ['ci-cd', 'infrastructure-as-code', 'containerization', 'orchestration', 'monitoring', 'logging', 'automation', 'cloud-infrastructure']
@@ -278,7 +278,7 @@ const DEFAULT_AGENTS = {
         description: 'Leads DevOps initiatives, establishes best practices, manages infrastructure strategy, and drives automation across the organization.',
         group: 'DevOps',
         languages: ['Bash', 'Python', 'JavaScript', 'TypeScript', 'YAML'],
-        tools: ['bash', 'read_file', 'write_file', 'list_dir', 'git_diff'],
+        tools: ['bash', 'read_file', 'write_file', 'list_dir', 'git_diff', 'fetch_webpage', 'save_webpage_to_vault'],
         autoAddTools: false,
         securityRole: 'implementer',
         capabilities: ['devops-strategy', 'team-leadership', 'cloud-architecture', 'cost-optimization', 'security-compliance', 'tooling', 'process-improvement']
@@ -289,7 +289,7 @@ const DEFAULT_AGENTS = {
         description: 'Implements GitOps workflows, manages declarative infrastructure, and ensures version-controlled deployment processes.',
         group: 'DevOps',
         languages: ['Bash', 'YAML', 'Python', 'Go'],
-        tools: ['bash', 'read_file', 'write_file', 'list_dir', 'git_diff', 'github'],
+        tools: ['bash', 'read_file', 'write_file', 'list_dir', 'git_diff', 'github', 'fetch_webpage', 'save_webpage_to_vault'],
         autoAddTools: true,
         securityRole: 'implementer',
         capabilities: ['gitops', 'argocd', 'flux', 'helm', 'kubernetes', 'git-workflows', 'infrastructure-as-code', 'drift-detection']
@@ -324,7 +324,7 @@ const DEFAULT_AGENTS = {
         description: 'Designs overall system architecture, defines technical standards, and ensures scalability, performance, and reliability of solutions.',
         group: 'Architecture',
         languages: ['JavaScript', 'TypeScript', 'Python', 'Go', 'Rust', 'SQL'],
-        tools: ['read_file', 'write_file', 'patch_file', 'list_dir', 'bash', 'git_diff'],
+        tools: ['read_file', 'write_file', 'patch_file', 'list_dir', 'bash', 'git_diff', 'fetch_webpage', 'save_webpage_to_vault'],
         autoAddTools: false,
         securityRole: 'implementer',
         capabilities: ['system-design', 'architecture-patterns', 'scalability', 'performance', 'security', 'technology-selection', 'integration-design']
@@ -335,7 +335,7 @@ const DEFAULT_AGENTS = {
         description: 'Designs enterprise-level solutions, creates architectural blueprints, and ensures alignment with business objectives and technical standards.',
         group: 'Architecture',
         languages: ['JavaScript', 'TypeScript', 'Python', 'Java', 'Go'],
-        tools: ['read_file', 'write_file', 'patch_file', 'list_dir', 'bash', 'git_diff'],
+        tools: ['read_file', 'write_file', 'patch_file', 'list_dir', 'bash', 'git_diff', 'fetch_webpage', 'save_webpage_to_vault'],
         autoAddTools: false,
         securityRole: 'implementer',
         capabilities: ['enterprise-architecture', 'solution-design', 'business-alignment', 'technology-roadmapping', 'architecture-governance', 'risk-assessment']
@@ -346,7 +346,7 @@ const DEFAULT_AGENTS = {
         description: 'Implements and maintains enterprise-level systems, integrates disparate systems, and ensures seamless data flow across the organization.',
         group: 'Architecture',
         languages: ['Java', 'Python', 'JavaScript', 'TypeScript', 'SQL'],
-        tools: ['read_file', 'write_file', 'patch_file', 'list_dir', 'bash'],
+        tools: ['read_file', 'write_file', 'patch_file', 'list_dir', 'bash', 'fetch_webpage', 'save_webpage_to_vault'],
         autoAddTools: false,
         securityRole: 'implementer',
         capabilities: ['enterprise-integration', 'system-integration', 'api-gateway', 'data-pipelines', 'workflow-automation', 'enterprise-security']
@@ -357,7 +357,7 @@ const DEFAULT_AGENTS = {
         description: 'Coordinates architectural activities across teams, manages architectural debt, and ensures consistent implementation of architectural decisions.',
         group: 'Architecture',
         languages: ['English'],
-        tools: ['read_file', 'write_file', 'list_dir', 'bash'],
+        tools: ['read_file', 'write_file', 'list_dir', 'bash', 'fetch_webpage', 'save_webpage_to_vault'],
         autoAddTools: false,
         securityRole: 'coordinator',
         capabilities: ['architecture-governance', 'coordination', 'documentation', 'standards-enforcement', 'technical-debt-management', 'stakeholder-communication']
@@ -370,7 +370,7 @@ const DEFAULT_AGENTS = {
         description: 'Creates visually appealing user interfaces, designs layouts, components, and ensures consistency with brand guidelines and design systems.',
         group: 'Design',
         languages: ['HTML', 'CSS', 'JavaScript', 'SCSS'],
-        tools: ['read_file', 'write_file', 'patch_file', 'understand_image', 'list_dir'],
+        tools: ['read_file', 'write_file', 'patch_file', 'understand_image', 'list_dir', 'fetch_webpage', 'save_webpage_to_vault'],
         autoAddTools: true,
         securityRole: 'implementer',
         capabilities: ['ui-design', 'visual-design', 'prototyping', 'design-systems', 'responsive-design', 'typography', 'color-theory', 'iconography']
@@ -381,7 +381,7 @@ const DEFAULT_AGENTS = {
         description: 'Designs intuitive user interfaces with focus on user experience, creates wireframes, prototypes, and conducts user research.',
         group: 'Design',
         languages: ['HTML', 'CSS', 'JavaScript'],
-        tools: ['read_file', 'write_file', 'patch_file', 'understand_image', 'list_dir'],
+        tools: ['read_file', 'write_file', 'patch_file', 'understand_image', 'list_dir', 'fetch_webpage', 'save_webpage_to_vault'],
         autoAddTools: true,
         securityRole: 'implementer',
         capabilities: ['ux-design', 'user-research', 'wireframing', 'prototyping', 'usability-testing', 'information-architecture', 'interaction-design']
@@ -394,7 +394,7 @@ const DEFAULT_AGENTS = {
         description: 'Builds and maintains data pipelines, manages data infrastructure, and ensures data quality and accessibility for analytics.',
         group: 'Data',
         languages: ['Python', 'SQL', 'Java', 'Scala', 'Bash'],
-        tools: ['read_file', 'write_file', 'patch_file', 'list_dir', 'bash'],
+        tools: ['read_file', 'write_file', 'patch_file', 'list_dir', 'bash', 'fetch_webpage', 'save_webpage_to_vault'],
         autoAddTools: true,
         securityRole: 'implementer',
         capabilities: ['data-pipelines', 'etl', 'data-warehousing', 'big-data', 'sql', 'python', 'spark', 'data-quality', 'data-modeling']
@@ -405,7 +405,7 @@ const DEFAULT_AGENTS = {
         description: 'Analyzes complex datasets, builds predictive models, and derives insights to drive data-informed decision making.',
         group: 'Data',
         languages: ['Python', 'R', 'SQL', 'Julia'],
-        tools: ['read_file', 'write_file', 'patch_file', 'list_dir', 'bash'],
+        tools: ['read_file', 'write_file', 'patch_file', 'list_dir', 'bash', 'fetch_webpage', 'save_webpage_to_vault'],
         autoAddTools: true,
         securityRole: 'implementer',
         capabilities: ['machine-learning', 'statistical-analysis', 'data-visualization', 'python', 'r', 'deep-learning', 'nlp', 'predictive-modeling']
@@ -418,7 +418,7 @@ const DEFAULT_AGENTS = {
         description: 'Defines product vision, manages roadmap, prioritizes features, and works with stakeholders to deliver successful products.',
         group: 'Product',
         languages: ['English'],
-        tools: ['read_file', 'write_file', 'list_dir'],
+        tools: ['read_file', 'write_file', 'list_dir', 'fetch_webpage', 'save_webpage_to_vault'],
         autoAddTools: false,
         securityRole: 'reviewer',
         capabilities: ['product-strategy', 'roadmap-management', 'stakeholder-management', 'user-research', 'prioritization', 'agile', 'market-analysis']
@@ -429,7 +429,7 @@ const DEFAULT_AGENTS = {
         description: 'Analyzes business requirements, bridges gap between business and technical teams, and ensures solutions meet business objectives.',
         group: 'Product',
         languages: ['English'],
-        tools: ['read_file', 'write_file', 'list_dir'],
+        tools: ['read_file', 'write_file', 'list_dir', 'fetch_webpage', 'save_webpage_to_vault'],
         autoAddTools: false,
         securityRole: 'reviewer',
         capabilities: ['requirements-analysis', 'business-process-modeling', 'data-analysis', 'stakeholder-communication', 'use-cases', 'functional-specs']
@@ -440,7 +440,7 @@ const DEFAULT_AGENTS = {
         description: 'Sets up new projects, defines initial structure, establishes workflows, and creates foundation for successful project execution.',
         group: 'Product',
         languages: ['English', 'JavaScript', 'TypeScript'],
-        tools: ['read_file', 'write_file', 'patch_file', 'list_dir', 'bash'],
+        tools: ['read_file', 'write_file', 'patch_file', 'list_dir', 'bash', 'fetch_webpage', 'save_webpage_to_vault'],
         autoAddTools: false,
         securityRole: 'implementer',
         capabilities: ['project-setup', 'template-creation', 'workflow-definition', 'tooling-setup', 'team-onboarding', 'governance-setup']
@@ -453,7 +453,7 @@ const DEFAULT_AGENTS = {
         description: 'Facilitates Scrum ceremonies, removes impediments, coaches team on Agile practices, and ensures process adherence.',
         group: 'Agile',
         languages: ['English'],
-        tools: ['read_file', 'write_file', 'list_dir'],
+        tools: ['read_file', 'write_file', 'list_dir', 'fetch_webpage', 'save_webpage_to_vault'],
         autoAddTools: false,
         securityRole: 'coordinator',
         capabilities: ['scrum', 'facilitation', 'coaching', 'impediment-removal', 'ceremony-facilitation', 'continuous-improvement', 'conflict-resolution']
@@ -486,7 +486,7 @@ const DEFAULT_AGENTS = {
         description: 'Orchestrates Agile workflows across multiple teams, ensures alignment, and optimizes delivery processes.',
         group: 'Agile',
         languages: ['English'],
-        tools: ['read_file', 'write_file', 'list_dir', 'bash'],
+        tools: ['read_file', 'write_file', 'list_dir', 'bash', 'fetch_webpage', 'save_webpage_to_vault'],
         autoAddTools: false,
         securityRole: 'coordinator',
         capabilities: ['workflow-orchestration', 'cross-team-coordination', 'agile-coaching', 'process-optimization', 'dependency-management', 'delivery-tracking']
@@ -499,7 +499,7 @@ const DEFAULT_AGENTS = {
         description: 'Ensures compliance with security standards and regulations, conducts audits, and implements security policies.',
         group: 'Security',
         languages: ['English'],
-        tools: ['read_file', 'write_file', 'list_dir', 'bash'],
+        tools: ['read_file', 'write_file', 'list_dir', 'bash', 'fetch_webpage', 'save_webpage_to_vault'],
         autoAddTools: false,
         securityRole: 'implementer',
         capabilities: ['security-compliance', 'audit', 'risk-assessment', 'policy-development', 'regulatory-compliance', 'security-frameworks', 'incident-response']
@@ -523,7 +523,7 @@ const DEFAULT_AGENTS = {
         description: 'Develops documentation strategy, establishes standards, and ensures comprehensive and maintainable documentation.',
         group: 'Documentation',
         languages: ['English', 'Markdown'],
-        tools: ['read_file', 'write_file', 'list_dir'],
+        tools: ['read_file', 'write_file', 'list_dir', 'fetch_webpage', 'save_webpage_to_vault'],
         autoAddTools: false,
         securityRole: 'reviewer',
         capabilities: ['documentation-strategy', 'content-architecture', 'knowledge-management', 'technical-writing', 'api-documentation', 'style-guides']
@@ -534,7 +534,7 @@ const DEFAULT_AGENTS = {
         description: 'Creates and maintains technical documentation, API docs, user guides, and ensures documentation stays up to date.',
         group: 'Documentation',
         languages: ['English', 'Markdown'],
-        tools: ['read_file', 'write_file', 'patch_file', 'list_dir'],
+        tools: ['read_file', 'write_file', 'patch_file', 'list_dir', 'fetch_webpage', 'save_webpage_to_vault'],
         autoAddTools: true,
         securityRole: 'implementer',
         capabilities: ['technical-writing', 'api-documentation', 'user-guides', 'markdown', 'documentation-tools', 'content-updates']
@@ -569,7 +569,7 @@ const DEFAULT_AGENTS = {
         description: 'Implements features, creates files, and modifies code based on requirements.',
         group: 'development',
         languages: ['JavaScript', 'TypeScript', 'Python', 'Go', 'Rust', 'C++', 'C'],
-        tools: ['read_file', 'write_file', 'patch_file', 'list_dir', 'bash'],
+        tools: ['read_file', 'write_file', 'patch_file', 'list_dir', 'bash', 'fetch_webpage', 'save_webpage_to_vault'],
         autoAddTools: true,
         securityRole: 'implementer',
         capabilities: ['coding', 'file-operations', 'implementation']
@@ -580,7 +580,7 @@ const DEFAULT_AGENTS = {
         description: 'Expert at developing high quality working polished UI and UX. Creates beautiful, functional, accessible interfaces with modern design principles.',
         group: 'development',
         languages: ['JavaScript', 'TypeScript', 'HTML', 'CSS', 'SCSS'],
-        tools: ['read_file', 'write_file', 'patch_file', 'list_dir', 'understand_image'],
+        tools: ['read_file', 'write_file', 'patch_file', 'list_dir', 'understand_image', 'fetch_webpage', 'save_webpage_to_vault'],
         autoAddTools: true,
         securityRole: 'implementer',
         capabilities: ['ui-design', 'ux-design', 'css', 'html', 'accessibility', 'responsive-design', 'animation', 'visual-design']
@@ -591,7 +591,7 @@ const DEFAULT_AGENTS = {
         description: 'Specializes in testing UI components, visual regression testing, accessibility testing, and ensuring pixel-perfect implementations.',
         group: 'quality-assurance',
         languages: ['JavaScript', 'TypeScript', 'Python'],
-        tools: ['qa_run_tests', 'qa_check_lint', 'understand_image', 'read_file'],
+        tools: ['qa_run_tests', 'qa_check_lint', 'understand_image', 'read_file', 'fetch_webpage', 'save_webpage_to_vault'],
         autoAddTools: true,
         securityRole: 'implementer',
         capabilities: ['ui-testing', 'visual-testing', 'accessibility-testing', 'e2e-testing', 'regression-testing']

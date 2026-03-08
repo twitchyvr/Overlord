@@ -25,6 +25,7 @@ export class ChatView extends Component {
         this._planVariantState = { multiVariant: false, preferred: 'regular', active: 'regular' };
         this._attachedImages = [];
         this._scrollThreshold = 150;
+        this._lastDelegateToolId = null; // dedup delegation toasts
     }
 
     // ══════════════════════════════════════════════════════════════
@@ -57,6 +58,9 @@ export class ChatView extends Component {
         // Thoughts
         sub('neural_thought', this._handleNeuralThought);
         sub('thinking_done', this._handleThinkingDone);
+
+        // Tool chip live updates — ported from index-ori.html:7075-7086
+        sub('agent_activity', this._handleAgentActivity);
 
         // Plan system
         sub('plan_ready', (d) => this._showPlanBar(d.taskCount, d));
@@ -825,6 +829,130 @@ export class ChatView extends Component {
     }
 
     // ══════════════════════════════════════════════════════════════
+    //  TOOL CHIP LIVE UPDATES
+    //  Ported from index-ori.html:7075-7086, 10478-10627
+    // ══════════════════════════════════════════════════════════════
+
+    _handleAgentActivity(event) {
+        if (event.type === 'tool_start') {
+            this._updateToolChip(event.toolId, event.tool, event.input, null, null, null);
+        } else if (event.type === 'tool_complete' || event.type === 'tool_error') {
+            const success = event.type !== 'tool_error' && event.success !== false;
+            this._updateToolChip(event.toolId, event.tool, null, event.output || '', event.durationMs, success);
+        }
+    }
+
+    // Short human-readable param summary — ported from index-ori.html:10478.
+    _toolParamSummary(name, input) {
+        if (!input || typeof input !== 'object') return '';
+        const pk = 'path' in input ? 'path' : 'file_path' in input ? 'file_path' : 'filepath' in input ? 'filepath' : null;
+        if (pk) {
+            const fname = String(input[pk]).split(/[/\\]/).pop();
+            const lines = input.start_line != null && input.end_line != null ? ':' + input.start_line + '\u2013' + input.end_line
+                        : input.start_line != null ? ':' + input.start_line + '+'
+                        : input.line != null       ? ':' + input.line : '';
+            return fname + lines;
+        }
+        if ('command' in input) return String(input.command).substring(0, 55);
+        if ('query' in input) return '"' + String(input.query).substring(0, 45) + '"';
+        if ('url' in input) { try { const u = new URL(String(input.url)); return u.hostname + u.pathname.substring(0, 30); } catch (e) { return String(input.url).substring(0, 50); } }
+        if ('taskId' in input && 'status' in input) return String(input.taskId).substring(0, 8) + ' \u2192 ' + input.status;
+        const first = Object.values(input)[0];
+        return first != null ? String(first).substring(0, 50) : '';
+    }
+
+    // Apply input/output data to a chip's DOM elements by safeId.
+    // For delegate_to_agent, adds agent name with aurora class.
+    // Ported from index-ori.html:10558-10601.
+    _applyToolChip(safeId, name, input, output, durationMs, success) {
+        const paramEl = document.getElementById('tcp-' + safeId);
+        if (paramEl && input) {
+            // Use DOM methods — not innerHTML — to safely build the param label
+            paramEl.textContent = '';
+            paramEl.appendChild(document.createTextNode(' \u00b7 '));
+            if (name === 'delegate_to_agent') {
+                // Aurora shimmer class makes the agent name animate cyan-purple
+                const agentName = this._toolParamSummary(name, input) || (input.agent || '');
+                const magic = document.createElement('span');
+                magic.className = 'tc-agent-magic';
+                magic.textContent = agentName;
+                paramEl.appendChild(magic);
+            } else {
+                paramEl.appendChild(document.createTextNode(this._toolParamSummary(name, input)));
+            }
+        }
+        const dotEl = document.getElementById('tcdot-' + safeId);
+        if (dotEl) dotEl.className = 'tc-dot ' + (output != null ? (success ? 'ok' : 'err') : 'run');
+        const durEl = document.getElementById('tcd-' + safeId);
+        if (durEl && durationMs != null) {
+            durEl.textContent = durationMs < 1000 ? durationMs + 'ms' : (durationMs / 1000).toFixed(1) + 's';
+        }
+        const bodyEl = document.getElementById('tcbody-' + safeId);
+        if (!bodyEl) return false;
+        if (output != null) {
+            bodyEl.replaceChildren();
+            if (input) {
+                const inLbl = document.createElement('span'); inLbl.className = 'tc-lbl'; inLbl.textContent = 'Input';
+                const inPre = document.createElement('pre'); inPre.className = 'tc-pre'; inPre.textContent = JSON.stringify(input, null, 2);
+                bodyEl.appendChild(inLbl); bodyEl.appendChild(inPre);
+            }
+            const outLbl = document.createElement('span'); outLbl.className = 'tc-lbl'; outLbl.textContent = 'Output';
+            const outPre = document.createElement('pre'); outPre.className = 'tc-pre'; outPre.textContent = String(output);
+            bodyEl.appendChild(outLbl); bodyEl.appendChild(outPre);
+        } else if (input) {
+            bodyEl.replaceChildren();
+            const inLbl = document.createElement('span'); inLbl.className = 'tc-lbl'; inLbl.textContent = 'Input';
+            const inPre = document.createElement('pre'); inPre.className = 'tc-pre'; inPre.textContent = JSON.stringify(input, null, 2);
+            const runLbl = document.createElement('span'); runLbl.className = 'tc-lbl'; runLbl.style.opacity = '0.4'; runLbl.textContent = 'Running\u2026';
+            bodyEl.appendChild(inLbl); bodyEl.appendChild(inPre); bodyEl.appendChild(runLbl);
+        }
+        return true;
+    }
+
+    // Update chip by toolId; show delegation toast; retry if chip not in DOM yet.
+    // Ported from index-ori.html:10603-10627.
+    _updateToolChip(toolId, name, input, output, durationMs, success) {
+        if (!toolId) return;
+        if (name === 'delegate_to_agent' && output == null && input && this._lastDelegateToolId !== toolId) {
+            this._lastDelegateToolId = toolId;
+            const agentName = this._toolParamSummary('delegate_to_agent', input) || (input && input.agent) || 'agent';
+            this._showDelegateToast('\u2728 Delegating to ' + agentName, 'Handing off task to sub-agent\u2026');
+        }
+        const safeId = toolId.replace(/[^a-zA-Z0-9_-]/g, '_');
+        if (!this._applyToolChip(safeId, name, input, output, durationMs, success)) {
+            let attempts = 0;
+            const retry = setInterval(() => {
+                attempts++;
+                if (this._applyToolChip(safeId, name, input, output, durationMs, success) || attempts >= 5) {
+                    clearInterval(retry);
+                }
+            }, 120);
+        }
+    }
+
+    // Aurora-bordered delegation toast — uses .toast-agent CSS class.
+    // Ported from index-ori.html:9345.
+    _showDelegateToast(title, preview) {
+        const container = document.getElementById('toast-container');
+        if (!container) return;
+        const toast = document.createElement('div');
+        toast.className = 'toast toast-agent';
+        const row = document.createElement('div'); row.className = 'toast-agent-row';
+        const titleEl = document.createElement('span'); titleEl.className = 'toast-agent-title'; titleEl.textContent = title;
+        row.appendChild(titleEl);
+        const closeBtn = document.createElement('button'); closeBtn.className = 'toast-close'; closeBtn.textContent = '\u2715';
+        closeBtn.onclick = (e) => { e.stopPropagation(); toast.remove(); };
+        row.appendChild(closeBtn);
+        toast.appendChild(row);
+        if (preview) {
+            const prevEl = document.createElement('div'); prevEl.className = 'toast-agent-preview'; prevEl.textContent = preview;
+            toast.appendChild(prevEl);
+        }
+        container.appendChild(toast);
+        setTimeout(() => { if (toast.parentNode) toast.remove(); }, 6000);
+    }
+
+    // ══════════════════════════════════════════════════════════════
     //  PLAN APPROVAL BAR
     // ══════════════════════════════════════════════════════════════
 
@@ -955,12 +1083,22 @@ export class ChatView extends Component {
     copyMessage(btnEl, format) {
         const msgDiv = btnEl.closest('.message');
         if (!msgDiv) return;
+        // Collect thought bubbles — raw text stored in data-thoughts attribute
+        const thoughtParts = [];
+        msgDiv.querySelectorAll('.thoughts-bubble').forEach(bubble => {
+            const raw = (bubble.getAttribute('data-thoughts') || bubble.querySelector('.tb-content')?.innerText || '').trim();
+            if (raw) thoughtParts.push('[Thought]\n' + raw);
+        });
         let text;
         if (format === 'markdown') {
             text = msgDiv.dataset.raw ||
                    msgDiv.querySelector('.content')?.innerText || '';
         } else {
             text = msgDiv.querySelector('.content')?.innerText || '';
+        }
+        // Prepend thoughts above the message body
+        if (thoughtParts.length > 0) {
+            text = thoughtParts.join('\n\n') + '\n\n---\n\n' + text;
         }
         this.$$('.msg-copy-menu').forEach(m => { m.style.display = 'none'; });
         if (!navigator.clipboard) return;

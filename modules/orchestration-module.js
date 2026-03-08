@@ -490,6 +490,7 @@ async function init(h) {
         }
         tools.registerTool({
             name: 'update_task_status',
+            category: 'tasks',
             description: 'Update the status of a task in the project task list. Call this when you start working on a task (status: in_progress) and again when you complete it (status: completed). This keeps the kanban board accurate in real time.',
             input_schema: {
                 type: 'object',
@@ -563,6 +564,7 @@ async function init(h) {
         // ── create_milestone: AI creates a new milestone ─────────────────────
         tools.registerTool({
             name: 'create_milestone',
+            category: 'milestones',
             description: 'Create a new project milestone. Use this to organize related tasks under a named goal. After creating a milestone, use assign_task_to_milestone to link tasks to it.',
             input_schema: {
                 type: 'object',
@@ -600,6 +602,7 @@ async function init(h) {
         // ── assign_task_to_milestone: link a task to a milestone ─────────────
         tools.registerTool({
             name: 'assign_task_to_milestone',
+            category: 'milestones',
             description: 'Assign an existing task to a milestone. The task will appear in the milestone\'s task list. Use list_milestones to find milestone IDs.',
             input_schema: {
                 type: 'object',
@@ -634,6 +637,7 @@ async function init(h) {
         // ── list_milestones: AI queries current milestones + task counts ──────
         tools.registerTool({
             name: 'list_milestones',
+            category: 'milestones',
             description: 'List all project milestones with their IDs, status, and task counts. Use this to find milestone IDs for assign_task_to_milestone, or to check progress.',
             input_schema: { type: 'object', properties: {} }
         }, (input) => {
@@ -654,6 +658,7 @@ async function init(h) {
         // ── close_milestone: user-initiated wrap-up ───────────────────────────
         tools.registerTool({
             name: 'close_milestone',
+            category: 'milestones',
             description: 'Mark a milestone as complete and closed. Only call this when ALL tasks have been completed/skipped and the user (or orchestrator) explicitly confirms the milestone is done. This action is final.',
             input_schema: {
                 type: 'object',
@@ -693,6 +698,7 @@ async function init(h) {
         // ── create_task: AI creates a new task ───────────────────────────────
         tools.registerTool({
             name: 'create_task',
+            category: 'tasks',
             description: 'Create a new task on the kanban board. Optionally assign to a milestone and/or agent. Use this whenever you need to track a piece of work.',
             input_schema: {
                 type: 'object',
@@ -731,6 +737,7 @@ async function init(h) {
         // ── recommend_task: agents recommend a task (orchestrator must approve) ──
         tools.registerTool({
             name: 'recommend_task',
+            category: 'tasks',
             description: [
                 'Recommend a new task for the orchestrator to review.',
                 'Unlike create_task, this does NOT create the task immediately.',
@@ -799,6 +806,7 @@ async function init(h) {
         // ── delete_task: AI deletes a task ───────────────────────────────────
         tools.registerTool({
             name: 'delete_task',
+            category: 'tasks',
             description: 'Permanently delete a task from the kanban board. Use with care — this is irreversible.',
             input_schema: {
                 type: 'object',
@@ -822,6 +830,7 @@ async function init(h) {
         // ── bulk_delete_tasks: AI deletes multiple tasks at once ─────────────
         tools.registerTool({
             name: 'bulk_delete_tasks',
+            category: 'tasks',
             description: 'Delete multiple tasks at once. Filter by explicit ID list, status, or milestoneId. Supports dry-run to preview what would be deleted.',
             input_schema: {
                 type: 'object',
@@ -858,6 +867,7 @@ async function init(h) {
         // ── list_tasks: AI queries current tasks ─────────────────────────────
         tools.registerTool({
             name: 'list_tasks',
+            category: 'tasks',
             description: 'List tasks with optional filters. Returns compact summaries to minimize token usage. Use this to find task IDs and current status.',
             input_schema: {
                 type: 'object',
@@ -889,6 +899,7 @@ async function init(h) {
         // ── update_task: AI updates any task field ────────────────────────────
         tools.registerTool({
             name: 'update_task',
+            category: 'tasks',
             description: 'Update any field of a task: title, description, priority, milestoneId, assignee, status, or notes. More flexible than update_task_status.',
             input_schema: {
                 type: 'object',
@@ -930,6 +941,7 @@ async function init(h) {
         // ── delete_milestone: AI deletes a milestone (with cascade option) ────
         tools.registerTool({
             name: 'delete_milestone',
+            category: 'milestones',
             description: 'Delete a milestone. Choose whether to also delete its tasks or just unassign them.',
             input_schema: {
                 type: 'object',
@@ -961,6 +973,7 @@ async function init(h) {
         // ── update_milestone: AI updates milestone fields ─────────────────────
         tools.registerTool({
             name: 'update_milestone',
+            category: 'milestones',
             description: 'Update a milestone\'s name, description, color, or status.',
             input_schema: {
                 type: 'object',
@@ -993,6 +1006,7 @@ async function init(h) {
         // ── add_agent: AI creates a new team agent ────────────────────────────
         tools.registerTool({
             name: 'add_agent',
+            category: 'agents',
             description: 'Add a new agent to the team. The agent will immediately be available for task assignment.',
             input_schema: {
                 type: 'object',
@@ -1030,6 +1044,7 @@ async function init(h) {
         // ── remove_agent: AI removes a team agent ─────────────────────────────
         tools.registerTool({
             name: 'remove_agent',
+            category: 'agents',
             description: 'Remove an agent from the team. Use with care — existing task assignments using this agent will not be auto-removed.',
             input_schema: {
                 type: 'object',
@@ -1056,6 +1071,7 @@ async function init(h) {
         // ── list_agents: AI lists all team agents ─────────────────────────────
         tools.registerTool({
             name: 'list_agents',
+            category: 'agents',
             description: 'List all agents on the team with their names, roles, descriptions, and capabilities. Use this to see who is available before delegating or to check what agents exist before adding a new one.',
             input_schema: {
                 type: 'object',
@@ -1087,6 +1103,7 @@ async function init(h) {
         // ── get_agent_info: get full details about one agent ───────────────────
         tools.registerTool({
             name: 'get_agent_info',
+            category: 'agents',
             description: 'Get detailed information about a specific agent: role, description, capabilities, group, system prompt, and allowed tools. Use list_agents first to find the agent name.',
             input_schema: {
                 type: 'object',
@@ -1121,6 +1138,7 @@ async function init(h) {
         // ── update_agent: AI modifies an existing agent ───────────────────────
         tools.registerTool({
             name: 'update_agent',
+            category: 'agents',
             description: 'Update an existing agent\'s properties: name, role, description, capabilities, group, systemPrompt, or languages. Only provide the fields you want to change.',
             input_schema: {
                 type: 'object',
@@ -1154,6 +1172,7 @@ async function init(h) {
         // ── list_agent_groups: list all agent groups ───────────────────────────
         tools.registerTool({
             name: 'list_agent_groups',
+            category: 'groups',
             description: 'List all agent groups with their names, descriptions, and agent counts.',
             input_schema: { type: 'object', properties: {} }
         }, () => {
@@ -1175,6 +1194,7 @@ async function init(h) {
         // ── create_agent_group: create a new group ─────────────────────────────
         tools.registerTool({
             name: 'create_agent_group',
+            category: 'groups',
             description: 'Create a new agent group to organize agents by department or function (e.g. "engineering", "qa", "devops").',
             input_schema: {
                 type: 'object',
@@ -1201,6 +1221,7 @@ async function init(h) {
         // ── update_agent_group: rename or re-describe a group ─────────────────
         tools.registerTool({
             name: 'update_agent_group',
+            category: 'groups',
             description: 'Update an existing agent group\'s name, description, or color.',
             input_schema: {
                 type: 'object',
@@ -1229,6 +1250,7 @@ async function init(h) {
         // ── delete_agent_group: remove a group ────────────────────────────────
         tools.registerTool({
             name: 'delete_agent_group',
+            category: 'groups',
             description: 'Delete an agent group. Agents in the group will remain but will no longer be associated with it.',
             input_schema: {
                 type: 'object',
@@ -1253,6 +1275,7 @@ async function init(h) {
         // ── add_agent_to_group: move an agent into a group ────────────────────
         tools.registerTool({
             name: 'add_agent_to_group',
+            category: 'groups',
             description: 'Add an existing agent to a group. Use list_agents and list_agent_groups to find the names/IDs.',
             input_schema: {
                 type: 'object',
@@ -1280,6 +1303,7 @@ async function init(h) {
         // ── remove_agent_from_group: unassign an agent from its group ─────────
         tools.registerTool({
             name: 'remove_agent_from_group',
+            category: 'groups',
             description: 'Remove an agent from its current group (the agent is not deleted, just ungrouped).',
             input_schema: {
                 type: 'object',
@@ -1306,6 +1330,7 @@ async function init(h) {
         // ── list_projects: list all projects ──────────────────────────────────
         tools.registerTool({
             name: 'list_projects',
+            category: 'projects',
             description: 'List all projects. Shows each project\'s name, description, working directory, and whether it is currently active.',
             input_schema: { type: 'object', properties: {} }
         }, () => {
@@ -1328,6 +1353,7 @@ async function init(h) {
         // ── get_project: get full details for one project ─────────────────────
         tools.registerTool({
             name: 'get_project',
+            category: 'projects',
             description: 'Get full details about a specific project including its description, working directory, linked agents, and metadata.',
             input_schema: {
                 type: 'object',
@@ -1359,6 +1385,7 @@ async function init(h) {
         // ── create_project: create a new project ──────────────────────────────
         tools.registerTool({
             name: 'create_project',
+            category: 'projects',
             description: 'Create a new project. Projects let you organize work with separate tasks, agents, and working directories.',
             input_schema: {
                 type: 'object',
@@ -1385,6 +1412,7 @@ async function init(h) {
         // ── update_project: modify an existing project ────────────────────────
         tools.registerTool({
             name: 'update_project',
+            category: 'projects',
             description: 'Update a project\'s name, description, or working directory.',
             input_schema: {
                 type: 'object',
@@ -1413,6 +1441,7 @@ async function init(h) {
         // ── delete_project: delete a project ──────────────────────────────────
         tools.registerTool({
             name: 'delete_project',
+            category: 'projects',
             description: 'Delete a project and all its data. This is irreversible. The project\'s tasks and agents are removed.',
             input_schema: {
                 type: 'object',
@@ -1437,6 +1466,7 @@ async function init(h) {
         // ── switch_project: change the active project ──────────────────────────
         tools.registerTool({
             name: 'switch_project',
+            category: 'projects',
             description: 'Switch to a different project, making it the active context. Tasks, agents, and working directory will switch to the selected project.',
             input_schema: {
                 type: 'object',
@@ -1461,6 +1491,7 @@ async function init(h) {
         // ── delegate_to_agent: orchestrator hands a task to a specialist agent ─
         tools.registerTool({
             name: 'delegate_to_agent',
+            category: 'agents',
             description: [
                 'Delegate a subtask to a specialist AI agent and wait for their result.',
                 'The agent runs its own full AI + tool cycle independently, then returns the output.',
@@ -1518,6 +1549,7 @@ async function init(h) {
         // ── delegate_to_team: orchestrator dispatches MULTIPLE agents in parallel ─
         tools.registerTool({
             name: 'delegate_to_team',
+            category: 'agents',
             description: [
                 'Delegate tasks to MULTIPLE specialist agents in parallel and wait for all results.',
                 'Use when a task spans multiple domains (e.g., code + tests, frontend + backend, implementation + documentation).',
@@ -1603,6 +1635,7 @@ async function init(h) {
         // ── message_agent: agent-to-agent messaging with depth guard ──────────
         tools.registerTool({
             name: 'message_agent',
+            category: 'agents',
             description: [
                 'Send a note or task to another agent via the backchannel.',
                 'Use when you (an agent) need to hand off work or share findings with a peer.',
@@ -1674,6 +1707,7 @@ async function init(h) {
         // ── get_config: AI reads current configuration ────────────────────────
         tools.registerTool({
             name: 'get_config',
+            category: 'config',
             description: 'Read one or all current configuration values. Use this to check settings before changing them.',
             input_schema: {
                 type: 'object',
@@ -1705,6 +1739,7 @@ async function init(h) {
         // ── set_config: AI changes a configuration setting persistently ───────
         tools.registerTool({
             name: 'set_config',
+            category: 'config',
             description: 'Change a configuration setting. Changes persist across server restarts. A 🤖 badge will appear in the settings UI next to AI-configured items.',
             input_schema: {
                 type: 'object',
@@ -1752,6 +1787,7 @@ async function init(h) {
         // ── add_reminder: AI sets a timed reminder ────────────────────────────
         tools.registerTool({
             name: 'add_reminder',
+            category: 'reminders',
             description: 'Set a reminder that fires at a specific time. Supports natural language: "in 30 minutes", "in 2 hours", "in 1 day". The reminder will appear as a toast notification and in the reminders list.',
             input_schema: {
                 type: 'object',
@@ -1801,6 +1837,7 @@ async function init(h) {
         // ── list_reminders: AI lists upcoming reminders ───────────────────────
         tools.registerTool({
             name: 'list_reminders',
+            category: 'reminders',
             description: 'List all upcoming (non-dismissed) reminders.',
             input_schema: { type: 'object', properties: {} }
         }, () => {
@@ -1819,6 +1856,7 @@ async function init(h) {
         // ── dismiss_reminder: AI dismisses a reminder ─────────────────────────
         tools.registerTool({
             name: 'dismiss_reminder',
+            category: 'reminders',
             description: 'Dismiss a reminder so it no longer fires.',
             input_schema: {
                 type: 'object',
@@ -1841,6 +1879,7 @@ async function init(h) {
         // ── handoff_to_orchestrator: PM hands off work to AUTO mode ──────────
         tools.registerTool({
             name: 'handoff_to_orchestrator',
+            category: 'orchestration',
             description: 'As Project Manager: hand off work to the Orchestrator. Switches the AI to AUTO mode, logs the handoff in session notes, and optionally creates tasks for the work.',
             input_schema: {
                 type: 'object',
@@ -1913,6 +1952,7 @@ async function init(h) {
         // save_session_note — agents can persist learnings, decisions, and patterns
         tools.registerTool({
             name: 'save_session_note',
+            category: 'orchestration',
             description: 'Save a note that persists across sessions. Use this to record important learnings, ' +
                 'decisions, patterns, or context that should be remembered for future tasks. ' +
                 'Notes are stored per-agent and can be recalled automatically in future sessions.',
@@ -1948,6 +1988,7 @@ async function init(h) {
         // recall_session_notes — retrieve previously saved persistent notes
         tools.registerTool({
             name: 'recall_session_notes',
+            category: 'orchestration',
             description: 'Retrieve previously saved session notes. Useful at the start of a task to recall ' +
                 'relevant context, learnings, or warnings from past sessions.',
             input_schema: {
@@ -1977,6 +2018,7 @@ async function init(h) {
         // request_tool_exception — allows any agent to request one-time access to a blocked tool
         tools.registerTool({
             name: 'request_tool_exception',
+            category: 'orchestration',
             description: 'Request one-time permission to use a tool that is outside your permitted set. ' +
                 'The orchestrator will evaluate your justification and either approve, deny, or escalate to the user. ' +
                 'If approved, the tool will be executed on your behalf and the result returned to you. ' +

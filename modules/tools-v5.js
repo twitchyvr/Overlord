@@ -103,6 +103,16 @@ function init(hub) {
     HUB.registerService('tools', {
         execute: execute,
         getDefinitions: () => [...TOOL_DEFS, ...DYNAMIC_TOOL_DEFS],
+        getCategorizedTools: () => {
+            const all = [...TOOL_DEFS, ...DYNAMIC_TOOL_DEFS];
+            const cats = {};
+            for (const def of all) {
+                const cat = def.category || 'other';
+                if (!cats[cat]) cats[cat] = [];
+                cats[cat].push(def.name);
+            }
+            return cats;
+        },
         startTask: startTask,
         endTask: endTask,
         registerTool: (def, handler) => {
@@ -110,6 +120,8 @@ function init(hub) {
                 HUB.log('[Tools] registerTool: invalid def or handler for ' + (def && def.name), 'warn');
                 return;
             }
+            // Default category for dynamically registered tools
+            if (!def.category) def.category = 'dynamic';
             // Avoid duplicates
             const existing = DYNAMIC_TOOL_DEFS.findIndex(d => d.name === def.name);
             if (existing >= 0) {
@@ -136,6 +148,7 @@ const TOOL_DEFS = [
     // --- Shell ---
     {
         name: 'bash',
+        category: 'shell',
         description: 'Execute a shell command using bash (or zsh on macOS). Use for running scripts, git commands, npm commands, file system operations, and any other terminal command. Returns stdout, stderr, and exit code.',
         input_schema: {
             type: 'object',
@@ -147,6 +160,7 @@ const TOOL_DEFS = [
     },
     {
         name: 'powershell',
+        category: 'shell',
         description: 'Execute a PowerShell command (Windows only). Use for Windows-specific scripting and automation.',
         input_schema: {
             type: 'object',
@@ -158,6 +172,7 @@ const TOOL_DEFS = [
     },
     {
         name: 'cmd',
+        category: 'shell',
         description: 'Execute a Windows CMD command. Use for Windows batch commands and legacy scripts.',
         input_schema: {
             type: 'object',
@@ -171,6 +186,7 @@ const TOOL_DEFS = [
     // --- File Operations ---
     {
         name: 'read_file',
+        category: 'files',
         description: 'Read the entire contents of a file. Use for files under 50KB. For larger files, use read_file_lines instead. Supports relative paths (resolved from working directory) and absolute paths.',
         input_schema: {
             type: 'object',
@@ -182,6 +198,7 @@ const TOOL_DEFS = [
     },
     {
         name: 'read_file_lines',
+        category: 'files',
         description: 'Read specific lines from a file. Use for large files or when you only need a section. Line numbers are 1-based.',
         input_schema: {
             type: 'object',
@@ -195,6 +212,7 @@ const TOOL_DEFS = [
     },
     {
         name: 'write_file',
+        category: 'files',
         description: 'Write content to a file, creating it if it does not exist. IMPORTANT: Always read_file first before overwriting an existing file to avoid data loss. Creates parent directories automatically.',
         input_schema: {
             type: 'object',
@@ -207,6 +225,7 @@ const TOOL_DEFS = [
     },
     {
         name: 'patch_file',
+        category: 'files',
         description: 'Find and replace a specific string in a file. Use for targeted edits without rewriting the entire file. The search string must match exactly.',
         input_schema: {
             type: 'object',
@@ -220,6 +239,7 @@ const TOOL_DEFS = [
     },
     {
         name: 'append_file',
+        category: 'files',
         description: 'Append content to the end of a file. Creates the file if it does not exist. Use for adding to log files, configuration, or any file where you want to add without overwriting.',
         input_schema: {
             type: 'object',
@@ -232,6 +252,7 @@ const TOOL_DEFS = [
     },
     {
         name: 'list_dir',
+        category: 'files',
         description: 'List files and directories in a given path. Shows directories first (prefixed DIR), then files (prefixed FILE). Defaults to the current working directory if no path is given.',
         input_schema: {
             type: 'object',
@@ -245,6 +266,7 @@ const TOOL_DEFS = [
     // --- AI & MCP ---
     {
         name: 'web_search',
+        category: 'ai',
         description: 'Search the web for current information. Returns relevant results for the given query. Use when you need up-to-date information not in your training data.',
         input_schema: {
             type: 'object',
@@ -256,6 +278,7 @@ const TOOL_DEFS = [
     },
     {
         name: 'understand_image',
+        category: 'ai',
         description: 'Analyze an image using AI vision. Provide a file path or URL. Returns a description of the image content. Use for understanding screenshots, diagrams, UI mockups, etc.',
         input_schema: {
             type: 'object',
@@ -270,6 +293,7 @@ const TOOL_DEFS = [
     // --- System & Config ---
     {
         name: 'system_info',
+        category: 'system',
         description: 'Get current system information including platform, OS, Node.js version, working directory, shell, AI model, and current date/time.',
         input_schema: {
             type: 'object',
@@ -279,6 +303,7 @@ const TOOL_DEFS = [
     },
     {
         name: 'get_working_dir',
+        category: 'system',
         description: 'Get the current working directory path. All relative file paths are resolved against this directory.',
         input_schema: {
             type: 'object',
@@ -288,6 +313,7 @@ const TOOL_DEFS = [
     },
     {
         name: 'set_working_dir',
+        category: 'system',
         description: 'Change the working directory. All subsequent file operations and shell commands will use this as the base path.',
         input_schema: {
             type: 'object',
@@ -299,6 +325,7 @@ const TOOL_DEFS = [
     },
     {
         name: 'set_thinking_level',
+        category: 'system',
         description: 'Adjust the AI thinking depth. Level 1=minimal (512 tokens), 2=low (1024), 3=normal (2048), 4=high (4096), 5=maximum (8192). Higher levels give deeper analysis but use more tokens.',
         input_schema: {
             type: 'object',
@@ -312,6 +339,7 @@ const TOOL_DEFS = [
     // --- QA & Testing ---
     {
         name: 'qa_run_tests',
+        category: 'qa',
         description: 'Run project tests. Supports types: "unit", "integration", "e2e", or "all" (default). Uses npm test with appropriate filters.',
         input_schema: {
             type: 'object',
@@ -323,6 +351,7 @@ const TOOL_DEFS = [
     },
     {
         name: 'qa_check_lint',
+        category: 'qa',
         description: 'Run linting checks on the project. Tries npm run lint, then falls back to npx eslint.',
         input_schema: {
             type: 'object',
@@ -332,6 +361,7 @@ const TOOL_DEFS = [
     },
     {
         name: 'qa_check_types',
+        category: 'qa',
         description: 'Run TypeScript type checking (npx tsc --noEmit). Reports type errors without emitting files.',
         input_schema: {
             type: 'object',
@@ -341,6 +371,7 @@ const TOOL_DEFS = [
     },
     {
         name: 'qa_check_coverage',
+        category: 'qa',
         description: 'Run test coverage report. Uses npm run coverage if configured.',
         input_schema: {
             type: 'object',
@@ -352,6 +383,7 @@ const TOOL_DEFS = [
     },
     {
         name: 'qa_audit_deps',
+        category: 'qa',
         description: 'Audit project dependencies for security vulnerabilities using npm audit.',
         input_schema: {
             type: 'object',
@@ -363,6 +395,7 @@ const TOOL_DEFS = [
     // --- Notes (Session Memory) ---
     {
         name: 'record_note',
+        category: 'notes',
         description: 'Record important information as session notes for future reference. Use this to record key facts, user preferences, decisions, or context that should be recalled later in the agent execution chain. Each note is timestamped.',
         input_schema: {
             type: 'object',
@@ -381,6 +414,7 @@ const TOOL_DEFS = [
     },
     {
         name: 'recall_notes',
+        category: 'notes',
         description: 'Recall all previously recorded session notes. Use this to retrieve important information, context, or decisions from earlier in the session or previous agent execution chains.',
         input_schema: {
             type: 'object',
@@ -397,6 +431,7 @@ const TOOL_DEFS = [
     // --- Skills (Claude Skills) ---
     {
         name: 'list_skills',
+        category: 'skills',
         description: 'List all available skills. Use this to see what specialized skills are available.',
         input_schema: {
             type: 'object',
@@ -406,6 +441,7 @@ const TOOL_DEFS = [
     },
     {
         name: 'get_skill',
+        category: 'skills',
         description: 'Get detailed information about a specific skill including its full content and capabilities.',
         input_schema: {
             type: 'object',
@@ -420,6 +456,7 @@ const TOOL_DEFS = [
     },
     {
         name: 'activate_skill',
+        category: 'skills',
         description: 'Activate a skill to add its specialized guidance to the current context. Use list_skills first to see available skills.',
         input_schema: {
             type: 'object',
@@ -434,6 +471,7 @@ const TOOL_DEFS = [
     },
     {
         name: 'deactivate_skill',
+        category: 'skills',
         description: 'Deactivate a previously activated skill.',
         input_schema: {
             type: 'object',
@@ -450,6 +488,7 @@ const TOOL_DEFS = [
     // --- Session Notes (persistent across context compaction) ---
     {
         name: 'session_note',
+        category: 'notes',
         description: 'Write a persistent session note. Use to capture important decisions, failures, lessons learned, or things to avoid. Notes survive context compaction and are injected into every subsequent system prompt.',
         input_schema: {
             type: 'object',
@@ -464,6 +503,7 @@ const TOOL_DEFS = [
     // --- GitHub ---
     {
         name: 'github',
+        category: 'github',
         description: 'Interact with GitHub using the gh CLI. Actions: get_repo (view repo info), list_issues, create_issue, close_issue, list_prs, create_pr. Requires gh CLI to be installed and authenticated.',
         input_schema: {
             type: 'object',
@@ -481,6 +521,7 @@ const TOOL_DEFS = [
     // --- Socket.IO UI tools ---
     {
         name: 'ui_action',
+        category: 'ui',
         description: 'Send a UI action to all connected browser clients. Use to open/close panels, show toast notifications, set the status bar message, or switch chat modes. Never use for destructive or irreversible operations.',
         input_schema: {
             type: 'object',
@@ -500,6 +541,7 @@ const TOOL_DEFS = [
     },
     {
         name: 'show_chart',
+        category: 'ui',
         description: 'Render an interactive chart as an overlay in the browser. Supports bar, line, and pie charts. Great for visualising data, metrics, task progress, agent performance, etc.',
         input_schema: {
             type: 'object',
@@ -515,6 +557,7 @@ const TOOL_DEFS = [
     },
     {
         name: 'ask_user',
+        category: 'ui',
         description: 'Request structured input from the user and wait for their answer before continuing. Ideal for confirmations, picking from choices, or collecting a short text/number input. Times out after 2 minutes.',
         input_schema: {
             type: 'object',
@@ -533,6 +576,7 @@ const TOOL_DEFS = [
     },
     {
         name: 'kv_set',
+        category: 'storage',
         description: 'Store a value in the persistent key-value store. Survives server restarts. Use for cross-session memory, caching, flags, and small data blobs.',
         input_schema: {
             type: 'object',
@@ -546,6 +590,7 @@ const TOOL_DEFS = [
     },
     {
         name: 'kv_get',
+        category: 'storage',
         description: 'Retrieve a value from the persistent key-value store. Returns null if the key does not exist or has expired.',
         input_schema: {
             type: 'object',
@@ -557,6 +602,7 @@ const TOOL_DEFS = [
     },
     {
         name: 'kv_list',
+        category: 'storage',
         description: 'List keys in the persistent key-value store, optionally filtered by prefix.',
         input_schema: {
             type: 'object',
@@ -568,6 +614,7 @@ const TOOL_DEFS = [
     },
     {
         name: 'kv_delete',
+        category: 'storage',
         description: 'Delete one or more keys from the persistent key-value store.',
         input_schema: {
             type: 'object',
@@ -579,6 +626,7 @@ const TOOL_DEFS = [
     },
     {
         name: 'socket_push',
+        category: 'ui',
         description: 'Emit a custom Socket.IO event to all connected browser clients. Event name must start with "agent_". Useful for custom UI integrations and live data feeds captured by onAgentEvent() in the browser.',
         input_schema: {
             type: 'object',

@@ -3009,14 +3009,14 @@
    ============================================================ */
 
 /* Dark-mode form field defaults */
-#agent-manager-modal input,
-#agent-manager-modal textarea,
-#agent-manager-modal select {
+.agent-manager-modal input,
+.agent-manager-modal textarea,
+.agent-manager-modal select {
     color: var(--text-primary) !important;
     background: var(--bg-secondary) !important;
     border-color: var(--border-color) !important;
 }
-#agent-manager-modal select option {
+.agent-manager-modal select option {
     color: var(--text-primary);
     background: var(--bg-panel);
 }

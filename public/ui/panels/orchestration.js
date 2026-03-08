@@ -151,7 +151,9 @@ export class OrchestrationPanel extends PanelComponent {
         // ── Cycle gauge ──
         const cycleEl = document.getElementById('orch-cycle-gauge');
         if (cycleEl) {
-            const maxC = s.maxCycles || 10;
+            // IMPORTANT: must NOT use || here — 0 is a valid value meaning "unlimited"
+            // and `0 || 10` would evaluate to 10, showing wrong denominator (same bug fixed in CONFIG section)
+            const maxC = s.maxCycles != null ? s.maxCycles : 10;
             const isUnlimited = maxC === 0 || maxC === Infinity || maxC > 99999;
             const pct = isUnlimited ? Math.min(100, (s.cycleDepth || 0)) : Math.min(100, Math.round(((s.cycleDepth || 0) / maxC) * 100));
             const fill = (!isUnlimited && pct > 80) ? '#ef4444' : 'var(--accent-cyan)';

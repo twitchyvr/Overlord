@@ -31,8 +31,20 @@ export function initSocketBridge(socket, store, engine) {
         store.set('ui.connected', true);
         engine.dispatch('connected', true);
 
-        // Request state sync
+        // ── Full state sync on every connect/reconnect ──
+        // These requests ensure the UI is fully populated even after a
+        // hard refresh while agents are working in the background.
         socket.emit('get_process_state');
+        socket.emit('get_config');
+        socket.emit('get_team');
+        socket.emit('list_conversations');
+        socket.emit('get_context_info');
+        socket.emit('get_orch_dashboard', {}, (state) => {
+            if (state) store.set('orchestration.dashboard', state);
+        });
+        // Request all agent session states so team panel + orchestration
+        // immediately reflect which agents are actually processing.
+        socket.emit('get_all_agent_states');
 
         const currentConv = store.peek('conversations.current');
         if (currentConv) {

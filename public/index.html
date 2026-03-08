@@ -1220,26 +1220,37 @@
         // ── Context / Usage Meter ────────────────────────────────────
         store.subscribe('context.info', (info) => {
             if (!info) return;
+            // Normalise field names — server may send either form
+            const used  = info.used ?? info.tokensUsed ?? info.estimatedTokens;
+            const total = info.total ?? info.maxTokens;
+            const pct   = info.percentUsed != null
+                ? Math.min(100, Math.round(info.percentUsed))
+                : (used != null && total ? Math.min(100, Math.round((used / total) * 100)) : null);
+
             const bar  = document.getElementById('ctx-fill-bar');
             const text = document.getElementById('ctx-usage');
-            if (info.used != null && info.total) {
-                const pct = Math.min(100, Math.round((info.used / info.total) * 100));
+            if (pct != null) {
                 if (bar)  { bar.style.width = pct + '%'; bar.className = 'ctx-fill' + (pct > 90 ? ' critical' : pct > 70 ? ' high' : ''); }
                 if (text) text.textContent = pct + '%';
             }
             // Detail popover fields
             const setEl = (id, val) => { const e = document.getElementById(id); if (e && val != null) e.textContent = val; };
-            setEl('cdp-used',  info.used != null ? info.used.toLocaleString() : null);
-            setEl('cdp-total', info.total ? info.total.toLocaleString() : null);
-            setEl('cdp-pct',   info.used != null && info.total ? Math.round((info.used / info.total) * 100) + '%' : null);
-            setEl('cdp-in',    info.inputTokens != null ? info.inputTokens.toLocaleString() : null);
-            setEl('cdp-out',   info.outputTokens != null ? info.outputTokens.toLocaleString() : null);
-            setEl('cdp-compact', info.compactions != null ? info.compactions : null);
+            setEl('cdp-used',  used != null ? Number(used).toLocaleString() : null);
+            setEl('cdp-total', total ? Number(total).toLocaleString() : null);
+            setEl('cdp-pct',   pct != null ? pct + '%' : null);
+            setEl('cdp-in',    info.inputTokens != null ? Number(info.inputTokens).toLocaleString() : null);
+            setEl('cdp-out',   info.outputTokens != null ? Number(info.outputTokens).toLocaleString() : null);
+            setEl('cdp-compact', (info.compactions ?? info.compactionCount ?? 0) + 'x');
+            setEl('cdp-req',   info.lastRequestDurationFormatted || null);
+            setEl('cdp-chat',  info.chatDurationFormatted || null);
             setEl('cdp-model', info.model || null);
+            // SYS pills: compactions, last req, session
+            setEl('ctx-compact', (info.compactions ?? info.compactionCount ?? 0) + 'x');
+            setEl('ctx-duration', info.lastRequestDurationFormatted || null);
+            setEl('ctx-chat', info.chatDurationFormatted || null);
             // Fill bar in popover
             const pBar = document.getElementById('cdp-bar-fill');
-            if (pBar && info.used != null && info.total) {
-                const pct = Math.min(100, Math.round((info.used / info.total) * 100));
+            if (pBar && pct != null) {
                 pBar.style.width = pct + '%';
                 pBar.style.background = pct > 90 ? 'var(--accent-red)' : pct > 70 ? 'var(--accent-yellow)' : 'var(--electric)';
             }
@@ -1323,12 +1334,14 @@
         // ── Long-Running Mode Toggle ────────────────────────────────
         const lrToggle = document.getElementById('long-running-mode');
         if (lrToggle) {
+            // Use the persisted store key so the setting survives page refresh
+            lrToggle.checked = store.get('settings.longRunning') === 'on';
             lrToggle.addEventListener('change', () => {
-                const val = lrToggle.checked;
-                store.set('ui.longRunning', val);
-                socket.emit('set_long_running', val);
+                const val = lrToggle.checked ? 'on' : 'off';
+                store.set('settings.longRunning', val);
+                socket.emit('set_long_running', lrToggle.checked);
             });
-            store.subscribe('ui.longRunning', (val) => { lrToggle.checked = !!val; });
+            store.subscribe('settings.longRunning', (val) => { lrToggle.checked = val === 'on'; });
         }
 
 
@@ -1766,8 +1779,15 @@
         // ── RTT Latency ────────────────────────────────────────────
         store.subscribe('latency.rtt', (rtt) => {
             if (rtt == null) return;
+            // Show the HUD container (hidden by default until first RTT reading)
+            const hud = document.getElementById('latency-hud');
+            if (hud) hud.classList.add('visible');
+            // Update RTT value with color-coded class
             const el = document.getElementById('rtt-val');
-            if (el) el.textContent = rtt + 'ms';
+            if (el) {
+                el.textContent = rtt + 'ms';
+                el.className = 'rtt-val' + (rtt < 30 ? ' rtt-good' : rtt < 100 ? ' rtt-warn' : ' rtt-bad');
+            }
             _rttSamples.push(rtt);
             if (_rttSamples.length > 30) _rttSamples.shift();
             updateSparklineSVG('rtt-sparkline', _rttSamples, Math.max(..._rttSamples, 200));
@@ -1788,11 +1808,12 @@
                 setEl('cdp-agent-msgs', _agentMsgCount);
             }
         }
-        OverlordUI.subscribe('message_added', (msg) => {
+        OverlordUI.subscribe('message_add', (msg) => {
             if (msg.role === 'user') _userMsgCount++;
             else if (msg.role === 'assistant') _aiMsgCount++;
             updateMsgFlow();
         });
+        OverlordUI.subscribe('backchannel_msg', () => { _agentMsgCount++; updateMsgFlow(); });
         OverlordUI.subscribe('agent_message', () => { _agentMsgCount++; updateMsgFlow(); });
 
 

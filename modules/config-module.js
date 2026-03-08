@@ -105,12 +105,12 @@ function init(hub) {
         approvalTimeoutMs: parseInt(process.env.APPROVAL_TIMEOUT_MS) || 300000,  // Approval wait timeout (ms)
         requestTimeoutMs: parseInt(process.env.REQUEST_TIMEOUT_MS) || 90000,     // API request timeout (ms)
         // ── Context injection limits ──────────────────────────────────────
-        sessionNotesLines: parseInt(process.env.SESSION_NOTES_LINES) || 50,   // Lines of session-notes.md to inject
-        timelineLines: parseInt(process.env.TIMELINE_LINES) || 20,             // Lines of TIMELINE.md to inject
-        // ── Socket rate limiting ──────────────────────────────────────────
-        rateLimitTokens: parseInt(process.env.RATE_LIMIT_TOKENS) || 20,        // Token bucket max capacity
-        rateLimitRefillRate: parseFloat(process.env.RATE_LIMIT_REFILL) || 4,   // Tokens refilled per second
-        messageQueueSize: parseInt(process.env.MESSAGE_QUEUE_SIZE) || 3,        // Max queued messages while processing
+        sessionNotesLines: parseInt(process.env.SESSION_NOTES_LINES) || 100,  // MiniMax M2.5: 204,800 tok ctx window
+        timelineLines: parseInt(process.env.TIMELINE_LINES) || 50,             // MiniMax M2.5: 204,800 tok ctx window
+        // ── Socket rate limiting (calibrated to MiniMax-M2.5 official limits) ──
+        rateLimitTokens: parseInt(process.env.RATE_LIMIT_TOKENS) || 40,        // Text API: 500 RPM × 5s burst = 40
+        rateLimitRefillRate: parseFloat(process.env.RATE_LIMIT_REFILL) || 8,   // Text API: 500 RPM ÷ 60 = 8.33 → 8
+        messageQueueSize: parseInt(process.env.MESSAGE_QUEUE_SIZE) || 5,        // Voice API: 60 RPM; larger queue buffers
         // ── Chat mode ────────────────────────────────────────────────────────
         chatMode: process.env.CHAT_MODE || 'auto',                              // 'auto' | 'plan' | 'ask' | 'pm'
         queueDrainMode: 'consolidated',                                          // 'consolidated' | 'sequential'

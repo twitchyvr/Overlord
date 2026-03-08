@@ -35,6 +35,7 @@ export class TeamPanel extends PanelComponent {
         this._sessionStates = {};     // { agentName: {isProcessing, paused, ...} }
         this._chatRooms = [];         // Active inter-agent chat rooms
         this._watchingRoom = null;    // Currently expanded room ID
+        this._viewingNotes = null;    // Meeting notes ID being viewed
     }
 
     mount() {
@@ -152,6 +153,66 @@ export class TeamPanel extends PanelComponent {
             }
         }));
 
+        // Meeting lifecycle events
+        this._subs.push(OverlordUI.subscribe('room_participant_joined', (data) => {
+            const room = this._chatRooms.find(r => r.id === data.roomId);
+            if (room) {
+                room.participants = data.participants;
+                room.isMeeting = data.isMeeting;
+                this._updateRoomCard(data.roomId);
+            }
+        }));
+        this._subs.push(OverlordUI.subscribe('room_participant_left', (data) => {
+            const room = this._chatRooms.find(r => r.id === data.roomId);
+            if (room) {
+                room.participants = data.participants;
+                room.userPresent = data.userPresent;
+                this._updateRoomCard(data.roomId);
+            }
+        }));
+        this._subs.push(OverlordUI.subscribe('room_user_joined', (data) => {
+            const room = this._chatRooms.find(r => r.id === data.roomId);
+            if (room) {
+                room.userPresent = data.userPresent;
+                this._updateRoomCard(data.roomId);
+            }
+        }));
+        this._subs.push(OverlordUI.subscribe('meeting_notes_generated', (data) => {
+            const room = this._chatRooms.find(r => r.id === data.roomId);
+            if (room) {
+                room.meetingNotes = data.notes;
+                this._updateRoomCard(data.roomId);
+            }
+        }));
+
+        // ── Click delegation for agent card buttons ────────────────
+        this.on('click', '[data-action]', (e, el) => {
+            const action = el.dataset.action;
+            const agentName = el.dataset.agent;
+            if (!agentName) return;
+
+            if (action === 'agent-chat') {
+                // Open the Agent Chat overlay for this agent
+                const agent = this._agents.find(a => a.name === agentName);
+                OverlordUI.dispatch('open_agent_chat', {
+                    agentName,
+                    role: agent?.role || '',
+                    status: (this._sessionStates[agentName]?.isProcessing ? 'working' : 'idle'),
+                    paused: this._sessionStates[agentName]?.paused || false,
+                    inboxCount: this._sessionStates[agentName]?.inboxCount || 0
+                });
+            } else if (action === 'agent-pause') {
+                const ses = this._sessionStates[agentName] || {};
+                if (OverlordUI._socket) {
+                    if (ses.paused) {
+                        OverlordUI._socket.emit('resume_agent', { agentName });
+                    } else {
+                        OverlordUI._socket.emit('pause_agent', { agentName });
+                    }
+                }
+            }
+        });
+
         // Refresh all visible sparklines every 1s
         this._sparklineInterval = setInterval(() => {
             this._agents.forEach(a => this._updateSparklineEl(a.name));
@@ -192,9 +253,10 @@ export class TeamPanel extends PanelComponent {
             return;
         }
 
-        // Sort: Active first (isProcessing), then On Deck (inbox > 0), then Idle.
+        // Sort: Orchestrator always first, then Active (isProcessing), On Deck, Idle.
         const sorted = [...filtered].sort((a, b) => {
             const rankOf = (agent) => {
+                if (agent.name === 'orchestrator') return -1;            // Always top
                 const ses = this._sessionStates[agent.name] || { isProcessing: false, paused: false, inboxCount: 0 };
                 if (ses.isProcessing === true && !ses.paused) return 0;  // Active
                 if ((ses.inboxCount || 0) > 0 && !ses.paused)           return 1;  // On Deck
@@ -276,6 +338,9 @@ export class TeamPanel extends PanelComponent {
     _filterAgents(agents) {
         if (this._filter === 'all') return agents;
         return agents.filter(a => {
+            // Orchestrator is always shown in the Active filter — it's the permanent top agent
+            if (a.name === 'orchestrator' && this._filter === 'active') return true;
+
             // Always normalize ses so filter logic never hits undefined comparisons
             const ses = this._sessionStates[a.name] || { isProcessing: false, paused: false, inboxCount: 0 };
             const isWorking = ses.isProcessing === true;
@@ -307,8 +372,9 @@ export class TeamPanel extends PanelComponent {
     _buildAgentCard(agent) {
         const ses = this._sessionStates[agent.name] || {};
         const isWorking = this._isAgentWorking(agent);
-        const dotCls = ses.paused ? 'paused' : (isWorking ? 'working' : 'idle');
-        const effectiveStatus = ses.paused ? 'PAUSED' : isWorking ? 'WORKING' : 'IDLE';
+        const isOrchestrator = agent.name === 'orchestrator';
+        const dotCls = ses.paused ? 'paused' : (isWorking ? 'working' : (isOrchestrator ? 'ready' : 'idle'));
+        const effectiveStatus = ses.paused ? 'PAUSED' : isWorking ? 'WORKING' : (isOrchestrator ? 'READY' : 'IDLE');
         const safeName = agent.name.replace(/\s+/g, '_');
 
         const card = h('div', {
@@ -429,85 +495,73 @@ export class TeamPanel extends PanelComponent {
     // ── Agent Chat Rooms UI ──────────────────────────────────────
 
     _buildRoomCard(room) {
-        const isWatching = this._watchingRoom === room.id;
         const esc = (s) => OverlordUI.escapeHtml ? OverlordUI.escapeHtml(String(s)) : String(s);
+        const participants = room.participants || [room.fromAgent, room.toAgent];
+        const isActive = room.status === 'active';
 
         const card = h('div', {
             id: `room-card-${room.id}`,
-            style: `background:var(--bg-secondary);border:1px solid ${isWatching ? 'var(--accent-primary)' : 'var(--border-color)'};border-radius:6px;margin:0 4px 4px;padding:8px 10px;cursor:pointer;transition:border-color 0.2s;`,
-            onClick: () => this._toggleWatchRoom(room.id)
-        },
-            // Header row: agents + status
-            h('div', { style: 'display:flex;align-items:center;gap:6px;margin-bottom:4px;' },
-                h('span', { style: 'font-size:11px;font-weight:600;color:var(--text-primary);' },
-                    esc(room.fromAgent) + ' \u2194 ' + esc(room.toAgent)),
-                room.tool ? h('span', {
-                    style: 'font-size:9px;background:var(--bg-tertiary);color:var(--accent-primary);padding:1px 5px;border-radius:3px;'
-                }, esc(room.tool)) : null,
-                h('span', {
-                    style: `font-size:9px;margin-left:auto;color:${room.status === 'active' ? 'var(--accent-green)' : 'var(--text-muted)'};`
-                }, room.status === 'active' ? '\u25CF live' : room.status)
-            ),
-            // Reason
-            room.reason ? h('div', {
-                style: 'font-size:10px;color:var(--text-muted);margin-bottom:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;'
-            }, esc(room.reason)) : null,
-            // Message count + action buttons
-            h('div', { style: 'display:flex;align-items:center;gap:6px;' },
-                h('span', { style: 'font-size:9px;color:var(--text-muted);' },
-                    (room.messageCount || 0) + ' messages'),
-                h('button', {
-                    style: 'margin-left:auto;padding:2px 8px;font-size:10px;background:var(--accent-primary);border:none;border-radius:3px;cursor:pointer;color:#000;font-weight:600;',
-                    onClick: (e) => { e.stopPropagation(); this._toggleWatchRoom(room.id); }
-                }, isWatching ? 'Close' : 'Watch'),
-                room.status === 'active' ? h('button', {
-                    style: 'padding:2px 8px;font-size:10px;background:var(--accent-red);border:none;border-radius:3px;cursor:pointer;color:#fff;font-weight:600;',
-                    onClick: (e) => { e.stopPropagation(); this._endRoom(room.id); }
-                }, 'End') : null
-            )
-        );
+            style: `background:var(--bg-secondary);border:1px solid ${room.isMeeting ? 'rgba(250,204,21,0.4)' : 'var(--border-color)'};border-radius:6px;margin:0 4px 4px;padding:8px 10px;`
+        });
 
-        // Expanded chat log
-        if (isWatching) {
-            const chatLog = h('div', {
-                id: `room-log-${room.id}`,
-                style: 'margin-top:8px;max-height:240px;overflow-y:auto;border-top:1px solid var(--border-color);padding-top:6px;'
-            });
-            const msgs = (room.messages || []);
-            if (msgs.length === 0) {
-                chatLog.appendChild(h('div', { style: 'font-size:10px;color:var(--text-muted);text-align:center;padding:8px;' }, 'Waiting for messages...'));
-            } else {
-                for (const msg of msgs) {
-                    const isFrom = msg.from === room.fromAgent;
-                    chatLog.appendChild(h('div', {
-                        style: `font-size:10px;margin-bottom:4px;padding:4px 6px;border-radius:4px;background:${isFrom ? 'rgba(88,166,255,0.08)' : 'rgba(63,185,80,0.08)'};border-left:2px solid ${isFrom ? 'var(--accent-primary)' : 'var(--accent-green)'};`
-                    },
-                        h('span', { style: 'font-weight:600;color:var(--text-primary);' }, esc(msg.from) + ': '),
-                        h('span', { style: 'color:var(--text-secondary);' }, esc(String(msg.content).substring(0, 500)))
-                    ));
-                }
-            }
-            // User chat input — the user can join the conversation
-            const inputRow = h('div', { style: 'display:flex;gap:4px;margin-top:6px;' },
-                h('input', {
-                    id: `room-input-${room.id}`,
-                    type: 'text',
-                    placeholder: 'Type a message to both agents...',
-                    style: 'flex:1;padding:4px 8px;background:var(--bg-primary);border:1px solid var(--border-color);border-radius:4px;color:var(--text-primary);font-size:11px;',
-                    onKeydown: (e) => {
-                        if (e.key === 'Enter') this._sendRoomMessage(room.id);
-                    }
-                }),
-                h('button', {
-                    style: 'padding:4px 10px;background:var(--accent-primary);border:none;border-radius:4px;cursor:pointer;color:#000;font-size:10px;font-weight:600;',
-                    onClick: () => this._sendRoomMessage(room.id)
-                }, 'Send')
-            );
-            card.appendChild(chatLog);
-            card.appendChild(inputRow);
+        // Header: meeting badge + participants + status
+        const header = h('div', { style: 'display:flex;align-items:center;gap:6px;margin-bottom:4px;' });
+        if (room.isMeeting) {
+            header.appendChild(h('span', {
+                style: 'font-size:9px;background:rgba(250,204,21,0.15);color:#fcd34d;padding:1px 5px;border-radius:3px;border:1px solid rgba(250,204,21,0.3);font-weight:700;'
+            }, 'MEETING'));
+        }
+        header.appendChild(h('span', { style: 'font-size:11px;font-weight:600;color:var(--text-primary);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;' },
+            participants.map(p => esc(p)).join(' \u2022 ')));
+        if (room.tool) {
+            header.appendChild(h('span', {
+                style: 'font-size:9px;background:var(--bg-tertiary);color:var(--accent-primary);padding:1px 5px;border-radius:3px;flex-shrink:0;'
+            }, esc(room.tool)));
+        }
+        header.appendChild(h('span', {
+            style: `font-size:9px;flex-shrink:0;color:${isActive ? 'var(--accent-green)' : 'var(--text-muted)'};`
+        }, isActive ? '\u25CF live' : esc(room.status)));
+        card.appendChild(header);
+
+        // Reason subtitle
+        if (room.reason) {
+            card.appendChild(h('div', {
+                style: 'font-size:10px;color:var(--text-muted);margin-bottom:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;'
+            }, esc(room.reason)));
         }
 
+        // Action row: stats + Open button + End button
+        const actions = h('div', { style: 'display:flex;align-items:center;gap:6px;' });
+        actions.appendChild(h('span', { style: 'font-size:9px;color:var(--text-muted);' },
+            `${room.messageCount || 0} msgs \u2022 ${participants.length} agents` +
+            (room.userPresent ? ' \u2022 \u{1F464} you' : '')
+        ));
+
+        // Open Room button — opens the full-screen RoomView overlay
+        actions.appendChild(h('button', {
+            style: 'margin-left:auto;padding:2px 10px;font-size:10px;background:var(--accent-primary);border:none;border-radius:3px;cursor:pointer;color:#000;font-weight:700;',
+            onClick: (e) => { e.stopPropagation(); this._openRoomView(room); }
+        }, 'Open Room'));
+
+        if (isActive) {
+            actions.appendChild(h('button', {
+                style: 'padding:2px 8px;font-size:10px;background:var(--accent-red, #f85149);border:none;border-radius:3px;cursor:pointer;color:#fff;font-weight:600;',
+                onClick: (e) => { e.stopPropagation(); room.isMeeting ? this._endMeeting(room.id) : this._endRoom(room.id); }
+            }, room.isMeeting ? 'End Meeting' : 'End'));
+        }
+        if (room.meetingNotes) {
+            actions.appendChild(h('button', {
+                style: 'padding:2px 8px;font-size:10px;background:rgba(250,204,21,0.2);border:1px solid rgba(250,204,21,0.3);border-radius:3px;cursor:pointer;color:#fcd34d;font-weight:600;',
+                onClick: (e) => { e.stopPropagation(); this._openRoomView(room); }
+            }, 'Notes'));
+        }
+        card.appendChild(actions);
+
         return card;
+    }
+
+    _openRoomView(room) {
+        OverlordUI.dispatch('open_room_view', { room });
     }
 
     _toggleWatchRoom(roomId) {
@@ -530,40 +584,74 @@ export class TeamPanel extends PanelComponent {
         this.render(this._agents);
     }
 
-    _sendRoomMessage(roomId) {
-        const input = this._listEl.querySelector(`#room-input-${roomId}`);
-        if (!input || !input.value.trim()) return;
-        const message = input.value.trim();
-        input.value = '';
-
-        // Send as "user" — both agents in the room will see this
+    _endRoom(roomId) {
         if (OverlordUI._socket) {
-            OverlordUI._socket.emit('send_room_message', { roomId, message }, () => {
-                // Optimistic update
+            OverlordUI._socket.emit('end_chat_room', roomId, () => {
                 const room = this._chatRooms.find(r => r.id === roomId);
-                if (room) {
-                    if (!room.messages) room.messages = [];
-                    room.messages.push({ from: 'user', content: message, type: 'message', ts: Date.now() });
-                    room.messageCount = (room.messageCount || 0) + 1;
+                if (room) room.status = 'ended';
+                this.render(this._agents);
+            });
+        }
+    }
+
+    _pullAgentIn(roomId, agentName) {
+        if (OverlordUI._socket) {
+            OverlordUI._socket.emit('pull_agent_into_room', { roomId, agentName, pulledBy: 'user' }, (result) => {
+                if (result?.success) {
+                    const room = this._chatRooms.find(r => r.id === roomId);
+                    if (room) {
+                        room.participants = result.participants;
+                        room.isMeeting = result.isMeeting;
+                    }
+                    this.render(this._agents);
+                } else {
+                    console.warn('[Team] Pull-in failed:', result?.error);
+                }
+            });
+        }
+    }
+
+    _userJoinRoom(roomId) {
+        if (OverlordUI._socket) {
+            OverlordUI._socket.emit('user_join_room', roomId, (result) => {
+                if (result?.success) {
+                    const room = this._chatRooms.find(r => r.id === roomId);
+                    if (room) room.userPresent = true;
                     this.render(this._agents);
                 }
             });
         }
     }
 
-    _endRoom(roomId) {
+    _userLeaveRoom(roomId) {
         if (OverlordUI._socket) {
-            OverlordUI._socket.emit('end_chat_room', roomId, () => {
+            OverlordUI._socket.emit('user_leave_room', roomId, (result) => {
+                if (result?.success) {
+                    const room = this._chatRooms.find(r => r.id === roomId);
+                    if (room) {
+                        room.userPresent = false;
+                        room.participants = result.participants;
+                    }
+                    this.render(this._agents);
+                }
+            });
+        }
+    }
+
+    _endMeeting(roomId) {
+        if (OverlordUI._socket) {
+            OverlordUI._socket.emit('end_meeting', roomId, (result) => {
                 const room = this._chatRooms.find(r => r.id === roomId);
-                if (room) room.status = 'ended';
-                if (this._watchingRoom === roomId) this._watchingRoom = null;
+                if (room) {
+                    room.status = 'completed';
+                    if (result?.meetingNotes) room.meetingNotes = result.meetingNotes;
+                }
                 this.render(this._agents);
             });
         }
     }
 
     _updateRoomCard(roomId) {
-        // Re-render full panel to update room card (simple approach)
         this.render(this._agents);
     }
 }

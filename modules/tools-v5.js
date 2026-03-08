@@ -80,6 +80,10 @@ const TOOL_ALIASES = new Map([
     ['read_webpage',    'fetch_webpage'],
     ['get_webpage',     'fetch_webpage'],
     ['curl',            'fetch_webpage'],
+    // Save-to-vault aliases
+    ['save_to_vault',    'save_webpage_to_vault'],
+    ['webpage_to_vault', 'save_webpage_to_vault'],
+    ['clip_to_vault',    'save_webpage_to_vault'],
     // Notes aliases
     ['get_notes',       'recall_notes'],
     ['read_notes',      'recall_notes'],
@@ -300,11 +304,25 @@ const TOOL_DEFS = [
     {
         name: 'fetch_webpage',
         category: 'ai',
-        description: 'Fetch the text content of a webpage by URL. Extracts headings, paragraphs, links, lists, and code blocks into readable text. HTTPS-only. 5 MB max download, 15 s timeout. Use to read documentation, reference pages, GitHub READMEs, or any publicly-accessible URL.',
+        description: 'Fetch the text content of a webpage by URL and return it as clean Markdown. Automatically handles JavaScript-rendered pages (React, Vue, SPAs) by retrying via a headless-browser proxy (Jina Reader) when the initial fetch returns minimal content. HTTPS-only. Use to read documentation, Obsidian Help, GitHub READMEs, or any publicly-accessible URL.',
         input_schema: {
             type: 'object',
             properties: {
                 url: { type: 'string', description: 'The full HTTPS URL to fetch (must start with https://)' }
+            },
+            required: ['url']
+        }
+    },
+    {
+        name: 'save_webpage_to_vault',
+        category: 'ai',
+        description: 'Fetch a webpage (including JavaScript-rendered pages) and save it as a Markdown note in the configured Obsidian vault. Adds YAML frontmatter with the source URL and fetch date. If no vault is configured, returns instructions to set one up in Settings → Obsidian Vault.',
+        input_schema: {
+            type: 'object',
+            properties: {
+                url:      { type: 'string', description: 'Full HTTPS URL of the page to fetch and save' },
+                folder:   { type: 'string', description: 'Subfolder within the vault to save into (e.g. "References/Web"). Created if it does not exist. Optional — defaults to vault root.' },
+                filename: { type: 'string', description: 'Override the auto-generated filename. Do not include the .md extension. Optional.' }
             },
             required: ['url']
         }
@@ -757,8 +775,9 @@ async function execute(tool, inputOverride) {
                 result = await webSearch(input.query); 
                 HUB.log(`[Tools] web_search result: ${result.success}`, 'info');
                 break;
-            case 'understand_image': result = await understandImage(input.path, input.prompt); break;
-            case 'fetch_webpage':    result = await fetchWebpage(input.url); break;
+            case 'understand_image':      result = await understandImage(input.path, input.prompt); break;
+            case 'fetch_webpage':         result = await fetchWebpage(input.url); break;
+            case 'save_webpage_to_vault': result = await saveWebpageToVault(input); break;
 
             // System
             case 'system_info':       result = await systemInfo(); break;
@@ -1303,12 +1322,13 @@ async function fetchWebpage(url) {
                 }
                 chunks.push(chunk);
             });
-            stream.on('end', () => {
+            stream.on('end', async () => {
                 const raw  = Buffer.concat(chunks).toString('utf8');
                 const text = extractTextFromHtml(raw, finalUrl);
-                // Warn if page appears to be JavaScript-rendered (SPA) with no readable content
+                // SPA detected — retry via Jina Reader (headless-browser proxy → clean Markdown)
                 if (text.length < 300 && raw.length > 2000) {
-                    done({ success: true, content: text + '\n\n[Note: This page appears to be JavaScript-rendered (SPA). The server-side HTML has minimal readable content. Try web_search for information from this page instead.]' });
+                    const jinaResult = await fetchViaJina(finalUrl);
+                    done(jinaResult);
                     return;
                 }
                 done({ success: true, content: text });
@@ -1321,6 +1341,168 @@ async function fetchWebpage(url) {
             done({ success: false, content: 'fetch_webpage: request error: ' + e.message });
         });
     });
+}
+
+/**
+ * Fetch a URL via Jina Reader (https://r.jina.ai/{url}).
+ * Jina runs a headless browser server-side and returns clean Markdown, making
+ * it the ideal fallback for JavaScript-rendered (SPA) pages that return an
+ * empty HTML shell on a plain GET.
+ * - No API key required for public pages.
+ * - Returns { success, content } matching the fetchWebpage contract.
+ */
+async function fetchViaJina(url) {
+    const jinaUrl = 'https://r.jina.ai/' + url;
+    const MAX_BYTES  = 10 * 1024 * 1024; // 10 MB
+    const TIMEOUT_MS = 30000;             // 30 s — rendering takes longer
+
+    return new Promise((resolve) => {
+        let settled = false;
+        const done = (val) => { if (!settled) { settled = true; resolve(val); } };
+
+        const fallback = () => done({
+            success: true,
+            content: `# ${url}\nSource: ${url}\n\n[Note: This page is JavaScript-rendered and could not be fetched as plain HTML. The headless-browser fallback also failed. Try web_search for content from this page.]`
+        });
+
+        const timer = setTimeout(() => { req.destroy(); fallback(); }, TIMEOUT_MS);
+
+        const req = https.get(jinaUrl, {
+            headers: {
+                'Accept':          'text/markdown',
+                'X-Return-Format': 'markdown',
+                'User-Agent':      'Mozilla/5.0 (compatible; Overlord-Agent/1.0)'
+            }
+        }, (res) => {
+            clearTimeout(timer);
+            if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
+                res.resume();
+                fetchViaJina(url).then(done);
+                return;
+            }
+            if (res.statusCode !== 200) {
+                res.resume();
+                fallback();
+                return;
+            }
+
+            const encoding = (res.headers['content-encoding'] || '').toLowerCase();
+            let stream = res;
+            if (encoding === 'gzip')    stream = res.pipe(zlib.createGunzip());
+            else if (encoding === 'deflate') stream = res.pipe(zlib.createInflate());
+
+            const chunks = [];
+            let totalBytes = 0;
+            stream.on('data', (chunk) => {
+                totalBytes += chunk.length;
+                if (totalBytes > MAX_BYTES) { res.destroy(); fallback(); return; }
+                chunks.push(chunk);
+            });
+            stream.on('end', () => {
+                const markdown = Buffer.concat(chunks).toString('utf8').trim();
+                if (!markdown || markdown.length < 50) { fallback(); return; }
+                done({ success: true, content: markdown });
+            });
+            stream.on('error', () => fallback());
+        });
+
+        req.on('error', () => { clearTimeout(timer); fallback(); });
+    });
+}
+
+/**
+ * Fetch a URL and save the result as a Markdown note in the configured Obsidian vault.
+ * Uses fetchWebpage (with Jina SPA fallback) so JS-rendered pages work automatically.
+ * Adds YAML frontmatter with source URL, fetch date, and a 'web-clip' tag.
+ * If no vault path is configured, returns a helpful setup message.
+ */
+async function saveWebpageToVault(input) {
+    const { url, folder, filename: filenameOverride } = input || {};
+    if (!url) return { success: false, content: 'save_webpage_to_vault: url is required' };
+
+    // ── 1. Resolve vault path ─────────────────────────────────────────────────
+    const configSvc = HUB?.getService?.('config');
+    const vaultSvc  = HUB?.getService?.('obsidianVault');
+    const vaultPath = configSvc?.get?.('obsidianVaultPath')
+                   || vaultSvc?.getVaultPath?.()
+                   || null;
+
+    if (!vaultPath) {
+        return {
+            success: false,
+            content: [
+                'No Obsidian vault configured.',
+                'To fix: open ⚙ Settings → Obsidian Vault → enter your vault folder path → click Set.',
+                'Then call save_webpage_to_vault again.'
+            ].join('\n')
+        };
+    }
+
+    if (!fs.existsSync(vaultPath)) {
+        return {
+            success: false,
+            content: `Vault path does not exist on disk: ${vaultPath}\nUpdate it in Settings → Obsidian Vault.`
+        };
+    }
+
+    // ── 2. Fetch the page (SPA-aware) ────────────────────────────────────────
+    const fetched = await fetchWebpage(url);
+    if (!fetched.success) return fetched;
+
+    // ── 3. Derive filename from first H1 heading or URL ───────────────────────
+    let title = '';
+    const h1Match = fetched.content.match(/^#\s+(.+)$/m);
+    if (h1Match) {
+        title = h1Match[1].trim();
+    } else {
+        try {
+            const parsed = new URL(url);
+            title = (parsed.pathname.split('/').filter(Boolean).pop() || parsed.hostname)
+                        .replace(/[-_]/g, ' ');
+        } catch (_) {
+            title = url;
+        }
+    }
+
+    const safeFilename = filenameOverride
+        ? filenameOverride.replace(/[/\\:*?"<>|]/g, '-').slice(0, 100)
+        : title.replace(/[/\\:*?"<>|]/g, '-').replace(/\s+/g, '-').replace(/-{2,}/g, '-').slice(0, 80);
+
+    // ── 4. Build note path and guard against traversal ────────────────────────
+    const relPath  = folder
+        ? path.join(folder, safeFilename + '.md')
+        : safeFilename + '.md';
+    const fullPath = path.resolve(vaultPath, relPath);
+
+    if (!fullPath.startsWith(path.resolve(vaultPath))) {
+        return { success: false, content: 'save_webpage_to_vault: path traversal rejected' };
+    }
+
+    // ── 5. Prepend YAML frontmatter ────────────────────────────────────────────
+    const frontmatter = [
+        '---',
+        `source: "${url}"`,
+        `fetched: "${new Date().toISOString()}"`,
+        'tags: [web-clip]',
+        '---',
+        ''
+    ].join('\n');
+
+    const noteContent = frontmatter + fetched.content;
+
+    // ── 6. Write to disk ──────────────────────────────────────────────────────
+    try {
+        const dir = path.dirname(fullPath);
+        if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+        const existed = fs.existsSync(fullPath);
+        fs.writeFileSync(fullPath, noteContent, 'utf8');
+        return {
+            success: true,
+            content: `${existed ? 'Updated' : 'Saved'} note: ${relPath}\nVault: ${vaultPath}`
+        };
+    } catch (e) {
+        return { success: false, content: `save_webpage_to_vault: write error — ${e.message}` };
+    }
 }
 
 function extractTextFromHtml(html, url) {

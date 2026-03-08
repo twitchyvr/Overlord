@@ -27,6 +27,56 @@ const APPROVAL_TIERS = {
     FULL_REVIEW: 4      // User + explicit sign-off
 };
 
+// ==================== TOOL TIER REGISTRY ====================
+// Inspired by Mini-Agent's declarative tool metadata.
+// Maps tool names to their declared tier, category, and risk level.
+// classifyApprovalTier() checks this registry BEFORE the runtime switch/case,
+// making tier assignment explicit and extensible.
+
+const TOOL_TIER_REGISTRY = {
+    // ── Tier 1 — Self-approve (read-only, safe, no side effects) ──
+    'read_file':            { tier: 1, category: 'read',      risk: 'none',     description: 'Read file contents' },
+    'read_file_lines':      { tier: 1, category: 'read',      risk: 'none',     description: 'Read file lines' },
+    'list_dir':             { tier: 1, category: 'read',      risk: 'none',     description: 'List directory entries' },
+    'list_directory':       { tier: 1, category: 'read',      risk: 'none',     description: 'List directory entries' },
+    'search_files':         { tier: 1, category: 'read',      risk: 'none',     description: 'Search file contents' },
+    'get_working_dir':      { tier: 1, category: 'read',      risk: 'none',     description: 'Get working directory' },
+    'system_info':          { tier: 1, category: 'read',      risk: 'none',     description: 'Get system information' },
+    'list_agents':          { tier: 1, category: 'read',      risk: 'none',     description: 'List available agents' },
+    'get_agent_info':       { tier: 1, category: 'read',      risk: 'none',     description: 'Get agent details' },
+    'web_search':           { tier: 1, category: 'read',      risk: 'none',     description: 'Search the web' },
+    'understand_image':     { tier: 1, category: 'read',      risk: 'none',     description: 'Analyze image content' },
+    'qa_check_lint':        { tier: 1, category: 'diagnostic', risk: 'none',    description: 'Run lint check' },
+    'qa_check_types':       { tier: 1, category: 'diagnostic', risk: 'none',    description: 'Run type check' },
+    'qa_check_coverage':    { tier: 1, category: 'diagnostic', risk: 'none',    description: 'Check test coverage' },
+    'qa_audit_deps':        { tier: 1, category: 'diagnostic', risk: 'none',    description: 'Audit dependencies' },
+    'save_session_note':    { tier: 1, category: 'memory',    risk: 'none',     description: 'Save persistent note' },
+    'recall_session_notes': { tier: 1, category: 'memory',    risk: 'none',     description: 'Recall persistent notes' },
+
+    // ── Tier 2 — Orchestrator-approve (writes, confidence-gated) ──
+    'write_file':           { tier: 2, category: 'write',     risk: 'medium',   description: 'Write/create file' },
+    'patch_file':           { tier: 2, category: 'write',     risk: 'medium',   description: 'Patch file contents' },
+    'append_file':          { tier: 2, category: 'write',     risk: 'medium',   description: 'Append to file' },
+    'edit_file':            { tier: 2, category: 'write',     risk: 'medium',   description: 'Edit existing file' },
+    'qa_run_tests':         { tier: 2, category: 'execute',   risk: 'low',      description: 'Run test suite' },
+    'set_working_dir':      { tier: 2, category: 'config',    risk: 'low',      description: 'Change working directory' },
+    'set_thinking_level':   { tier: 2, category: 'config',    risk: 'low',      description: 'Adjust thinking budget' },
+    'delegate_to_agent':    { tier: 2, category: 'delegate',  risk: 'low',      description: 'Delegate to sub-agent' },
+    'assign_task':          { tier: 2, category: 'delegate',  risk: 'low',      description: 'Assign task to agent' },
+    'message_agent':        { tier: 2, category: 'delegate',  risk: 'low',      description: 'Send message to agent' },
+    'execute_command':      { tier: 2, category: 'execute',   risk: 'medium',   description: 'Run shell command' },
+
+    // ── Tier 3 — Human required (destructive, external, package changes) ──
+    'delete_file':          { tier: 3, category: 'destructive', risk: 'high',   description: 'Delete file' },
+    'git_commit':           { tier: 3, category: 'vcs',       risk: 'high',     description: 'Git commit' },
+    'git_push':             { tier: 3, category: 'vcs',       risk: 'high',     description: 'Git push to remote' },
+    'handoff_to_orchestrator': { tier: 2, category: 'workflow', risk: 'low',    description: 'PM handoff to orchestrator' },
+
+    // ── Tier 4 — Full review (critical/irreversible) ──
+    'delete_directory':     { tier: 4, category: 'destructive', risk: 'critical', description: 'Delete directory recursively' },
+    'deploy':               { tier: 4, category: 'deploy',    risk: 'critical',   description: 'Deploy to production' },
+};
+
 // Track actions for periodic check-ins
 let actionCount = 0;
 const CHECK_IN_INTERVAL = 10;
@@ -136,7 +186,21 @@ function classifyApprovalTier(toolName, input) {
         };
     }
 
-    // Default tier classification per APPROVAL_SYSTEM.md
+    // Check declarative tool registry (Mini-Agent pattern) BEFORE runtime inference
+    const registered = TOOL_TIER_REGISTRY[toolName];
+    if (registered) {
+        return {
+            tier: registered.tier,
+            confidence: 0.90,  // High confidence for declaratively registered tools
+            reasoning: `Declarative tier ${registered.tier} (${registered.category}, risk: ${registered.risk})`,
+            action,
+            category: registered.category,
+            risk: registered.risk
+        };
+    }
+
+    // Fallthrough: runtime tier classification per APPROVAL_SYSTEM.md
+    // (Handles dynamic tools like bash/powershell that need input inspection)
     switch (toolName) {
         // Tier 1: Self-Approve (read-only, docs, formatting)
         case 'read_file':
@@ -344,7 +408,10 @@ async function init(h) {
         getLearnedPatterns: () => learnedPatterns,
         getActionCount: () => actionCount,
         maybeCheckIn,
-        APPROVAL_TIERS
+        APPROVAL_TIERS,
+        // Mini-Agent pattern: declarative tool registry metadata
+        getToolRegistry: () => ({ ...TOOL_TIER_REGISTRY }),
+        TOOL_TIER_REGISTRY
     };
 
     hub.registerService('agentSystem', service);

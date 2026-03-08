@@ -13,3 +13,4 @@ src-tauri/target/
 *.db-shm
 .DS_Store
 Thumbs.db
+reports/

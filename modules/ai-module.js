@@ -309,6 +309,70 @@ class AIClient {
         }));
         req.end();
     }
+
+    // ── Quick Complete: lightweight non-streaming completion ──
+    // Inspired by Mini-Agent's internal summarization calls.
+    // Used for context summarization, session note generation, and other
+    // internal tasks that don't need streaming or tool use.
+    async quickComplete(prompt, opts = {}) {
+        const baseUrl = this.config.baseUrl.replace(/\/$/, '');
+        const url = new URL(`${baseUrl}/v1/messages`);
+
+        const messages = [{ role: 'user', content: prompt }];
+        const model = opts.model || _effectiveModel(this.config);
+        const maxTokens = opts.maxTokens || 500;
+
+        const body = JSON.stringify({
+            model,
+            messages,
+            max_tokens: maxTokens,
+            temperature: opts.temperature || 0.3,  // Lower temp for internal tasks
+            stream: false  // Non-streaming for simplicity
+        });
+
+        return new Promise((resolve, reject) => {
+            const reqOptions = {
+                hostname: url.hostname,
+                port: url.port || 443,
+                path: url.pathname + url.search,
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'x-api-key': this.config.apiKey,
+                    'Authorization': `Bearer ${this.config.apiKey}`,
+                    'anthropic-version': '2023-06-01',
+                    'Content-Length': Buffer.byteLength(body)
+                }
+            };
+
+            const req = https.request(reqOptions, (res) => {
+                let responseBody = '';
+                res.on('data', chunk => responseBody += chunk.toString());
+                res.on('end', () => {
+                    if (res.statusCode !== 200) {
+                        hub.log(`[quickComplete] API error ${res.statusCode}: ${responseBody.substring(0, 200)}`, 'warn');
+                        reject(new Error(`quickComplete API Error ${res.statusCode}`));
+                        return;
+                    }
+                    try {
+                        const parsed = JSON.parse(responseBody);
+                        const text = parsed.content?.[0]?.text || '';
+                        resolve(text);
+                    } catch (e) {
+                        reject(new Error('quickComplete parse error: ' + e.message));
+                    }
+                });
+            });
+
+            req.on('error', reject);
+            req.setTimeout(opts.timeout || 30000, () => {
+                req.destroy(new Error('quickComplete timed out'));
+            });
+
+            req.write(body);
+            req.end();
+        });
+    }
 }
 
 function buildSystemPrompt(toolsModule) {
@@ -725,13 +789,27 @@ YOU ARE THE CONDUCTOR. You plan, coordinate, and delegate. You do NOT write code
 **BLOCKED FOR YOU** (code will reject these and tell you to delegate):
 write_file, patch_file, edit_file, apply_diff, run_command, bash, execute_code
 
-**YOUR TOOLS**: create_task, delegate_to_agent, update_task_status, list_agents, message_agent, read_file (read-only), list_milestones, list_projects
+**YOUR TOOLS**: create_task, delegate_to_agent, delegate_to_team, update_task_status, list_agents, message_agent, read_file (read-only), list_milestones, list_projects, recommend_task (review agent suggestions)
 
 ## Workflow — follow this EVERY time:
 1. list_agents() — know your team before assigning work
 2. create_task(title, description, assignee:"agent-name") — ASSIGNEE IS REQUIRED on every task
-3. delegate_to_agent(agent:"agent-name", task:"full self-contained description with file paths and context") — hand it off
+3. For multi-domain tasks: **delegate_to_team** (PREFERRED — dispatches multiple agents in parallel)
+   For single-domain tasks: delegate_to_agent(agent:"agent-name", task:"full self-contained description")
 4. Receive result → update_task_status → coordinate next step
+
+## TEAM DELEGATION BIAS (prefer teams for multi-domain tasks):
+For any task that touches multiple domains (code + tests, frontend + backend, implementation + documentation),
+use **delegate_to_team** to dispatch multiple agents in parallel instead of sequential delegate_to_agent calls.
+
+Example: "Implement login form and write tests"
+→ delegate_to_team(assignments: [
+    { agent: "code-implementer", task: "Implement login form component at src/components/Login.tsx..." },
+    { agent: "testing-engineer", task: "Write unit and integration tests for the login form..." }
+  ])
+
+Single-agent tasks (pure coding, pure testing, git ops) still use delegate_to_agent.
+Team delegation results are returned together so you can coordinate follow-up work efficiently.
 
 ## Agent Routing (use the right specialist):
 - Code writing/editing/patching → **code-implementer**
@@ -828,7 +906,8 @@ async function init(h) {
 
     hub.registerService('ai', {
         chatStream: aiClient.chatStream.bind(aiClient),
-        abort: aiClient.abort.bind(aiClient)
+        abort: aiClient.abort.bind(aiClient),
+        quickComplete: aiClient.quickComplete.bind(aiClient)  // Mini-Agent pattern: lightweight internal completions
     });
 
     hub.log('🤖 AI module loaded (model: ' + config.model + ')', 'success');

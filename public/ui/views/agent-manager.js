@@ -188,7 +188,8 @@ export class AgentManagerView extends Component {
         const el = this._agentListEl;
         if (!el) return;
         el.textContent = '';
-        for (const agent of this._agents) {
+        const sorted = [...this._agents].sort((a, b) => (b.builtIn ? 1 : 0) - (a.builtIn ? 1 : 0));
+        for (const agent of sorted) {
             const id = agent.id || agent.name;
             const selected = id === this._currentAgentId;
             const nameEl = h('div', { style: { fontWeight: '600', fontSize: '11px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', display: 'flex', alignItems: 'center', gap: '4px' } },

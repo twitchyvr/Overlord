@@ -91,7 +91,7 @@ const DEFAULT_AGENTS = {
         securityRole: 'developer',
         builtIn: true,
         forcedTools: ['delegate_to_agent', 'delegate_to_team', 'create_task', 'message_agent', 'recommend_task', 'close_milestone', 'request_tool_exception'],
-        blockedTools: ['bash', 'write_file', 'patch_file', 'edit_file'],
+        blockedTools: ['bash', 'powershell', 'cmd', 'write_file', 'patch_file', 'edit_file'],
         capabilities: ['orchestration', 'task-delegation', 'multi-agent-coordination', 'milestone-management', 'workflow-design']
     },
     'project-manager': {
@@ -109,7 +109,7 @@ const DEFAULT_AGENTS = {
         securityRole: 'developer',
         builtIn: true,
         forcedTools: ['handoff_to_orchestrator', 'recommend_task', 'create_task'],
-        blockedTools: ['bash', 'write_file', 'patch_file', 'edit_file'],
+        blockedTools: ['bash', 'powershell', 'cmd', 'write_file', 'patch_file', 'edit_file'],
         capabilities: ['project-planning', 'milestone-creation', 'scope-management', 'stakeholder-communication', 'roadmap-design']
     },
 
@@ -402,17 +402,6 @@ const DEFAULT_AGENTS = {
         autoAddTools: false,
         securityRole: 'readonly',
         capabilities: ['requirements-analysis', 'business-process-modeling', 'data-analysis', 'stakeholder-communication', 'use-cases', 'functional-specs']
-    },
-    'project-manager': {
-        name: 'project-manager',
-        role: 'Project Manager',
-        description: 'Manages projects from initiation to completion, coordinates resources, manages timelines, and ensures successful delivery.',
-        group: 'Product',
-        languages: ['English'],
-        tools: ['read_file', 'write_file', 'list_dir', 'bash'],
-        autoAddTools: false,
-        securityRole: 'readonly',
-        capabilities: ['project-planning', 'resource-management', 'risk-management', 'stakeholder-management', 'budget-tracking', 'timeline-management', 'reporting']
     },
     'project-initializer': {
         name: 'project-initializer',
@@ -739,10 +728,51 @@ function initializeAgentTables() {
 function initializeDefaultAgents() {
     if (!db) return;
 
+    // Always upsert built-in agents so they exist even on existing DBs
+    try {
+        for (const [name, agent] of Object.entries(DEFAULT_AGENTS)) {
+            if (!agent.builtIn) continue;
+            const check = db.query('SELECT id FROM agents WHERE name = ?', [name]);
+            if (check.success && check.results && check.results.length > 0) {
+                // Already exists — update flags + tools to match definition
+                db.run(
+                    `UPDATE agents SET built_in=1, forced_tools=?, blocked_tools=?, role=?, description=?, tools=?, updated_at=? WHERE name=?`,
+                    [
+                        JSON.stringify(agent.forcedTools || []),
+                        JSON.stringify(agent.blockedTools || []),
+                        agent.role,
+                        agent.description || '',
+                        JSON.stringify(agent.tools || []),
+                        new Date().toISOString(),
+                        name
+                    ]
+                );
+            } else {
+                createAgent({
+                    name,
+                    role: agent.role,
+                    description: agent.description,
+                    group: agent.group,
+                    languages: agent.languages,
+                    tools: agent.tools,
+                    autoAddTools: agent.autoAddTools,
+                    securityRole: agent.securityRole,
+                    capabilities: agent.capabilities,
+                    builtIn: true,
+                    forcedTools: agent.forcedTools || [],
+                    blockedTools: agent.blockedTools || []
+                });
+            }
+        }
+        HUB?.log('✅ Built-in agents synced', 'info');
+    } catch (e) {
+        HUB?.log('⚠️ Built-in agents sync error: ' + e.message, 'warn');
+    }
+
+    // Seed all default agents only on a fresh DB (no agents yet)
     try {
         const existing = db.query('SELECT COUNT(*) as count FROM agents');
         if (existing.success && existing.results[0].count === 0) {
-            // Insert default agents
             for (const [name, agent] of Object.entries(DEFAULT_AGENTS)) {
                 createAgent({
                     name: name,

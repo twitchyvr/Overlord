@@ -67,6 +67,9 @@ const SERVER_PRESETS = {
 
 // ==================== MCP SERVER CONNECTION ====================
 
+// Default timeout for MCP operations (configurable via MCP_TIMEOUT_MS env var)
+const MCP_TIMEOUT_MS = parseInt(process.env.MCP_TIMEOUT_MS, 10) || 60000;
+
 class McpServerConnection {
     constructor(config) {
         this.config = config;
@@ -113,6 +116,8 @@ class McpServerConnection {
             if (cfg?.baseUrl) env['MINIMAX_API_HOST'] = cfg.baseUrl.replace('/anthropic', '');
         }
 
+        hub?.log(`[MCP:${this.config.name}] Starting: ${this.config.command} ${(this.config.args || []).join(' ')} (timeout: ${MCP_TIMEOUT_MS / 1000}s)`, 'info');
+
         try {
             this.proc = spawn(this.config.command, this.config.args || [], {
                 env,
@@ -122,7 +127,8 @@ class McpServerConnection {
 
             this.proc.stdout.on('data', (chunk) => this._onData(chunk));
             this.proc.stderr.on('data', (chunk) => {
-                hub?.log(`[MCP:${this.config.name}] stderr: ${chunk.toString().trim()}`, 'warn');
+                const msg = chunk.toString().trim();
+                if (msg) hub?.log(`[MCP:${this.config.name}] stderr: ${msg}`, 'warn');
             });
 
             this.proc.on('exit', (code, signal) => {
@@ -189,10 +195,11 @@ class McpServerConnection {
                 return reject(new Error(`MCP server "${this.config.name}" not running`));
             }
             const id = this.nextId++;
+            const timeoutMs = MCP_TIMEOUT_MS;
             const timeout = setTimeout(() => {
                 this.pendingRequests.delete(id);
-                reject(new Error(`MCP server "${this.config.name}" timeout on ${method}`));
-            }, 30000);
+                reject(new Error(`MCP server "${this.config.name}" timeout on ${method} after ${timeoutMs / 1000}s — if this is a first run, the package may still be downloading. Set MCP_TIMEOUT_MS in .env to increase (current: ${timeoutMs}ms)`));
+            }, timeoutMs);
 
             this.pendingRequests.set(id, {
                 resolve: (val) => { clearTimeout(timeout); resolve(val); },
@@ -296,10 +303,25 @@ async function startEnabledServers() {
 
         const conn = new McpServerConnection(cfg);
         servers.set(cfg.name, conn);
-        try {
-            await conn.start();
-        } catch (e) {
-            // Non-fatal: just mark as errored
+
+        // Retry loop: up to maxReconnects attempts with exponential backoff
+        for (let attempt = 0; attempt <= conn.maxReconnects; attempt++) {
+            try {
+                await conn.start();
+                break; // Success — exit retry loop
+            } catch (e) {
+                conn.reconnectAttempts = attempt + 1;
+                if (attempt < conn.maxReconnects) {
+                    const delay = Math.min(5000 * (attempt + 1), 15000); // 5s, 10s, 15s
+                    hub?.log(`[MCP:${cfg.name}] Retry ${attempt + 1}/${conn.maxReconnects} in ${delay / 1000}s…`, 'warn');
+                    await new Promise(r => setTimeout(r, delay));
+                    // Reset for next attempt
+                    conn.proc = null;
+                    conn.ready = false;
+                } else {
+                    hub?.log(`[MCP:${cfg.name}] All ${conn.maxReconnects} retries exhausted — server disabled for this session`, 'error');
+                }
+            }
         }
     }
 }

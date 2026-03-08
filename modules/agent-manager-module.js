@@ -44,7 +44,7 @@ const SECURITY_ROLES = {
         name: 'full-access',
         label: 'Full Access',
         description: 'Unrestricted system agent. For orchestrators and system-level coordinators that need every tool.',
-        allowedCategories: ['read', 'write', 'execute', 'diagnostic', 'memory', 'orchestration', 'ai', 'notes'],
+        allowedCategories: ['*'],   // wildcard — all categories permitted
         blockedTools: [],
         canOverride: false
     },
@@ -765,6 +765,25 @@ function initializeAgentTables() {
             )
         `);
         
+        // Meeting notes table (persists meeting notes generated from chat room transcripts)
+        db.run(`
+            CREATE TABLE IF NOT EXISTS meeting_notes (
+                id TEXT PRIMARY KEY,
+                room_id TEXT NOT NULL,
+                title TEXT,
+                date TEXT,
+                duration TEXT,
+                participants TEXT,
+                summary TEXT,
+                key_decisions TEXT,
+                raid TEXT,
+                action_items TEXT,
+                next_steps TEXT,
+                transcript TEXT,
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP
+            )
+        `);
+
         HUB?.log('📊 Agent Manager tables initialized', 'info');
     } catch (e) {
         HUB?.log('⚠️ Agent table init error: ' + e.message, 'warn');
@@ -946,7 +965,7 @@ function createAgent(agentData) {
 
 function updateAgent(agentId, updates) {
     try {
-        if (!db) return { success: true }; // No DB — graceful no-op
+        if (!db) return { success: false, error: 'Database not available' };
 
         // ── Upsert: check if agent exists in DB (default agents may not be stored yet)
         const existingResult = db.query(
@@ -1175,6 +1194,9 @@ function isToolAllowedForRole(toolName, role, agentConfig = {}) {
 
     // Explicit block list — always checked first
     if (roleDef.blockedTools.includes(toolName)) return false;
+
+    // Wildcard: full-access (or any role with allowedCategories: ['*']) bypasses category check
+    if (roleDef.allowedCategories.includes('*')) return true;
 
     // Category check: look up tool's category from TOOL_TIER_REGISTRY
     // The registry is loaded from agent-system-module at runtime via HUB
@@ -1502,6 +1524,75 @@ function getActiveCollaborations() {
     return Array.from(activeCollaborations.values()).filter(c => c.status === 'active');
 }
 
+// ==================== MEETING NOTES ====================
+
+function saveMeetingNotes(roomId, notes) {
+    if (!db) return { success: false, error: 'Database not available' };
+    try {
+        const id = `meeting_${roomId}_${Date.now()}`;
+        db.run(`
+            INSERT OR REPLACE INTO meeting_notes (id, room_id, title, date, duration, participants, summary, key_decisions, raid, action_items, next_steps, transcript)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `, [
+            id, roomId,
+            notes.title || '',
+            notes.date || new Date().toISOString(),
+            notes.duration || '',
+            JSON.stringify(notes.participants || []),
+            notes.summary || '',
+            JSON.stringify(notes.keyDecisions || []),
+            JSON.stringify(notes.raid || {}),
+            JSON.stringify(notes.actionItems || []),
+            JSON.stringify(notes.nextSteps || []),
+            notes.transcript || ''
+        ]);
+        HUB?.log(`📋 Meeting notes saved for room ${roomId}`, 'info');
+        return { success: true, id };
+    } catch (e) {
+        return { success: false, error: e.message };
+    }
+}
+
+function listMeetingNotes(limit = 50) {
+    if (!db) return [];
+    try {
+        const result = db.query(
+            `SELECT id, room_id, title, date, duration, participants, summary, key_decisions, raid, action_items, next_steps, created_at
+             FROM meeting_notes ORDER BY created_at DESC LIMIT ?`, [limit]
+        );
+        if (!result.success) return [];
+        return (result.results || []).map(row => ({
+            ...row,
+            participants: JSON.parse(row.participants || '[]'),
+            keyDecisions: JSON.parse(row.key_decisions || '[]'),
+            raid: JSON.parse(row.raid || '{}'),
+            actionItems: JSON.parse(row.action_items || '[]'),
+            nextSteps: JSON.parse(row.next_steps || '[]')
+        }));
+    } catch (_) {
+        return [];
+    }
+}
+
+function getMeetingNotes(noteId) {
+    if (!db) return null;
+    try {
+        const result = db.query(`SELECT * FROM meeting_notes WHERE id = ?`, [noteId]);
+        if (!result.success || !result.results?.length) return null;
+        const row = result.results[0];
+        return {
+            ...row,
+            participants: JSON.parse(row.participants || '[]'),
+            keyDecisions: JSON.parse(row.key_decisions || '[]'),
+            raid: JSON.parse(row.raid || '{}'),
+            actionItems: JSON.parse(row.action_items || '[]'),
+            nextSteps: JSON.parse(row.next_steps || '[]')
+        };
+    } catch (_) {
+        return null;
+    }
+}
+
 // ==================== EXPORTS ====================
 
 module.exports = {
@@ -1527,6 +1618,10 @@ module.exports = {
     startCollaboration,
     endCollaboration,
     getActiveCollaborations,
+    // Meeting notes
+    saveMeetingNotes,
+    listMeetingNotes,
+    getMeetingNotes,
     // Constants
     TOOL_CATEGORIES,
     PROGRAMMING_LANGUAGES,

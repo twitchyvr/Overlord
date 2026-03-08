@@ -460,7 +460,10 @@ export class OrchestrationPanel extends PanelComponent {
         if (!el) return;
 
         const s = this._state;
-        const maxC = s.maxCycles || 10;
+        // IMPORTANT: must NOT use || here — 0 is a valid value meaning "unlimited"
+        // and `0 || 10` would evaluate to 10, causing the unlimited state to be
+        // immediately overwritten on every re-render after the checkbox is clicked.
+        const maxC = s.maxCycles != null ? s.maxCycles : 10;
         const isUnlimited = maxC === 0 || maxC > 99999;
 
         // ── In-place update guard ─────────────────────────────────────────────

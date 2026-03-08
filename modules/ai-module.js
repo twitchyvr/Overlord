@@ -291,7 +291,7 @@ class AIClient {
 
         // Merge per-call config overrides (e.g. per-agent thinking settings)
         const effectiveCfg = configOverrides ? { ...this.config, ...configOverrides } : this.config;
-        req.write(JSON.stringify({
+        const requestPayload = {
             model: _effectiveModel(effectiveCfg),
             messages: messages,
             system: systemOverride || systemPrompt,
@@ -306,7 +306,32 @@ class AIClient {
                     budget_tokens: Math.min(effectiveCfg.thinkingBudget || 2048, effectiveCfg.maxTokens - 1)
                 }
             } : {})
-        }));
+        };
+
+        // Broadcast context snapshot for the Settings context viewer
+        _lastApiContext = {
+            ts: Date.now(),
+            model: requestPayload.model,
+            system: typeof requestPayload.system === 'string' ? requestPayload.system : JSON.stringify(requestPayload.system),
+            messagesCount: messages.length,
+            messages: messages.map(m => ({
+                role: m.role,
+                contentPreview: typeof m.content === 'string'
+                    ? m.content.substring(0, 200)
+                    : Array.isArray(m.content)
+                        ? m.content.filter(c => c.type === 'text').map(c => c.text?.substring(0, 200)).join(' ').substring(0, 200)
+                        : '...',
+                contentLength: typeof m.content === 'string' ? m.content.length : JSON.stringify(m.content).length
+            })),
+            toolsCount: toolDefs.length,
+            maxTokens: requestPayload.max_tokens,
+            temperature: requestPayload.temperature,
+            thinkingEnabled: !!effectiveCfg.thinkingEnabled,
+            thinkingBudget: effectiveCfg.thinkingBudget || 0
+        };
+        hub.broadcast('api_context_snapshot', _lastApiContext);
+
+        req.write(JSON.stringify(requestPayload));
         req.end();
     }
 
@@ -905,6 +930,9 @@ function formatDuration(ms) {
     return `${minutes}m ${seconds}s`;
 }
 
+// Last API context snapshot (for Settings context viewer)
+let _lastApiContext = null;
+
 async function init(h) {
     hub = h;
     config = hub.getService('config');
@@ -918,7 +946,8 @@ async function init(h) {
         chatStream: aiClient.chatStream.bind(aiClient),
         abort: aiClient.abort.bind(aiClient),
         quickComplete: aiClient.quickComplete.bind(aiClient),  // Mini-Agent pattern: lightweight internal completions
-        buildSystemPrompt  // expose for settings prompt inspector
+        buildSystemPrompt,  // expose for settings prompt inspector
+        getLastContext: () => _lastApiContext  // expose for settings context viewer
     });
 
     hub.log('🤖 AI module loaded (model: ' + config.model + ')', 'success');

@@ -856,6 +856,17 @@ class Hub extends EventEmitter {
                 }
             });
 
+            // Get last API context snapshot (for Settings context viewer)
+            socket.on('get_last_context', () => {
+                const aiMod = this.getService('ai');
+                if (aiMod && typeof aiMod.getLastContext === 'function') {
+                    const ctx = aiMod.getLastContext();
+                    socket.emit('last_context_data', ctx || { error: 'No API calls made yet in this session' });
+                } else {
+                    socket.emit('last_context_data', { error: 'AI module not ready' });
+                }
+            });
+
             // ── Voice Clone handlers ──────────────────────────────────────────
             socket.on('voice_clone_create', (data) => this.emit('voice_clone_create', data, socket));
             socket.on('voice_clone_upload', (data) => this.emit('voice_clone_upload', data, socket));

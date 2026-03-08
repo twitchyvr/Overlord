@@ -901,11 +901,54 @@ export class SettingsView extends Component {
             instrArea
         ));
 
-        // Register for system_prompt_data responses
+        // ── Context Viewer ────────────────────────────────────────
+        const ctxArea = h('textarea', {
+            class: 'settings-textarea settings-prompt-preview',
+            readonly: '',
+            rows: '14',
+            placeholder: 'Click "Refresh" to load the last API context snapshot…',
+            style: 'font-family: monospace; font-size: 10px; resize: vertical; white-space: pre; tab-size: 2;'
+        });
+        this._contextPreviewEl = ctxArea;
+
+        const ctxRefreshBtn = Button.create('Refresh', {
+            variant: 'ghost', size: 'sm',
+            onClick: () => this._refreshContext()
+        });
+
+        const ctxHeader = h('div', { style: 'display:flex; align-items:center; justify-content:space-between; margin-bottom:6px;' },
+            h('div', { class: 'settings-label' }, 'Last API Request Context'),
+            ctxRefreshBtn
+        );
+
+        panel.appendChild(this._section('Context Viewer',
+            'Shows what was sent to the API on the last request: system prompt, messages (with previews), tool count, model, and parameters. Auto-updates on each API call.',
+            ctxHeader,
+            ctxArea
+        ));
+
+        // Register for system_prompt_data and context responses
         if (this._socket) {
             this._socket.on('system_prompt_data', (data) => {
                 if (this._promptPreviewEl) {
                     this._promptPreviewEl.value = data.prompt || '';
+                }
+            });
+
+            this._socket.on('last_context_data', (data) => {
+                if (this._contextPreviewEl) {
+                    if (data.error) {
+                        this._contextPreviewEl.value = data.error;
+                    } else {
+                        this._contextPreviewEl.value = this._formatContext(data);
+                    }
+                }
+            });
+
+            // Auto-update on each API call
+            this._socket.on('api_context_snapshot', (data) => {
+                if (this._contextPreviewEl && data) {
+                    this._contextPreviewEl.value = this._formatContext(data);
                 }
             });
         }
@@ -919,6 +962,43 @@ export class SettingsView extends Component {
             this._promptPreviewEl.value = '⏳ Loading…';
         }
         this._socket.emit('get_system_prompt');
+    }
+
+    _refreshContext() {
+        if (!this._socket) return;
+        if (this._contextPreviewEl) {
+            this._contextPreviewEl.value = '⏳ Loading…';
+        }
+        this._socket.emit('get_last_context');
+    }
+
+    _formatContext(ctx) {
+        const lines = [];
+        lines.push(`=== API CONTEXT SNAPSHOT ===`);
+        lines.push(`Timestamp: ${new Date(ctx.ts).toLocaleString()}`);
+        lines.push(`Model: ${ctx.model}`);
+        lines.push(`Max Tokens: ${ctx.maxTokens}`);
+        lines.push(`Temperature: ${ctx.temperature}`);
+        lines.push(`Tools: ${ctx.toolsCount} definitions`);
+        if (ctx.thinkingEnabled) {
+            lines.push(`Thinking: enabled (budget: ${ctx.thinkingBudget})`);
+        }
+        lines.push('');
+        lines.push(`=== SYSTEM PROMPT (${(ctx.system || '').length} chars) ===`);
+        lines.push((ctx.system || '').substring(0, 2000));
+        if ((ctx.system || '').length > 2000) lines.push('... [truncated]');
+        lines.push('');
+        lines.push(`=== MESSAGES (${ctx.messagesCount} total) ===`);
+        if (ctx.messages) {
+            for (let i = 0; i < ctx.messages.length; i++) {
+                const m = ctx.messages[i];
+                lines.push(`[${i}] ${m.role.toUpperCase()} (${m.contentLength} chars)`);
+                if (m.contentPreview) {
+                    lines.push(`    ${m.contentPreview}`);
+                }
+            }
+        }
+        return lines.join('\n');
     }
 
     // ══════════════════════════════════════════════════════════════

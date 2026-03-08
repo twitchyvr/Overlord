@@ -308,7 +308,9 @@ export class OrchestrationPanel extends PanelComponent {
 
     _renderFleet() {
         const s = this._state;
-        const agents = s.activeAgents || [];
+        // Filter out phantom sessions with no valid name (backend guard handles this too,
+        // but a frontend filter prevents any stale or malformed data from rendering).
+        const agents = (s.activeAgents || []).filter(a => a.name);
 
         // ── Agent list ──
         const el = document.getElementById('orch-agent-list');

@@ -206,9 +206,20 @@ function broadcastOrchestratorDashboard() {
     // Agent fleet snapshot (enhanced with Mini-Agent persistent context flags)
     orchestrationState.activeAgents = [];
     agentSessions.forEach((session, name) => {
+        // Skip phantom sessions with no valid name (can occur if delegate_to_agent
+        // was called with an empty string before the input guard was added).
+        if (!name) return;
+
+        // Derive human-readable status from the actual session booleans.
+        // session.status is only ever set to 'killed' — isProcessing/paused are
+        // the authoritative flags for whether an agent is running or waiting.
+        const derivedStatus = session.isProcessing ? 'running'
+                            : session.paused        ? 'paused'
+                            :                         'idle';
+
         orchestrationState.activeAgents.push({
             name,
-            status: session.status || 'idle',
+            status: derivedStatus,
             task: session.currentTask || null,
             startTime: session.startTime || null,
             cycleCount: session.cycleCount || 0,
@@ -3864,6 +3875,9 @@ async function dispatchAgentAndAwait(agentName, task, taskScope = {}) {
     // Attach task scope so buildAgentSystemPrompt can inject constraints
     session.taskScope = Object.keys(taskScope).length ? taskScope : null;
 
+    // Record the task so the orchestration fleet panel can show what the agent is doing
+    session.currentTask = task.substring(0, 100);
+
     // Push task into the agent's history so it has context
     session.history.push({ role: 'user', content: task });
     hub.broadcast('agent_message', { agentName, role: 'user', content: task, ts: Date.now() });
@@ -4043,6 +4057,7 @@ async function runAgentCycle(session) {
     } finally {
         session.isProcessing = false;
         session.startTime = null;
+        session.currentTask = null;   // Clear task so fleet shows idle after completion
         hub.broadcast('agent_session_state', {
             agentName: session.name,
             isProcessing: false,

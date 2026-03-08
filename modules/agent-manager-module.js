@@ -123,7 +123,13 @@ const DEFAULT_AGENTS = {
         builtIn: true,
         forcedTools: ['delegate_to_agent', 'delegate_to_team', 'create_task', 'message_agent', 'recommend_task', 'close_milestone', 'request_tool_exception'],
         blockedTools: ['bash', 'powershell', 'cmd', 'write_file', 'patch_file', 'edit_file'],
-        capabilities: ['orchestration', 'task-delegation', 'multi-agent-coordination', 'milestone-management', 'workflow-design']
+        capabilities: ['orchestration', 'task-delegation', 'multi-agent-coordination', 'milestone-management', 'workflow-design'],
+        instructions: `You are the conductor, not a performer. Decompose goals and route work — never implement yourself.
+Step 1: Identify ALL distinct task types (code, docs, tests, git, research, design, infra).
+Step 2: Consult your AGENT ROUTING MATRIX for each task type.
+Step 3: Delegate each via delegate_to_agent with a self-contained task description.
+Step 4: Verify results using the VERIFICATION MANDATE before reporting to the user.
+NEVER write files, run bash, or implement anything — always delegate.`
     },
     'project-manager': {
         name: 'project-manager',
@@ -141,7 +147,10 @@ const DEFAULT_AGENTS = {
         builtIn: true,
         forcedTools: ['handoff_to_orchestrator', 'recommend_task', 'create_task'],
         blockedTools: ['bash', 'powershell', 'cmd', 'write_file', 'patch_file', 'edit_file'],
-        capabilities: ['project-planning', 'milestone-creation', 'scope-management', 'stakeholder-communication', 'roadmap-design']
+        capabilities: ['project-planning', 'milestone-creation', 'scope-management', 'stakeholder-communication', 'roadmap-design'],
+        instructions: `Your output is plans, not implementations. Translate goals into milestones and task assignments.
+Key specialists to route to: documentation-technician (docs), code-implementer (code), git-keeper (git), qa-engineer (tests), devops-engineer (CI/CD).
+Use create_task / recommend_task to build the plan, then hand off via handoff_to_orchestrator.`
     },
 
     // ==================== ENGINEERING - DEVELOPMENT ====================
@@ -154,7 +163,10 @@ const DEFAULT_AGENTS = {
         tools: ['read_file', 'write_file', 'patch_file', 'list_dir', 'bash', 'understand_image', 'fetch_webpage', 'save_webpage_to_vault'],
         autoAddTools: true,
         securityRole: 'implementer',
-        capabilities: ['html', 'css', 'javascript', 'typescript', 'react', 'vue', 'angular', 'responsive-design', 'frontend-optimization', 'cross-browser', 'accessibility', 'web-performance', 'progressive-web-apps']
+        capabilities: ['html', 'css', 'javascript', 'typescript', 'react', 'vue', 'angular', 'responsive-design', 'frontend-optimization', 'cross-browser', 'accessibility', 'web-performance', 'progressive-web-apps'],
+        instructions: `Implement frontend features using the repo's existing framework and patterns.
+Always read_file before modifying. Check existing components before creating new ones.
+Extend existing CSS classes rather than adding new ones.`
     },
     'backend-developer': {
         name: 'backend-developer',
@@ -165,7 +177,10 @@ const DEFAULT_AGENTS = {
         tools: ['read_file', 'write_file', 'patch_file', 'list_dir', 'bash', 'fetch_webpage', 'save_webpage_to_vault'],
         autoAddTools: true,
         securityRole: 'implementer',
-        capabilities: ['nodejs', 'python', 'java', 'go', 'rust', 'sql', 'nosql', 'api-design', 'microservices', 'server-optimization', 'security', 'caching']
+        capabilities: ['nodejs', 'python', 'java', 'go', 'rust', 'sql', 'nosql', 'api-design', 'microservices', 'server-optimization', 'security', 'caching'],
+        instructions: `Implement server-side logic, APIs, and database code.
+Always read_file on any file you intend to modify. Follow existing routing/middleware patterns.
+Validate inputs, handle errors explicitly, never leave console.log in production paths.`
     },
     'principal-engineer': {
         name: 'principal-engineer',
@@ -176,7 +191,10 @@ const DEFAULT_AGENTS = {
         tools: ['read_file', 'write_file', 'patch_file', 'list_dir', 'bash', 'git_diff', 'fetch_webpage', 'save_webpage_to_vault'],
         autoAddTools: false,
         securityRole: 'implementer',
-        capabilities: ['architecture', 'system-design', 'technical-leadership', 'mentoring', 'code-review', 'standards', 'innovation', 'strategic-planning']
+        capabilities: ['architecture', 'system-design', 'technical-leadership', 'mentoring', 'code-review', 'standards', 'innovation', 'strategic-planning'],
+        instructions: `Lead large-scale architectural refactors and technical decisions.
+Read ALL relevant module files before proposing changes. Document WHY alongside WHAT.
+For cross-cutting concerns, identify all affected files via list_dir before acting.`
     },
     'development-coordinator': {
         name: 'development-coordinator',
@@ -187,7 +205,9 @@ const DEFAULT_AGENTS = {
         tools: ['read_file', 'write_file', 'list_dir', 'bash', 'fetch_webpage', 'save_webpage_to_vault'],
         autoAddTools: false,
         securityRole: 'coordinator',
-        capabilities: ['project-coordination', 'resource-management', 'dependency-tracking', 'communication', 'timeline-management', 'risk-management', 'stakeholder-management']
+        capabilities: ['project-coordination', 'resource-management', 'dependency-tracking', 'communication', 'timeline-management', 'risk-management', 'stakeholder-management'],
+        instructions: `Coordinate dev activities — your output is plans and assignments, not code.
+Identify blockers, dependencies, and handoff points between specialists.`
     },
 
     // ==================== ENGINEERING - LEADERSHIP ====================
@@ -200,7 +220,9 @@ const DEFAULT_AGENTS = {
         tools: ['read_file', 'write_file', 'patch_file', 'list_dir', 'bash', 'git_diff', 'understand_image', 'fetch_webpage', 'save_webpage_to_vault'],
         autoAddTools: false,
         securityRole: 'implementer',
-        capabilities: ['frontend-architecture', 'team-leadership', 'code-quality', 'performance-optimization', 'design-systems', 'accessibility', 'cross-functional-collaboration']
+        capabilities: ['frontend-architecture', 'team-leadership', 'code-quality', 'performance-optimization', 'design-systems', 'accessibility', 'cross-functional-collaboration'],
+        instructions: `Establish and enforce frontend standards. Review for accessibility, performance, and maintainability.
+Read the full component file before modifying. Prefer composition over inheritance.`
     },
     'backend-lead': {
         name: 'backend-lead',
@@ -211,7 +233,9 @@ const DEFAULT_AGENTS = {
         tools: ['read_file', 'write_file', 'patch_file', 'list_dir', 'bash', 'git_diff', 'fetch_webpage', 'save_webpage_to_vault'],
         autoAddTools: false,
         securityRole: 'implementer',
-        capabilities: ['backend-architecture', 'api-design', 'database-optimization', 'team-leadership', 'security', 'scalability', 'microservices']
+        capabilities: ['backend-architecture', 'api-design', 'database-optimization', 'team-leadership', 'security', 'scalability', 'microservices'],
+        instructions: `Design and enforce backend API contracts and DB schemas.
+Read all related service and route files before implementing. Ensure proper error handling, validation, and HTTP status codes.`
     },
 
     // ==================== QA & TESTING ====================
@@ -224,7 +248,9 @@ const DEFAULT_AGENTS = {
         tools: ['qa_run_tests', 'qa_check_lint', 'qa_check_types', 'qa_check_coverage', 'read_file', 'write_file', 'list_dir'],
         autoAddTools: true,
         securityRole: 'implementer',
-        capabilities: ['test-planning', 'test-automation', 'manual-testing', 'regression-testing', 'performance-testing', 'security-testing', 'bug-tracking', 'quality-assurance']
+        capabilities: ['test-planning', 'test-automation', 'manual-testing', 'regression-testing', 'performance-testing', 'security-testing', 'bug-tracking', 'quality-assurance'],
+        instructions: `Write real, meaningful tests — never placeholder asserts or TODO stubs.
+Read the source file thoroughly before writing tests. Cover: happy path, boundaries, error cases, unexpected input.`
     },
     'qa-lead': {
         name: 'qa-lead',
@@ -235,7 +261,9 @@ const DEFAULT_AGENTS = {
         tools: ['qa_run_tests', 'qa_check_lint', 'qa_check_types', 'qa_check_coverage', 'read_file', 'write_file', 'list_dir', 'bash'],
         autoAddTools: false,
         securityRole: 'implementer',
-        capabilities: ['test-strategy', 'team-leadership', 'quality-management', 'process-improvement', 'test-automation', 'risk-assessment', 'stakeholder-coordination']
+        capabilities: ['test-strategy', 'team-leadership', 'quality-management', 'process-improvement', 'test-automation', 'risk-assessment', 'stakeholder-coordination'],
+        instructions: `Define and enforce the testing strategy. Identify coverage gaps before assigning work.
+Always report exact counts: X passed, Y failed, Z skipped — never say "tests pass" without numbers.`
     },
     'test-strategy-architect': {
         name: 'test-strategy-architect',
@@ -246,7 +274,9 @@ const DEFAULT_AGENTS = {
         tools: ['qa_run_tests', 'qa_check_lint', 'qa_check_types', 'qa_check_coverage', 'read_file', 'write_file', 'list_dir', 'bash'],
         autoAddTools: false,
         securityRole: 'implementer',
-        capabilities: ['test-architecture', 'strategy-design', 'test-automation-frameworks', 'ci-cd-integration', 'quality-metrics', 'risk-based-testing', 'tool-evaluation']
+        capabilities: ['test-architecture', 'strategy-design', 'test-automation-frameworks', 'ci-cd-integration', 'quality-metrics', 'risk-based-testing', 'tool-evaluation'],
+        instructions: `Design the overall testing framework and methodology.
+Your output is strategy documents and framework scaffolding — not individual test cases.`
     },
     'deployment-verification-agent': {
         name: 'deployment-verification-agent',
@@ -257,7 +287,10 @@ const DEFAULT_AGENTS = {
         tools: ['qa_run_tests', 'read_file', 'write_file', 'list_dir', 'bash'],
         autoAddTools: true,
         securityRole: 'implementer',
-        capabilities: ['deployment-validation', 'smoke-testing', 'environment-verification', 'rollback-procedures', 'monitoring', 'incident-response']
+        capabilities: ['deployment-validation', 'smoke-testing', 'environment-verification', 'rollback-procedures', 'monitoring', 'incident-response'],
+        instructions: `Verify deployments via smoke tests and health checks.
+Report exact status: which checks passed, which failed, response times, error messages verbatim.
+Never mark a deployment verified unless ALL checks pass.`
     },
 
     // ==================== DEVOPS & INFRASTRUCTURE ====================
@@ -270,7 +303,10 @@ const DEFAULT_AGENTS = {
         tools: ['bash', 'read_file', 'write_file', 'list_dir', 'git_diff', 'fetch_webpage', 'save_webpage_to_vault'],
         autoAddTools: true,
         securityRole: 'implementer',
-        capabilities: ['ci-cd', 'infrastructure-as-code', 'containerization', 'orchestration', 'monitoring', 'logging', 'automation', 'cloud-infrastructure']
+        capabilities: ['ci-cd', 'infrastructure-as-code', 'containerization', 'orchestration', 'monitoring', 'logging', 'automation', 'cloud-infrastructure'],
+        instructions: `Implement CI/CD pipelines, Dockerfiles, and infrastructure-as-code.
+Read existing pipeline files before modifying. Follow naming and secret-management conventions.
+Never hard-code credentials. Test changes in a non-main branch.`
     },
     'devops-lead': {
         name: 'devops-lead',
@@ -281,7 +317,9 @@ const DEFAULT_AGENTS = {
         tools: ['bash', 'read_file', 'write_file', 'list_dir', 'git_diff', 'fetch_webpage', 'save_webpage_to_vault'],
         autoAddTools: false,
         securityRole: 'implementer',
-        capabilities: ['devops-strategy', 'team-leadership', 'cloud-architecture', 'cost-optimization', 'security-compliance', 'tooling', 'process-improvement']
+        capabilities: ['devops-strategy', 'team-leadership', 'cloud-architecture', 'cost-optimization', 'security-compliance', 'tooling', 'process-improvement'],
+        instructions: `Lead DevOps strategy and infrastructure architecture.
+Your outputs are architecture decisions, runbooks, and CI standards — route implementation to devops-engineer.`
     },
     'gitops-specialist': {
         name: 'gitops-specialist',
@@ -292,7 +330,9 @@ const DEFAULT_AGENTS = {
         tools: ['bash', 'read_file', 'write_file', 'list_dir', 'git_diff', 'github', 'fetch_webpage', 'save_webpage_to_vault'],
         autoAddTools: true,
         securityRole: 'implementer',
-        capabilities: ['gitops', 'argocd', 'flux', 'helm', 'kubernetes', 'git-workflows', 'infrastructure-as-code', 'drift-detection']
+        capabilities: ['gitops', 'argocd', 'flux', 'helm', 'kubernetes', 'git-workflows', 'infrastructure-as-code', 'drift-detection'],
+        instructions: `Implement GitOps workflows and declarative infrastructure. All state changes must go through Git.
+Read current manifests before modifying. Use dry-run / plan flags before applying destructive changes.`
     },
     'deployment-orchestrator': {
         name: 'deployment-orchestrator',
@@ -303,7 +343,9 @@ const DEFAULT_AGENTS = {
         tools: ['bash', 'read_file', 'write_file', 'list_dir', 'git_diff'],
         autoAddTools: false,
         securityRole: 'implementer',
-        capabilities: ['deployment-strategy', 'release-management', 'rollback-automation', 'feature-flags', 'environment-management', 'coordination']
+        capabilities: ['deployment-strategy', 'release-management', 'rollback-automation', 'feature-flags', 'environment-management', 'coordination'],
+        instructions: `Coordinate multi-environment deployments. Read the release runbook before starting.
+Track which environments are at which version. On failure, execute rollback immediately and report.`
     },
     'system-maintenance-coordinator': {
         name: 'system-maintenance-coordinator',
@@ -314,7 +356,9 @@ const DEFAULT_AGENTS = {
         tools: ['bash', 'read_file', 'write_file', 'list_dir'],
         autoAddTools: false,
         securityRole: 'implementer',
-        capabilities: ['maintenance-planning', 'patch-management', 'system-monitoring', 'incident-coordination', 'compliance', 'documentation']
+        capabilities: ['maintenance-planning', 'patch-management', 'system-monitoring', 'incident-coordination', 'compliance', 'documentation'],
+        instructions: `Plan and coordinate maintenance windows. Document all changes in each window.
+Verify system health before and after. Keep a log of all actions taken.`
     },
 
     // ==================== ARCHITECTURE & DESIGN ====================
@@ -327,7 +371,9 @@ const DEFAULT_AGENTS = {
         tools: ['read_file', 'write_file', 'patch_file', 'list_dir', 'bash', 'git_diff', 'fetch_webpage', 'save_webpage_to_vault'],
         autoAddTools: false,
         securityRole: 'implementer',
-        capabilities: ['system-design', 'architecture-patterns', 'scalability', 'performance', 'security', 'technology-selection', 'integration-design']
+        capabilities: ['system-design', 'architecture-patterns', 'scalability', 'performance', 'security', 'technology-selection', 'integration-design'],
+        instructions: `Design system architecture with ADRs, diagrams, and interface contracts.
+Read all relevant module files before proposing changes. Primary output is design docs — not code.`
     },
     'enterprise-solutions-architect': {
         name: 'enterprise-solutions-architect',
@@ -338,7 +384,9 @@ const DEFAULT_AGENTS = {
         tools: ['read_file', 'write_file', 'patch_file', 'list_dir', 'bash', 'git_diff', 'fetch_webpage', 'save_webpage_to_vault'],
         autoAddTools: false,
         securityRole: 'implementer',
-        capabilities: ['enterprise-architecture', 'solution-design', 'business-alignment', 'technology-roadmapping', 'architecture-governance', 'risk-assessment']
+        capabilities: ['enterprise-architecture', 'solution-design', 'business-alignment', 'technology-roadmapping', 'architecture-governance', 'risk-assessment'],
+        instructions: `Design enterprise-scale solutions. Map business requirements to technical architecture.
+Produce blueprint documents, integration maps, and technology selection rationales.`
     },
     'enterprise-solutions-engineer': {
         name: 'enterprise-solutions-engineer',
@@ -349,7 +397,10 @@ const DEFAULT_AGENTS = {
         tools: ['read_file', 'write_file', 'patch_file', 'list_dir', 'bash', 'fetch_webpage', 'save_webpage_to_vault'],
         autoAddTools: false,
         securityRole: 'implementer',
-        capabilities: ['enterprise-integration', 'system-integration', 'api-gateway', 'data-pipelines', 'workflow-automation', 'enterprise-security']
+        capabilities: ['enterprise-integration', 'system-integration', 'api-gateway', 'data-pipelines', 'workflow-automation', 'enterprise-security'],
+        instructions: `Implement enterprise integrations and system connectors.
+Read existing integration layer and API contracts before adding new connectors.
+Ensure idempotency, retry logic, and proper error propagation.`
     },
     'architecture-coordinator': {
         name: 'architecture-coordinator',
@@ -360,7 +411,9 @@ const DEFAULT_AGENTS = {
         tools: ['read_file', 'write_file', 'list_dir', 'bash', 'fetch_webpage', 'save_webpage_to_vault'],
         autoAddTools: false,
         securityRole: 'coordinator',
-        capabilities: ['architecture-governance', 'coordination', 'documentation', 'standards-enforcement', 'technical-debt-management', 'stakeholder-communication']
+        capabilities: ['architecture-governance', 'coordination', 'documentation', 'standards-enforcement', 'technical-debt-management', 'stakeholder-communication'],
+        instructions: `Track architectural decisions and ensure consistent implementation.
+Document architectural debt. Raise blockers when implementation diverges from approved architecture.`
     },
 
     // ==================== UI/UX DESIGN ====================
@@ -373,7 +426,9 @@ const DEFAULT_AGENTS = {
         tools: ['read_file', 'write_file', 'patch_file', 'understand_image', 'list_dir', 'fetch_webpage', 'save_webpage_to_vault'],
         autoAddTools: true,
         securityRole: 'implementer',
-        capabilities: ['ui-design', 'visual-design', 'prototyping', 'design-systems', 'responsive-design', 'typography', 'color-theory', 'iconography']
+        capabilities: ['ui-design', 'visual-design', 'prototyping', 'design-systems', 'responsive-design', 'typography', 'color-theory', 'iconography'],
+        instructions: `Create UI that follows the existing design system. Read tokens.css and components.css first.
+Use understand_image to verify rendered output. Match the project's existing visual language.`
     },
     'ux-interface-designer': {
         name: 'ux-interface-designer',
@@ -384,7 +439,9 @@ const DEFAULT_AGENTS = {
         tools: ['read_file', 'write_file', 'patch_file', 'understand_image', 'list_dir', 'fetch_webpage', 'save_webpage_to_vault'],
         autoAddTools: true,
         securityRole: 'implementer',
-        capabilities: ['ux-design', 'user-research', 'wireframing', 'prototyping', 'usability-testing', 'information-architecture', 'interaction-design']
+        capabilities: ['ux-design', 'user-research', 'wireframing', 'prototyping', 'usability-testing', 'information-architecture', 'interaction-design'],
+        instructions: `Design user flows before writing implementation code. Validate against WCAG 2.1 AA.
+Your output is wireframes, flows, and UX specs — route implementation to ui-expert or frontend-developer.`
     },
 
     // ==================== DATA & ANALYTICS ====================
@@ -397,7 +454,9 @@ const DEFAULT_AGENTS = {
         tools: ['read_file', 'write_file', 'patch_file', 'list_dir', 'bash', 'fetch_webpage', 'save_webpage_to_vault'],
         autoAddTools: true,
         securityRole: 'implementer',
-        capabilities: ['data-pipelines', 'etl', 'data-warehousing', 'big-data', 'sql', 'python', 'spark', 'data-quality', 'data-modeling']
+        capabilities: ['data-pipelines', 'etl', 'data-warehousing', 'big-data', 'sql', 'python', 'spark', 'data-quality', 'data-modeling'],
+        instructions: `Build data pipelines and ETL. Read existing schema definitions before creating new ones.
+Document all transformations with input/output schemas. Validate data quality at each stage.`
     },
     'data-scientist': {
         name: 'data-scientist',
@@ -408,7 +467,9 @@ const DEFAULT_AGENTS = {
         tools: ['read_file', 'write_file', 'patch_file', 'list_dir', 'bash', 'fetch_webpage', 'save_webpage_to_vault'],
         autoAddTools: true,
         securityRole: 'implementer',
-        capabilities: ['machine-learning', 'statistical-analysis', 'data-visualization', 'python', 'r', 'deep-learning', 'nlp', 'predictive-modeling']
+        capabilities: ['machine-learning', 'statistical-analysis', 'data-visualization', 'python', 'r', 'deep-learning', 'nlp', 'predictive-modeling'],
+        instructions: `Analyse data and build models. Start with exploratory analysis before modelling.
+Document assumptions, feature selection, and model limitations. Report metrics with confidence intervals.`
     },
 
     // ==================== PRODUCT & PROJECT MANAGEMENT ====================
@@ -421,7 +482,8 @@ const DEFAULT_AGENTS = {
         tools: ['read_file', 'write_file', 'list_dir', 'fetch_webpage', 'save_webpage_to_vault'],
         autoAddTools: false,
         securityRole: 'reviewer',
-        capabilities: ['product-strategy', 'roadmap-management', 'stakeholder-management', 'user-research', 'prioritization', 'agile', 'market-analysis']
+        capabilities: ['product-strategy', 'roadmap-management', 'stakeholder-management', 'user-research', 'prioritization', 'agile', 'market-analysis'],
+        instructions: `Define product direction and prioritise the backlog. Your output is user stories, acceptance criteria, and success metrics — not code.`
     },
     'business-analyst': {
         name: 'business-analyst',
@@ -430,6 +492,8 @@ const DEFAULT_AGENTS = {
         group: 'Product',
         languages: ['English'],
         tools: ['read_file', 'write_file', 'list_dir', 'fetch_webpage', 'save_webpage_to_vault'],
+        instructions: `Elicit and document business requirements. Read existing system docs before starting.
+Produce use cases, process flows, and functional specs that engineering can act on directly.`,
         autoAddTools: false,
         securityRole: 'reviewer',
         capabilities: ['requirements-analysis', 'business-process-modeling', 'data-analysis', 'stakeholder-communication', 'use-cases', 'functional-specs']
@@ -443,7 +507,9 @@ const DEFAULT_AGENTS = {
         tools: ['read_file', 'write_file', 'patch_file', 'list_dir', 'bash', 'fetch_webpage', 'save_webpage_to_vault'],
         autoAddTools: false,
         securityRole: 'implementer',
-        capabilities: ['project-setup', 'template-creation', 'workflow-definition', 'tooling-setup', 'team-onboarding', 'governance-setup']
+        capabilities: ['project-setup', 'template-creation', 'workflow-definition', 'tooling-setup', 'team-onboarding', 'governance-setup'],
+        instructions: `Set up new projects with correct directory structure, tooling, and initial configuration.
+Read existing project templates first. Document what was created and why.`
     },
 
     // ==================== AGILE & PROCESS ====================
@@ -456,7 +522,9 @@ const DEFAULT_AGENTS = {
         tools: ['read_file', 'write_file', 'list_dir', 'fetch_webpage', 'save_webpage_to_vault'],
         autoAddTools: false,
         securityRole: 'coordinator',
-        capabilities: ['scrum', 'facilitation', 'coaching', 'impediment-removal', 'ceremony-facilitation', 'continuous-improvement', 'conflict-resolution']
+        capabilities: ['scrum', 'facilitation', 'coaching', 'impediment-removal', 'ceremony-facilitation', 'continuous-improvement', 'conflict-resolution'],
+        instructions: `Facilitate Scrum ceremonies and remove impediments. Keep outputs concise and action-oriented.
+Document blockers with their owner and expected resolution date.`
     },
     'sprint-planner': {
         name: 'sprint-planner',
@@ -467,7 +535,9 @@ const DEFAULT_AGENTS = {
         tools: ['read_file', 'write_file', 'list_dir'],
         autoAddTools: false,
         securityRole: 'coordinator',
-        capabilities: ['sprint-planning', 'estimation', 'velocity-tracking', 'capacity-planning', 'goal-setting', 'prioritization']
+        capabilities: ['sprint-planning', 'estimation', 'velocity-tracking', 'capacity-planning', 'goal-setting', 'prioritization'],
+        instructions: `Plan sprints by matching backlog items to team capacity.
+Output: sprint plan with assignments, estimates, and sprint goal statement.`
     },
     'sprint-retrospective-facilitator': {
         name: 'sprint-retrospective-facilitator',
@@ -478,7 +548,9 @@ const DEFAULT_AGENTS = {
         tools: ['read_file', 'write_file', 'list_dir'],
         autoAddTools: false,
         securityRole: 'coordinator',
-        capabilities: ['retrospective-facilitation', 'process-improvement', 'team-coaching', 'feedback-analysis', 'action-tracking', 'change-management']
+        capabilities: ['retrospective-facilitation', 'process-improvement', 'team-coaching', 'feedback-analysis', 'action-tracking', 'change-management'],
+        instructions: `Lead retros that produce actionable improvements. Structure: What went well / What to improve / Action items with owners.
+Follow up on previous retro action items before starting new ones.`
     },
     'agile-workflow-orchestrator': {
         name: 'agile-workflow-orchestrator',
@@ -489,7 +561,9 @@ const DEFAULT_AGENTS = {
         tools: ['read_file', 'write_file', 'list_dir', 'bash', 'fetch_webpage', 'save_webpage_to_vault'],
         autoAddTools: false,
         securityRole: 'coordinator',
-        capabilities: ['workflow-orchestration', 'cross-team-coordination', 'agile-coaching', 'process-optimization', 'dependency-management', 'delivery-tracking']
+        capabilities: ['workflow-orchestration', 'cross-team-coordination', 'agile-coaching', 'process-optimization', 'dependency-management', 'delivery-tracking'],
+        instructions: `Coordinate Agile workflows across teams. Track inter-team dependencies and escalate blockers promptly.
+Output: coordination plans, dependency maps, and delivery forecasts.`
     },
 
     // ==================== SECURITY & COMPLIANCE ====================
@@ -502,7 +576,10 @@ const DEFAULT_AGENTS = {
         tools: ['read_file', 'write_file', 'list_dir', 'bash', 'fetch_webpage', 'save_webpage_to_vault'],
         autoAddTools: false,
         securityRole: 'implementer',
-        capabilities: ['security-compliance', 'audit', 'risk-assessment', 'policy-development', 'regulatory-compliance', 'security-frameworks', 'incident-response']
+        capabilities: ['security-compliance', 'audit', 'risk-assessment', 'policy-development', 'regulatory-compliance', 'security-frameworks', 'incident-response'],
+        instructions: `Audit for security and compliance. Read the security policy before starting.
+Report findings with severity (Critical/High/Medium/Low), affected component, and recommended remediation.
+Never remediate yourself — report to orchestrator for delegation.`
     },
     'workflow-termination-coordinator': {
         name: 'workflow-termination-coordinator',
@@ -513,7 +590,9 @@ const DEFAULT_AGENTS = {
         tools: ['read_file', 'write_file', 'patch_file', 'list_dir', 'bash'],
         autoAddTools: false,
         securityRole: 'implementer',
-        capabilities: ['workflow-management', 'process-termination', 'cleanup-automation', 'resource-release', 'state-management', 'error-handling']
+        capabilities: ['workflow-management', 'process-termination', 'cleanup-automation', 'resource-release', 'state-management', 'error-handling'],
+        instructions: `Manage graceful workflow shutdowns. Identify all active processes and dependencies before terminating.
+Follow: drain → stop → verify → cleanup. Report the final state of each terminated process.`
     },
 
     // ==================== DOCUMENTATION ====================
@@ -526,7 +605,10 @@ const DEFAULT_AGENTS = {
         tools: ['read_file', 'write_file', 'list_dir', 'fetch_webpage', 'save_webpage_to_vault'],
         autoAddTools: false,
         securityRole: 'reviewer',
-        capabilities: ['documentation-strategy', 'content-architecture', 'knowledge-management', 'technical-writing', 'api-documentation', 'style-guides']
+        capabilities: ['documentation-strategy', 'content-architecture', 'knowledge-management', 'technical-writing', 'api-documentation', 'style-guides'],
+        instructions: `Design documentation architecture. Audit existing docs before proposing new structure.
+Define what docs exist, what is missing, and the audience for each doc type.
+Your output is a documentation PLAN — route actual writing to documentation-technician.`
     },
     'documentation-technician': {
         name: 'documentation-technician',
@@ -537,7 +619,12 @@ const DEFAULT_AGENTS = {
         tools: ['read_file', 'write_file', 'patch_file', 'list_dir', 'fetch_webpage', 'save_webpage_to_vault'],
         autoAddTools: true,
         securityRole: 'implementer',
-        capabilities: ['technical-writing', 'api-documentation', 'user-guides', 'markdown', 'documentation-tools', 'content-updates']
+        capabilities: ['technical-writing', 'api-documentation', 'user-guides', 'markdown', 'documentation-tools', 'content-updates'],
+        instructions: `Write and maintain technical documentation, API docs, user guides, and Obsidian vault notes.
+Before writing: read the source code OR fetch_webpage the external reference you are documenting.
+For Obsidian vault notes: use YAML frontmatter (---) with source, fetched, and tags fields.
+For API docs: include endpoint, method, params, response schema, and an example.
+Never write placeholder sections — every heading must have real content.`
     },
 
     // ==================== EXISTING DEFAULT AGENTS ====================
@@ -550,7 +637,10 @@ const DEFAULT_AGENTS = {
         tools: ['github', 'bash'],
         autoAddTools: false,
         securityRole: 'implementer',
-        capabilities: ['git', 'github', 'version-control']
+        capabilities: ['git', 'github', 'version-control'],
+        instructions: `Handle ALL git operations. Run git status before and after every operation.
+Commit messages must follow Conventional Commits: type(scope): subject.
+Never force-push to main/master — refuse and report to the orchestrator instead.`
     },
     'testing-engineer': {
         name: 'testing-engineer',
@@ -561,7 +651,9 @@ const DEFAULT_AGENTS = {
         tools: ['qa_run_tests', 'qa_check_lint', 'qa_check_types', 'qa_check_coverage', 'qa_audit_deps'],
         autoAddTools: true,
         securityRole: 'implementer',
-        capabilities: ['testing', 'linting', 'quality-assurance', 'coverage']
+        capabilities: ['testing', 'linting', 'quality-assurance', 'coverage'],
+        instructions: `Run the project's test suite and report results with exact counts: X passed, Y failed, Z skipped.
+To WRITE new tests, use qa-engineer — your role is execution and reporting only.`
     },
     'code-implementer': {
         name: 'code-implementer',
@@ -572,7 +664,10 @@ const DEFAULT_AGENTS = {
         tools: ['read_file', 'write_file', 'patch_file', 'list_dir', 'bash', 'fetch_webpage', 'save_webpage_to_vault'],
         autoAddTools: true,
         securityRole: 'implementer',
-        capabilities: ['coding', 'file-operations', 'implementation']
+        capabilities: ['coding', 'file-operations', 'implementation'],
+        instructions: `General-purpose code implementer — use ONLY when no specialist agent better fits.
+Documentation tasks → documentation-technician. Git ops → git-keeper. Tests → qa-engineer. UI → ui-expert.
+SCOPE: implement ONLY what was asked. After writing, verify the file exists via list_dir.`
     },
     'ui-expert': {
         name: 'ui-expert',
@@ -583,7 +678,10 @@ const DEFAULT_AGENTS = {
         tools: ['read_file', 'write_file', 'patch_file', 'list_dir', 'understand_image', 'fetch_webpage', 'save_webpage_to_vault'],
         autoAddTools: true,
         securityRole: 'implementer',
-        capabilities: ['ui-design', 'ux-design', 'css', 'html', 'accessibility', 'responsive-design', 'animation', 'visual-design']
+        capabilities: ['ui-design', 'ux-design', 'css', 'html', 'accessibility', 'responsive-design', 'animation', 'visual-design'],
+        instructions: `Implement polished, accessible UI. Read existing CSS tokens and component files before adding styles.
+Match the visual language already present. Test with understand_image after major layout changes.
+Prefer modifying existing CSS classes over adding new ones.`
     },
     'ui-tester': {
         name: 'ui-tester',
@@ -594,7 +692,9 @@ const DEFAULT_AGENTS = {
         tools: ['qa_run_tests', 'qa_check_lint', 'understand_image', 'read_file', 'fetch_webpage', 'save_webpage_to_vault'],
         autoAddTools: true,
         securityRole: 'implementer',
-        capabilities: ['ui-testing', 'visual-testing', 'accessibility-testing', 'e2e-testing', 'regression-testing']
+        capabilities: ['ui-testing', 'visual-testing', 'accessibility-testing', 'e2e-testing', 'regression-testing'],
+        instructions: `Test UI for visual correctness and accessibility using understand_image and qa_check tools.
+Check WCAG 2.1 AA compliance for all interactive elements. Report visual regressions with descriptions.`
     },
     'regex-expert': {
         name: 'regex-expert',
@@ -605,7 +705,9 @@ const DEFAULT_AGENTS = {
         tools: ['read_file', 'write_file', 'bash'],
         autoAddTools: true,
         securityRole: 'implementer',
-        capabilities: ['regex', 'pattern-matching', 'text-processing', 'validation', 'parsing']
+        capabilities: ['regex', 'pattern-matching', 'text-processing', 'validation', 'parsing'],
+        instructions: `Create and test regular expressions. Always test against provided examples AND edge cases (empty, Unicode, very long input).
+Document each regex with a plain-English explanation of what each group matches.`
     }
 };
 
@@ -801,12 +903,13 @@ function initializeDefaultAgents() {
             if (check.success && check.results && check.results.length > 0) {
                 // Already exists — update flags + tools to match definition
                 db.run(
-                    `UPDATE agents SET built_in=1, forced_tools=?, blocked_tools=?, role=?, description=?, tools=?, updated_at=? WHERE name=?`,
+                    `UPDATE agents SET built_in=1, forced_tools=?, blocked_tools=?, role=?, description=?, instructions=?, tools=?, updated_at=? WHERE name=?`,
                     [
                         JSON.stringify(agent.forcedTools || []),
                         JSON.stringify(agent.blockedTools || []),
                         agent.role,
                         agent.description || '',
+                        agent.instructions || '',
                         JSON.stringify(agent.tools || []),
                         new Date().toISOString(),
                         name
@@ -817,6 +920,7 @@ function initializeDefaultAgents() {
                     name,
                     role: agent.role,
                     description: agent.description,
+                    instructions: agent.instructions || '',
                     group: agent.group,
                     languages: agent.languages,
                     tools: agent.tools,
@@ -843,6 +947,7 @@ function initializeDefaultAgents() {
                     name: name,
                     role: agent.role,
                     description: agent.description,
+                    instructions: agent.instructions || '',
                     group: agent.group,
                     languages: agent.languages,
                     tools: agent.tools,
@@ -858,6 +963,22 @@ function initializeDefaultAgents() {
         }
     } catch (e) {
         HUB?.log('⚠️ Default agents init error: ' + e.message, 'warn');
+    }
+
+    // One-time backfill: write instructions for non-builtIn default agents on existing DBs
+    // Only updates rows where instructions is currently empty — user customisations are safe
+    try {
+        for (const [name, agent] of Object.entries(DEFAULT_AGENTS)) {
+            if (agent.builtIn) continue; // already handled above
+            if (!agent.instructions) continue;
+            db.run(
+                `UPDATE agents SET instructions=?, updated_at=? WHERE name=? AND (instructions IS NULL OR instructions='')`,
+                [agent.instructions, new Date().toISOString(), name]
+            );
+        }
+        HUB?.log('✅ Agent instructions backfilled', 'info');
+    } catch (e) {
+        HUB?.log('⚠️ Agent instructions backfill error: ' + e.message, 'warn');
     }
 
     // Seed default groups if none exist

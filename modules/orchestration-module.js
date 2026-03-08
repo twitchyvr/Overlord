@@ -1107,10 +1107,17 @@ async function init(h) {
                     filtered = agents.filter(a => (a.group || '').toLowerCase() === input.group.toLowerCase());
                 }
                 if (!filtered.length) return input.group ? `No agents in group "${input.group}".` : 'No agents found.';
-                const lines = filtered.map(a =>
-                    `- **${a.name}** (${a.role || 'No role'}) [group: ${a.group || 'none'}]\n  ${a.description || 'No description'}` +
-                    (a.capabilities && a.capabilities.length ? `\n  Capabilities: ${a.capabilities.join(', ')}` : '')
-                );
+                const lines = filtered.map(a => {
+                    let line = `- **${a.name}** (${a.role || 'No role'}) [group: ${a.group || 'none'}]\n  ${a.description || 'No description'}`;
+                    if (a.capabilities && a.capabilities.length) {
+                        line += `\n  Capabilities: ${a.capabilities.join(', ')}`;
+                    }
+                    if (a.instructions) {
+                        const firstLine = a.instructions.split('\n')[0].trim();
+                        if (firstLine) line += `\n  Specialty: ${firstLine}`;
+                    }
+                    return line;
+                });
                 return `## Team Agents (${filtered.length})\n\n${lines.join('\n\n')}`;
             } catch (e) {
                 return `ERROR listing agents: ${e.message}`;
@@ -1512,16 +1519,17 @@ async function init(h) {
             category: 'agents',
             description: [
                 'Delegate a subtask to a specialist AI agent and wait for their result.',
-                'The agent runs its own full AI + tool cycle independently, then returns the output.',
-                'Use this to divide work: code-implementer for coding, testing-engineer for tests,',
-                'git-keeper for git operations, ui-expert for UI/CSS work.',
-                'The agent\'s activity will appear on the Team panel while they work.',
-                'Prefer this over doing everything yourself — your team exists to help you.'
+                'ALWAYS consult your AGENT ROUTING MATRIX before choosing an agent.',
+                'Key agents: documentation-technician (docs/vault/research), ui-expert (UI/CSS),',
+                'testing-engineer (run tests), qa-engineer (write tests), git-keeper (git ops),',
+                'code-implementer (general code ONLY when no specialist better fits).',
+                'Use list_agents to see all 40+ available agents.',
+                'Prefer delegation over doing work yourself — your team exists to help you.'
             ].join(' '),
             input_schema: {
                 type: 'object',
                 properties: {
-                    agent:   { type: 'string', description: 'Agent name, e.g. "code-implementer", "testing-engineer", "git-keeper", "ui-expert". Use list_agents to see all available.' },
+                    agent:   { type: 'string', description: 'Agent name from your ROUTING MATRIX or list_agents output. E.g. "documentation-technician", "git-keeper", "ui-expert", "testing-engineer", "qa-engineer", "code-implementer".' },
                     task:    { type: 'string', description: 'Clear, self-contained task description. Include file paths, requirements, and expected output so the agent can work independently.' },
                     context: { type: 'string', description: 'Optional: additional context from this conversation that the agent needs (e.g. relevant code snippets, constraints, prior decisions).' }
                 },
@@ -3921,6 +3929,84 @@ When any subagent reports task completion, you MUST verify before relaying resul
 
 5. **If verification fails**, automatically re-delegate the remaining items.
    Break large bulk tasks into batches and track which batch is in progress.`);
+
+        parts.push(`
+## AGENT ROUTING MATRIX (orchestrator-only — authoritative)
+
+Before delegating ANY task, identify the PRIMARY action type and pick ONE agent below.
+Do NOT default to code-implementer when unsure — consult this matrix first.
+
+### DOCUMENTATION & VAULT
+| Task | Agent |
+|------|-------|
+| Write docs, README, changelog, guides | documentation-technician |
+| Fetch external docs / summarise web pages | documentation-technician |
+| Generate Obsidian vault notes | documentation-technician |
+| Plan documentation strategy or structure | documentation-strategist |
+
+### CODE IMPLEMENTATION
+| Task | Agent |
+|------|-------|
+| General feature / bug fix (no specialist fit) | code-implementer |
+| Frontend components, HTML, CSS, JS/TS | ui-expert OR frontend-developer |
+| Backend APIs, server logic, databases | backend-developer |
+| Large cross-file refactors | principal-engineer |
+| Regex / text processing | regex-expert |
+
+### UI & DESIGN
+| Task | Agent |
+|------|-------|
+| UI implementation (HTML/CSS/JS) | ui-expert |
+| Visual design, design systems | ui-designer |
+| UX wireframes, user flows | ux-interface-designer |
+| Frontend framework (React/Vue/Angular) | frontend-developer |
+
+### TESTING & QUALITY
+| Task | Agent |
+|------|-------|
+| RUN existing test suite / lint / type check | testing-engineer |
+| WRITE new test cases | qa-engineer |
+| Visual / accessibility testing | ui-tester |
+| QA strategy | qa-lead OR test-strategy-architect |
+| Smoke tests after deployment | deployment-verification-agent |
+
+### GIT & VERSION CONTROL
+| Task | Agent |
+|------|-------|
+| Commit, push, branch, merge, PR, tags | git-keeper |
+| GitOps, Helm, declarative infra | gitops-specialist |
+
+### DEVOPS & INFRASTRUCTURE
+| Task | Agent |
+|------|-------|
+| CI/CD pipelines, Docker | devops-engineer |
+| Multi-environment deployment | deployment-orchestrator |
+| DevOps strategy / infra design | devops-lead |
+
+### ARCHITECTURE & PLANNING
+| Task | Agent |
+|------|-------|
+| System or API architecture | system-architect |
+| Enterprise integration design | enterprise-solutions-architect |
+| Initial project scaffolding | project-initializer |
+
+### RESEARCH & DATA
+| Task | Agent |
+|------|-------|
+| Business requirements | business-analyst |
+| Data analysis, ML models | data-scientist |
+| Data pipelines, ETL | data-engineer |
+
+### SECURITY
+| Task | Agent |
+|------|-------|
+| Security audit, compliance | security-compliance-officer |
+
+### ANTI-PATTERNS — NEVER DO THESE
+- NEVER use code-implementer for documentation — use documentation-technician
+- NEVER use code-implementer for git operations — use git-keeper
+- NEVER use code-implementer for running tests — use testing-engineer
+- NEVER use code-implementer for web research or vault clipping — use documentation-technician`);
     }
 
     // Inject per-task scope constraints when dispatched via delegate_to_agent

@@ -1021,11 +1021,11 @@ async function init(h) {
         });
         hub.log('✅ update_milestone tool registered', 'info');
 
-        // ── add_agent: AI creates a new team agent ────────────────────────────
+        // ── add_agent: AI creates a new agent (global or project-scoped) ────────
         tools.registerTool({
             name: 'add_agent',
             category: 'agents',
-            description: 'Add a new agent to the team. The agent will immediately be available for task assignment.',
+            description: 'Add a new agent to the team. Agents are global by default (available in all projects). Set scope="project" to create a project-specific agent that only appears in the active project.',
             input_schema: {
                 type: 'object',
                 properties: {
@@ -1033,34 +1033,52 @@ async function init(h) {
                     role:         { type: 'string', description: 'Role title, e.g. "Security Auditor"' },
                     description:  { type: 'string', description: 'What this agent does and its expertise' },
                     capabilities: { type: 'array', items: { type: 'string' }, description: 'List of capability strings' },
-                    group:        { type: 'string', description: 'Group/team name (e.g. "engineering", "qa")' }
+                    group:        { type: 'string', description: 'Group/team name (e.g. "engineering", "qa")' },
+                    scope:        { type: 'string', enum: ['global', 'project'], description: 'Scope: "global" (default, persisted to DB, available everywhere) or "project" (stored with the active project only)' },
+                    instructions: { type: 'string', description: 'Optional system-prompt instructions for this agent' }
                 },
                 required: ['name', 'role', 'description']
             }
         }, (input) => {
-            const agentMgr = hub.getService('agentManager');
-            if (!agentMgr || !agentMgr.createAgent) return 'ERROR: Agent manager service not available';
             const name = String(input.name).toLowerCase().replace(/[^a-z0-9-]/g, '-').replace(/--+/g, '-').trim('-');
             if (!name) return 'ERROR: Invalid agent name — use lowercase letters, numbers, and hyphens only';
-            const result = agentMgr.createAgent({
+            const agentData = {
                 name,
-                role: String(input.role).trim(),
-                description: String(input.description).trim(),
+                role:         String(input.role).trim(),
+                description:  String(input.description).trim(),
                 capabilities: Array.isArray(input.capabilities) ? input.capabilities : [],
-                group: input.group || 'custom'
-            });
+                group:        input.group || 'custom',
+                instructions: input.instructions || ''
+            };
+
+            if (input.scope === 'project') {
+                // Project-scoped: persist to the active project's data.json
+                const projects = hub.getService('projects');
+                const pid = projects?.getActiveProjectId?.();
+                if (!pid) return 'ERROR: No active project. Switch to a project first, or create a global agent (omit scope).';
+                const result = projects.addProjectAgent(pid, { ...agentData, scope: 'project' });
+                if (result && result.success === false) return `ERROR creating project agent: ${result.error}`;
+                hub.broadcastAll('agents_updated', { projectId: pid });
+                hub.log(`[add_agent] Created project agent "${name}" in project ${pid}`, 'success');
+                return `Project agent "${name}" created with role "${input.role}". Available in the active project only.`;
+            }
+
+            // Global: persist to SQLite via agentManager
+            const agentMgr = hub.getService('agentManager');
+            if (!agentMgr || !agentMgr.createAgent) return 'ERROR: Agent manager service not available';
+            const result = agentMgr.createAgent({ ...agentData, scope: 'global' });
             if (result && result.success === false) return `ERROR creating agent: ${result.error}`;
             hub.broadcastAll('agents_updated', {});
-            hub.log(`[add_agent] Created: "${name}"`, 'success');
-            return `Agent "${name}" created with role "${input.role}".`;
+            hub.log(`[add_agent] Created global agent "${name}"`, 'success');
+            return `Global agent "${name}" created with role "${input.role}". Available in all projects.`;
         });
         hub.log('✅ add_agent tool registered', 'info');
 
-        // ── remove_agent: AI removes a team agent ─────────────────────────────
+        // ── remove_agent: AI removes a global or project-scoped agent ─────────
         tools.registerTool({
             name: 'remove_agent',
             category: 'agents',
-            description: 'Remove an agent from the team. Use with care — existing task assignments using this agent will not be auto-removed.',
+            description: 'Remove an agent. Project-scoped agents are removed from the active project; global agents are soft-deleted from the database. Use with care — existing task assignments are not auto-updated.',
             input_schema: {
                 type: 'object',
                 properties: {
@@ -1070,39 +1088,68 @@ async function init(h) {
                 required: ['name']
             }
         }, (input) => {
+            // Try project agent first (if an active project exists)
+            const projects = hub.getService('projects');
+            const pid = projects?.getActiveProjectId?.();
+            if (pid) {
+                const projAgents = projects.listProjectAgents?.(pid) || [];
+                if (projAgents.some(a => a.name === input.name)) {
+                    const result = projects.removeProjectAgent(pid, input.name);
+                    if (result && result.success === false) return `ERROR removing project agent: ${result.error}`;
+                    hub.broadcastAll('agents_updated', { projectId: pid });
+                    hub.log(`[remove_agent] Removed project agent "${input.name}"${input.reason ? ' — ' + input.reason : ''}`, 'info');
+                    return `Project agent "${input.name}" removed.${input.reason ? ' Reason: ' + input.reason : ''}`;
+                }
+            }
+            // Fall back to global DB agent
             const agentMgr = hub.getService('agentManager');
             if (!agentMgr || !agentMgr.deleteAgent) return 'ERROR: Agent manager service not available';
             const result = agentMgr.deleteAgent(input.name);
             if (result && result.success === false) return `ERROR removing agent: ${result.error}`;
             hub.broadcastAll('agents_updated', {});
-            hub.log(`[remove_agent] Removed: "${input.name}"${input.reason ? ' — ' + input.reason : ''}`, 'info');
+            hub.log(`[remove_agent] Removed global agent "${input.name}"${input.reason ? ' — ' + input.reason : ''}`, 'info');
             return `Agent "${input.name}" removed.${input.reason ? ' Reason: ' + input.reason : ''}`;
         });
         hub.log('✅ remove_agent tool registered', 'info');
 
-        // ── list_agents: AI lists all team agents ─────────────────────────────
+        // ── list_agents: AI lists all agents (global + active project) ─────────
         tools.registerTool({
             name: 'list_agents',
             category: 'agents',
-            description: 'List all agents on the team with their names, roles, descriptions, and capabilities. Use this to see who is available before delegating or to check what agents exist before adding a new one.',
+            description: 'List all agents: global agents (available everywhere) plus any project-specific agents for the active project. Use this before delegating or before adding a new agent.',
             input_schema: {
                 type: 'object',
                 properties: {
-                    group: { type: 'string', description: 'Optional: filter by group name (e.g. "engineering", "qa", "custom")' }
+                    group: { type: 'string', description: 'Optional: filter by group name (e.g. "engineering", "qa", "custom")' },
+                    scope: { type: 'string', enum: ['all', 'global', 'project'], description: 'Optional: filter by scope. Default "all".' }
                 }
             }
         }, (input) => {
             const agentMgr = hub.getService('agentManager');
             if (!agentMgr || !agentMgr.listAgents) return 'ERROR: Agent manager service not available';
             try {
-                const agents = agentMgr.listAgents();
-                let filtered = agents;
-                if (input.group) {
-                    filtered = agents.filter(a => (a.group || '').toLowerCase() === input.group.toLowerCase());
+                let agents = agentMgr.listAgents().map(a => ({ ...a, scope: a.scope || 'global' }));
+
+                // Merge active project agents (deduplicated by name — project overrides global)
+                const projects = hub.getService('projects');
+                const pid = projects?.getActiveProjectId?.();
+                if (pid) {
+                    const projAgents = (projects.listProjectAgents?.(pid) || []).map(a => ({ ...a, scope: 'project' }));
+                    const projNames = new Set(projAgents.map(a => a.name));
+                    agents = agents.filter(a => !projNames.has(a.name)).concat(projAgents);
                 }
-                if (!filtered.length) return input.group ? `No agents in group "${input.group}".` : 'No agents found.';
-                const lines = filtered.map(a => {
-                    let line = `- **${a.name}** (${a.role || 'No role'}) [group: ${a.group || 'none'}]\n  ${a.description || 'No description'}`;
+
+                if (input.scope && input.scope !== 'all') {
+                    agents = agents.filter(a => a.scope === input.scope);
+                }
+                if (input.group) {
+                    agents = agents.filter(a => (a.group || '').toLowerCase() === input.group.toLowerCase());
+                }
+                if (!agents.length) return 'No agents found matching the filter.';
+
+                const lines = agents.map(a => {
+                    const scopeTag = a.scope === 'project' ? ' [project]' : ' [global]';
+                    let line = `- **${a.name}** (${a.role || 'No role'}) [group: ${a.group || 'none'}]${scopeTag}\n  ${a.description || 'No description'}`;
                     if (a.capabilities && a.capabilities.length) {
                         line += `\n  Capabilities: ${a.capabilities.join(', ')}`;
                     }
@@ -1112,7 +1159,8 @@ async function init(h) {
                     }
                     return line;
                 });
-                return `## Team Agents (${filtered.length})\n\n${lines.join('\n\n')}`;
+                const header = pid ? `## Team Agents (${agents.length}) — global + project` : `## Team Agents (${agents.length})`;
+                return `${header}\n\n${lines.join('\n\n')}`;
             } catch (e) {
                 return `ERROR listing agents: ${e.message}`;
             }
@@ -1535,9 +1583,15 @@ async function init(h) {
             if (!agentName) return 'ERROR: agent name is required';
             if (!task)      return 'ERROR: task description is required';
 
-            // Validate agent exists
+            // Validate agent exists — check global DB agents + active project agents
             const agentMgr = hub.getService('agentManager');
-            const validAgents = agentMgr?.listAgents?.()?.map(a => a.name) || [];
+            const globalNames = agentMgr?.listAgents?.()?.map(a => a.name) || [];
+            const projectsSvc = hub.getService('projects');
+            const activePid   = projectsSvc?.getActiveProjectId?.();
+            const projNames   = activePid
+                ? (projectsSvc.listProjectAgents?.(activePid) || []).map(a => a.name)
+                : [];
+            const validAgents = [...new Set([...globalNames, ...projNames])];
             if (validAgents.length && !validAgents.includes(agentName)) {
                 return `ERROR: Unknown agent "${agentName}". Available: ${validAgents.join(', ')}`;
             }
@@ -2121,21 +2175,36 @@ function handleClientConnected(socket) {
     // CRITICAL: Get the actual working directory from conversation service
     const workingDirectory = conv.getWorkingDirectory ? conv.getWorkingDirectory() : process.cwd();
 
-    // Safely get agent list — prefer DB (agentManager) so team panel matches Agent Manager UI
+    // Safely get agent list — global DB agents + active project agents merged
     let team = [];
     try {
         const agentMgr = hub.getService('agentManager');
         if (agentMgr && agentMgr.listAgents) {
-            const dbAgents = agentMgr.listAgents();
-            team = dbAgents.map(a => ({
+            team = agentMgr.listAgents().map(a => ({
                 name: a.name,
                 role: a.role,
                 description: a.description || '',
                 capabilities: a.capabilities || [],
+                scope: a.scope || 'global',
                 status: a.status || 'IDLE'
             }));
         } else {
             team = agents ? agents.getAgentList() : [];
+        }
+        // Merge active project agents (project agents override global if same name)
+        const projectsSvc = hub.getService('projects');
+        const activePid   = projectsSvc?.getActiveProjectId?.();
+        if (activePid) {
+            const projAgents = (projectsSvc.listProjectAgents?.(activePid) || []).map(a => ({
+                name: a.name,
+                role: a.role,
+                description: a.description || '',
+                capabilities: a.capabilities || [],
+                scope: 'project',
+                status: 'IDLE'
+            }));
+            const projNames = new Set(projAgents.map(a => a.name));
+            team = team.filter(a => !projNames.has(a.name)).concat(projAgents);
         }
     } catch (e) {
         hub.log('Could not get agent list: ' + e.message, 'warn');
@@ -2348,8 +2417,17 @@ async function handleUserMessage(text, socket) {
     const cfg = hub.getService('config');
     if (cfg?.chatMode === 'plan') {
         const agentMgr = hub.getService('agentManager');
-        const availableAgents = agentMgr?.listAgents?.()
-            ?.map(a => a.name).join(', ') || 'orchestrator, code-implementer, testing-engineer, git-keeper';
+        let availableAgentNames = agentMgr?.listAgents?.()?.map(a => a.name) || [];
+        // Include active project agents in plan mode roster
+        try {
+            const projectsSvc = hub.getService('projects');
+            const activePid   = projectsSvc?.getActiveProjectId?.();
+            if (activePid) {
+                const projNames = (projectsSvc.listProjectAgents?.(activePid) || []).map(a => a.name);
+                availableAgentNames = [...new Set([...availableAgentNames, ...projNames])];
+            }
+        } catch (_) {}
+        const availableAgents = availableAgentNames.join(', ') || 'orchestrator, code-implementer, testing-engineer, git-keeper';
         const planLength = cfg.planLength || 'regular';
         const lengthConstraints = {
             short:     'SHORT: 3–5 tasks maximum. Critical path only.',
@@ -3750,12 +3828,22 @@ function handleSwitchPlanVariant({ variant } = {}) {
 function getOrCreateSession(agentName) {
     if (agentSessions.has(agentName)) return agentSessions.get(agentName);
 
-    // Fetch agent definition
+    // Fetch agent definition — try global DB, then project agents, then legacy in-memory list
     let def = null;
     try {
         const agentMgr = hub.getService('agentManager');
         if (agentMgr && agentMgr.getAgent) def = agentMgr.getAgent(agentName);
     } catch (e) {}
+    if (!def) {
+        try {
+            const projects = hub.getService('projects');
+            const pid = projects?.getActiveProjectId?.();
+            if (pid) {
+                const projAgents = projects.listProjectAgents?.(pid) || [];
+                def = projAgents.find(a => a.name === agentName) || null;
+            }
+        } catch (e) {}
+    }
     if (!def) {
         try {
             const agents = hub.getService('agents');

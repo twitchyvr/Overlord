@@ -474,7 +474,16 @@ async function init(h) {
         getAgentHistory,
         getAgentInbox,
         getOrchestratorState: getState,
-        getAllAgentStates
+        getAllAgentStates,
+        // ── Chat room / meeting functions ──────────────────────────────
+        createChatRoom,
+        listChatRooms,
+        getChatRoom,
+        pullAgentIntoRoom,
+        userLeaveRoom,
+        userJoinRoom,
+        endMeeting,
+        generateMeetingNotes
     });
 
     // Allow clients to request current orchestration state

@@ -979,6 +979,9 @@
         });
         // Expose socket globally so the non-module approval script can use it
         window._overlordSocket = socket;
+        // Expose on engine so module-scoped components (team.js etc.) can emit via OverlordUI._socket
+        OverlordUI._socket = socket;
+
         const store = createStore();
 
         // Initialize engine

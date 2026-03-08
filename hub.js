@@ -1087,6 +1087,27 @@ class Hub extends EventEmitter {
             });
 
             // ── Agent Chat Rooms — let the user watch inter-agent conversations ──
+
+            // User-initiated room: create a new room between 'user' and a target agent
+            socket.on('create_chat_room', (data, cb) => {
+                const orch = this.getService('orchestration');
+                if (!orch || !orch.createChatRoom) {
+                    if (typeof cb === 'function') cb({ success: false, error: 'orchestration not available' });
+                    return;
+                }
+                const toAgent   = data.toAgent || data.agentName;
+                const fromAgent = data.fromAgent || 'user';
+                const reason    = data.reason || `User-initiated room with ${toAgent}`;
+                if (!toAgent) {
+                    if (typeof cb === 'function') cb({ success: false, error: 'toAgent required' });
+                    return;
+                }
+                const room = orch.createChatRoom(fromAgent, toAgent, { reason, tool: 'user_initiated' });
+                // Auto-join the user into this room
+                room.userPresent = true;
+                if (typeof cb === 'function') cb({ success: true, room });
+            });
+
             socket.on('list_chat_rooms', (cb) => {
                 const orch = this.getService('orchestration');
                 if (!orch || !orch.listChatRooms) { if (typeof cb === 'function') cb([]); return; }

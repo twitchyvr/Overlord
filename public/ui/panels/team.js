@@ -210,6 +210,19 @@ export class TeamPanel extends PanelComponent {
                         OverlordUI._socket.emit('pause_agent', { agentName });
                     }
                 }
+            } else if (action === 'start-room') {
+                // Create a new multi-agent room with this agent, then open RoomView
+                if (OverlordUI._socket) {
+                    OverlordUI._socket.emit('create_chat_room', {
+                        fromAgent: 'user',
+                        toAgent: agentName,
+                        reason: `User started a room with ${agentName}`
+                    }, (result) => {
+                        if (result?.success && result.room) {
+                            OverlordUI.dispatch('open_room_view', { room: result.room });
+                        }
+                    });
+                }
             }
         });
 
@@ -436,12 +449,19 @@ export class TeamPanel extends PanelComponent {
         sparkWrap.appendChild(this._renderSparklineSVG(agent.name));
         header.appendChild(sparkWrap);
 
-        // Chat button
+        // Chat button (1:1 direct chat)
         header.appendChild(h('button', {
             class: 'agent-card-btn',
             title: `Chat with ${agent.name}`,
             dataset: { action: 'agent-chat', agent: agent.name }
         }, '💬'));
+
+        // Start Room button (opens a multi-agent room with this agent)
+        header.appendChild(h('button', {
+            class: 'agent-card-btn',
+            title: `Start a room with ${agent.name}`,
+            dataset: { action: 'start-room', agent: agent.name }
+        }, '🚪'));
 
         // Pause/resume button
         const pauseIcon = ses.paused ? '▶' : '⏸';

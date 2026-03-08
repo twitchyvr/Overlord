@@ -621,14 +621,16 @@
 
 /* Markdown rendered inside thinking or delegate fields */
 .tb-markdown { white-space: normal; }
-.tb-markdown p { margin: 0 0 4px; }
-.tb-markdown ul, .tb-markdown ol { margin: 2px 0; padding-left: 18px; }
+.tb-markdown p { margin: 0 0 2px; }
+.tb-markdown ul, .tb-markdown ol { margin: 1px 0; padding-left: 16px; }
+.tb-markdown li { margin: 0; padding: 0; line-height: 1.4; }
+.tb-markdown li p { margin: 0; }
 .tb-markdown code { font-size: 10px; background: rgba(0,0,0,0.25); padding: 1px 4px; border-radius: 3px; }
 .tb-markdown pre { background: rgba(0,0,0,0.25); padding: 4px 6px; border-radius: 3px; font-size: 10px; }
 
 /* Readable delegate input fields (inside tool chip body) */
 .tc-lbl-field { color: rgba(168,85,247,0.7); }
-.tc-pre-readable { max-height: 200px; white-space: pre-wrap; word-break: break-word; }
+.tc-pre-readable { max-height: 200px; overflow-y: auto; white-space: pre-wrap; word-break: break-word; }
 
 
 /* ═══════════════════════════════════════════════════════

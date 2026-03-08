@@ -354,7 +354,7 @@ export class ChatView extends Component {
         const isUser = role === 'user';
         const roleLabel = isUser
             ? (hotInjected ? 'HOT INJECT' : 'USER')
-            : role === 'assistant' ? 'Assistant' : role;
+            : role === 'assistant' ? 'Overlord' : role;
 
         // Build message container
         const div = h('div', {
@@ -580,7 +580,7 @@ export class ChatView extends Component {
             }
             // Add role label if missing
             if (!last.querySelector('.role')) {
-                const roleEl = h('div', { class: 'role' }, 'Assistant');
+                const roleEl = h('div', { class: 'role' }, 'Overlord');
                 last.insertBefore(roleEl, last.firstChild);
             }
 

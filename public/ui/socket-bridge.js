@@ -546,6 +546,12 @@ export function initSocketBridge(socket, store, engine) {
 
     socket.on('overlay_changed', (data) => {
         engine.dispatch('overlay_changed', data);
+        // Sync mode bar: planning→plan, pm→pm (don't revert on null — mode should persist)
+        const overlayToMode = { planning: 'plan', pm: 'pm' };
+        if (data.overlay && overlayToMode[data.overlay]) {
+            const newMode = overlayToMode[data.overlay];
+            if (store.get('chat.mode') !== newMode) store.set('chat.mode', newMode);
+        }
     });
 
     socket.on('reminder_due', (d) => {

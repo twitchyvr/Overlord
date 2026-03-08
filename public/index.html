@@ -858,6 +858,34 @@
                 console.warn('[Approval] Cannot respond — socket or toolId not available');
             }
         }
+
+        // ==================== AUDIO PLAYBACK (TTS) ====================
+        // Must live in a non-module <script> so window.playAudio is defined
+        // synchronously before any ES module code runs. chat.js calls
+        // window.playAudio() guarded by typeof — without this definition the
+        // play button silently does nothing. Ported from index-ori.html:7268.
+        var currentAudio = null;
+
+        window.playAudio = function(src, audioId) {
+            if (currentAudio) {
+                currentAudio.pause();
+                currentAudio = null;
+            }
+            document.querySelectorAll('.audio-play-btn').forEach(function(btn) {
+                btn.textContent = '▶';
+            });
+            var audio = new Audio(src);
+            currentAudio = audio;
+            var btn = document.getElementById('btn-' + audioId);
+            if (btn) btn.textContent = '⏸';
+            audio.play().catch(function(e) {
+                console.error('[Audio] Playback error:', e.message);
+            });
+            audio.onended = function() {
+                if (btn) btn.textContent = '▶';
+                currentAudio = null;
+            };
+        };
     </script>
 
     <!-- Input Request Modal (ask_user tool) -->

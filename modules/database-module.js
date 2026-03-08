@@ -53,6 +53,7 @@ async function init(h) {
         
         hub.log('Database module loaded - SQLite', 'success');
     } catch (err) {
+        console.error('[database] INIT FAILED:', err.message);
         hub.log('Database initialization failed: ' + err.message, 'error');
         hub.log('Falling back to file-based storage', 'warning');
     }

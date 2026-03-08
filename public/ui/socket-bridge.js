@@ -218,6 +218,40 @@ export function initSocketBridge(socket, store, engine) {
     });
 
     // ══════════════════════════════════════════════════════════════
+    //  AGENT CHAT ROOMS & DELEGATION
+    // ══════════════════════════════════════════════════════════════
+
+    socket.on('agent_room_opened', (room) => {
+        engine.dispatch('agent_room_opened', room);
+    });
+    socket.on('agent_room_message', (data) => {
+        engine.dispatch('agent_room_message', data);
+    });
+    socket.on('agent_room_closed', (data) => {
+        engine.dispatch('agent_room_closed', data);
+    });
+    socket.on('role_block', (data) => {
+        engine.dispatch('role_block', data);
+    });
+    socket.on('delegation_request', (data) => {
+        engine.dispatch('delegation_request', data);
+    });
+
+    // Meeting system events
+    socket.on('room_participant_joined', (data) => {
+        engine.dispatch('room_participant_joined', data);
+    });
+    socket.on('room_participant_left', (data) => {
+        engine.dispatch('room_participant_left', data);
+    });
+    socket.on('room_user_joined', (data) => {
+        engine.dispatch('room_user_joined', data);
+    });
+    socket.on('meeting_notes_generated', (data) => {
+        engine.dispatch('meeting_notes_generated', data);
+    });
+
+    // ══════════════════════════════════════════════════════════════
     //  AGENT ORCHESTRATION
     // ══════════════════════════════════════════════════════════════
 
@@ -524,6 +558,12 @@ export function initSocketBridge(socket, store, engine) {
 
     socket.on('overlay_changed', (data) => {
         engine.dispatch('overlay_changed', data);
+        // Sync mode bar: planning→plan, pm→pm (don't revert on null — mode should persist)
+        const overlayToMode = { planning: 'plan', pm: 'pm' };
+        if (data.overlay && overlayToMode[data.overlay]) {
+            const newMode = overlayToMode[data.overlay];
+            if (store.get('chat.mode') !== newMode) store.set('chat.mode', newMode);
+        }
     });
 
     socket.on('reminder_due', (d) => {

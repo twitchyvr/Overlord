@@ -459,6 +459,8 @@
                     <div class="panel-content" id="log"></div>
                 </div>
 
+                <div class="panel-divider" data-between="panel-log,panel-orchestration" title="Drag to resize"></div>
+
                 <!-- ── Orchestration Panel ─────────────────────────── -->
                 <div class="panel panel-orchestration" id="panel-orchestration">
                     <div class="panel-header" data-panel="orchestration" title="Click to collapse">
@@ -531,22 +533,22 @@
              ═══════════════════════════════════════════════════════════ -->
         <div class="mobile-nav" id="mobile-nav">
             <div class="mobile-nav-items">
-                <div class="mobile-nav-item active" data-panel="chat">
+                <div class="mobile-nav-item active" data-view="chat">
                     <span class="icon">💬</span><span>Chat</span>
                 </div>
-                <div class="mobile-nav-item" data-panel="tasks">
+                <div class="mobile-nav-item" data-view="tasks">
                     <span class="icon">✅</span><span>Tasks</span>
                 </div>
-                <div class="mobile-nav-item" data-panel="team">
+                <div class="mobile-nav-item" data-view="team">
                     <span class="icon">👥</span><span>Team</span>
                 </div>
-                <div class="mobile-nav-item" data-panel="activity">
+                <div class="mobile-nav-item" data-view="activity">
                     <span class="icon">⚡</span><span>Activity</span>
                 </div>
-                <div class="mobile-nav-item" data-panel="log">
+                <div class="mobile-nav-item" data-view="log">
                     <span class="icon">📜</span><span>Log</span>
                 </div>
-                <div class="mobile-nav-item" data-panel="project" style="position:relative;">
+                <div class="mobile-nav-item" data-view="project" style="position:relative;">
                     <span class="icon">📊</span><span>Project</span>
                 </div>
             </div>
@@ -601,6 +603,9 @@
             <button id="agent-chat-send-btn" style="background:var(--accent-cyan);color:#000;border:none;border-radius:8px;padding:6px 14px;font-weight:700;font-size:12px;cursor:pointer;">Send</button>
         </div>
     </div>
+
+    <!-- Room View Overlay (full-screen multi-agent room / meeting) -->
+    <div class="room-view-overlay" id="room-view-overlay"></div>
 
     <!-- Tool Inspector Drawer -->
     <div class="tool-inspector" id="tool-inspector">
@@ -954,6 +959,7 @@
         import { KanbanView }       from '/ui/views/kanban.js';
         import { AgentChatView }    from '/ui/views/agent-chat.js';
         import { AgentManagerView } from '/ui/views/agent-manager.js';
+        import { RoomView }         from '/ui/views/room-view.js';
 
 
         // ═════════════════════════════════════════════════════════════
@@ -973,6 +979,9 @@
         });
         // Expose socket globally so the non-module approval script can use it
         window._overlordSocket = socket;
+        // Expose on engine so module-scoped components (team.js etc.) can emit via OverlordUI._socket
+        OverlordUI._socket = socket;
+
         const store = createStore();
 
         // Initialize engine
@@ -1103,6 +1112,15 @@
                 agentChat.mount();
             }
         } catch (e) { console.error('[Overlord] AgentChatView failed to mount:', e); }
+
+        try {
+            const roomViewEl = document.getElementById('room-view-overlay');
+            if (roomViewEl) {
+                const roomView = new RoomView(roomViewEl, { socket });
+                OverlordUI.registerComponent('room-view', roomView);
+                roomView.mount();
+            }
+        } catch (e) { console.error('[Overlord] RoomView failed to mount:', e); }
 
 
         // ── Settings & Agent Manager (modal-based) ──────────────────
@@ -1305,12 +1323,26 @@
                 if (_mainChatPanel) _mainChatPanel.classList.toggle('bypass-active', isBypass);
             }
 
+            // Map mode → overlay (PLAN↔planning, PM↔pm, others clear overlay)
+            const _modeToOverlay = { plan: 'planning', pm: 'pm' };
+
             _modeBtns.forEach(btn => {
                 const mode = btn.id.replace('mode-btn-', '');
                 btn.addEventListener('click', () => {
                     store.set('chat.mode', mode);
                     socket.emit('set_mode', mode);
                     _setActiveMode(mode);
+                    // Sync orch overlay with mode
+                    socket.emit('set_overlay', { overlay: _modeToOverlay[mode] ?? null });
+                    // Enable long-running for PLAN and PM (mirrors monolith behaviour)
+                    if (mode === 'plan' || mode === 'pm') {
+                        const lr = document.getElementById('long-running-mode');
+                        if (lr && !lr.checked) {
+                            lr.checked = true;
+                            store.set('ui.longRunning', true);
+                            socket.emit('set_long_running', true);
+                        }
+                    }
                 });
             });
 
@@ -1321,6 +1353,7 @@
                     store.set('chat.mode', 'auto');
                     socket.emit('set_mode', 'auto');
                     _setActiveMode('auto');
+                    socket.emit('set_overlay', { overlay: null });
                 });
             }
 
@@ -1419,6 +1452,164 @@
                     console.error('[Overlord] Image upload failed:', err);
                 }
             });
+        }
+
+
+        // ── Drag / Drop onto input wrapper ────────────────────────
+        {
+            const _dropWrapper = document.querySelector('.input-wrapper');
+            const _dropTextarea = document.getElementById('user-input');
+            const _dropImagesEl = document.getElementById('input-images');
+
+            // Accepted image MIME types (sent to /upload)
+            const _IMG_TYPES = new Set([
+                'image/jpeg','image/png','image/gif','image/webp',
+                'image/svg+xml','image/bmp','image/avif','image/tiff'
+            ]);
+
+            // Extensions treated as text/code (injected into textarea)
+            const _TEXT_EXTS = new Set([
+                'txt','md','markdown','mdx','json','jsonc','yaml','yml','toml',
+                'ini','cfg','conf','env','xml','js','mjs','cjs','jsx','ts','tsx',
+                'html','htm','css','scss','sass','less','py','rb','go','rs','java',
+                'c','cpp','cc','h','hpp','cs','php','sh','bash','zsh','fish','ps1',
+                'bat','sql','graphql','gql','prisma','proto','tf','hcl','vue',
+                'svelte','astro','r','m','swift','kt','kts','dart','lua','vim',
+                'dockerfile','makefile','gitignore','lock','diff','patch',
+            ]);
+
+            // Extension → fenced-code language hint
+            const _LANG = {
+                js:'javascript', mjs:'javascript', cjs:'javascript', jsx:'javascript',
+                ts:'typescript', tsx:'typescript',
+                py:'python', rb:'ruby', go:'go', rs:'rust', java:'java',
+                c:'c', cpp:'cpp', cc:'cpp', h:'c', hpp:'cpp', cs:'csharp', php:'php',
+                html:'html', htm:'html', css:'css', scss:'scss', sass:'scss', less:'less',
+                json:'json', jsonc:'json', yaml:'yaml', yml:'yaml', xml:'xml',
+                sh:'bash', bash:'bash', zsh:'bash', ps1:'powershell', bat:'batch',
+                sql:'sql', graphql:'graphql', gql:'graphql',
+                tf:'hcl', hcl:'hcl', vue:'vue', svelte:'svelte',
+                md:'markdown', mdx:'markdown',
+            };
+
+            // Upload a dropped image exactly like the attach-button flow
+            async function _uploadDroppedImage(file) {
+                const localThumb = URL.createObjectURL(file);
+                const pill = document.createElement('div');
+                pill.style.cssText = 'display:inline-flex;align-items:center;gap:5px;padding:3px 8px 3px 4px;' +
+                    'background:rgba(0,212,255,0.08);border:1px solid rgba(0,212,255,0.3);border-radius:6px;' +
+                    'margin:2px;font-size:10px;color:var(--text-secondary);cursor:pointer;vertical-align:middle;';
+                pill.title = 'Click to remove';
+
+                const thumbImg = document.createElement('img');
+                thumbImg.src   = localThumb;
+                thumbImg.style.cssText = 'width:20px;height:20px;object-fit:cover;border-radius:3px;flex-shrink:0;';
+
+                const nameSpan = document.createElement('span');
+                nameSpan.textContent = file.name.length > 20 ? file.name.substring(0, 18) + '…' : file.name;
+
+                const statusSpan = document.createElement('span');
+                statusSpan.style.cssText = 'font-size:9px;color:var(--text-muted);';
+                statusSpan.textContent   = 'uploading…';
+
+                pill.appendChild(thumbImg);
+                pill.appendChild(nameSpan);
+                pill.appendChild(statusSpan);
+                if (_dropImagesEl) _dropImagesEl.appendChild(pill);
+
+                try {
+                    const fd = new FormData();
+                    fd.append('image', file);
+                    const res  = await fetch('/upload', { method: 'POST', body: fd });
+                    const data = await res.json();
+                    if (!data.success) throw new Error(data.error || 'Upload failed');
+
+                    statusSpan.textContent = '✓';
+                    pill.style.borderColor = 'rgba(0,255,136,0.35)';
+
+                    if (typeof chatView !== 'undefined' && chatView) {
+                        chatView._attachedImages.push({
+                            path: data.path, name: file.name,
+                            size: file.size, type: file.type, localThumb
+                        });
+                    }
+
+                    pill.addEventListener('click', () => {
+                        if (typeof chatView !== 'undefined' && chatView) {
+                            chatView._attachedImages = chatView._attachedImages.filter(
+                                img => img.localThumb !== localThumb
+                            );
+                        }
+                        URL.revokeObjectURL(localThumb);
+                        pill.remove();
+                    });
+                } catch (err) {
+                    statusSpan.textContent = '✗ failed';
+                    pill.style.borderColor = 'rgba(248,113,113,0.4)';
+                    console.error('[Overlord] Drop image upload failed:', err);
+                }
+            }
+
+            // Read a text/code file and inject it into the textarea as a fenced block
+            async function _injectTextFile(file) {
+                const MAX_BYTES = 50 * 1024;
+                let text = await file.text();
+                const truncated = text.length > MAX_BYTES;
+                if (truncated) text = text.slice(0, MAX_BYTES);
+
+                const ext  = file.name.includes('.') ? file.name.split('.').pop().toLowerCase() : '';
+                const lang = _LANG[ext] || ext;
+                const note = truncated ? ' (truncated to 50 KB)' : '';
+                const block = `\`\`\`${lang}\n// ${file.name}${note}\n${text}\n\`\`\``;
+
+                if (!_dropTextarea) return;
+                const cur = _dropTextarea.value;
+                _dropTextarea.value = cur + (cur && !cur.endsWith('\n') ? '\n' : '') + block + '\n';
+                _dropTextarea.dispatchEvent(new Event('input')); // trigger auto-resize
+                _dropTextarea.focus();
+                if (truncated) Toast.warning(`${file.name} truncated to 50 KB`, { duration: 4000 });
+            }
+
+            // Wire events using a depth counter to handle dragenter/dragleave across children
+            if (_dropWrapper) {
+                let _dragDepth = 0;
+
+                _dropWrapper.addEventListener('dragenter', (e) => {
+                    e.preventDefault();
+                    if (++_dragDepth === 1) _dropWrapper.classList.add('drag-over');
+                });
+
+                _dropWrapper.addEventListener('dragleave', () => {
+                    if (--_dragDepth <= 0) {
+                        _dragDepth = 0;
+                        _dropWrapper.classList.remove('drag-over');
+                    }
+                });
+
+                _dropWrapper.addEventListener('dragover', (e) => {
+                    e.preventDefault();
+                    e.dataTransfer.dropEffect = 'copy';
+                });
+
+                _dropWrapper.addEventListener('drop', async (e) => {
+                    e.preventDefault();
+                    _dragDepth = 0;
+                    _dropWrapper.classList.remove('drag-over');
+
+                    for (const file of Array.from(e.dataTransfer.files)) {
+                        if (_IMG_TYPES.has(file.type)) {
+                            await _uploadDroppedImage(file);
+                        } else {
+                            const ext = file.name.includes('.') ? file.name.split('.').pop().toLowerCase() : '';
+                            if (_TEXT_EXTS.has(ext)) {
+                                await _injectTextFile(file);
+                            } else {
+                                Toast.warning(`${file.name}: unsupported type — drop images or text/code files`);
+                            }
+                        }
+                    }
+                });
+            }
         }
 
 

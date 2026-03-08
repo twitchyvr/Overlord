@@ -38,6 +38,8 @@ class Hub extends EventEmitter {
         this.initialized = false;
         // ── Web Push subscriptions (socketId → PushSubscription JSON) ──
         this._pushSubscriptions = new Map();
+        // ── Room discussion round timers (roomId → timeoutId) ──
+        this._roomDiscussionTimers = new Map();
         
         // Process state tracking
         this.processState = {
@@ -837,6 +839,23 @@ class Hub extends EventEmitter {
                 this.emit('gitops_commit_now');
             });
 
+            // Get computed system prompt (for Prompt inspector in Settings)
+            socket.on('get_system_prompt', async () => {
+                try {
+                    const config  = this.getService('config');
+                    const aiMod   = this.getService('ai');
+                    const toolsMod = this.getService('tools');
+                    if (aiMod && typeof aiMod.buildSystemPrompt === 'function') {
+                        const prompt = await aiMod.buildSystemPrompt(toolsMod);
+                        socket.emit('system_prompt_data', { prompt });
+                    } else {
+                        socket.emit('system_prompt_data', { prompt: '[System prompt unavailable — AI module not ready]' });
+                    }
+                } catch (err) {
+                    socket.emit('system_prompt_data', { prompt: '[Error building system prompt: ' + err.message + ']' });
+                }
+            });
+
             // ── Voice Clone handlers ──────────────────────────────────────────
             socket.on('voice_clone_create', (data) => this.emit('voice_clone_create', data, socket));
             socket.on('voice_clone_upload', (data) => this.emit('voice_clone_upload', data, socket));
@@ -847,15 +866,7 @@ class Hub extends EventEmitter {
                 if (orch && orch.runAgentSession) orch.runAgentSession(agentName, message);
             });
 
-            socket.on('pause_agent', ({ agentName }) => {
-                const orch = this.getService('orchestration');
-                if (orch && orch.pauseAgent) orch.pauseAgent(agentName);
-            });
-
-            socket.on('resume_agent', ({ agentName }) => {
-                const orch = this.getService('orchestration');
-                if (orch && orch.resumeAgent) orch.resumeAgent(agentName);
-            });
+            // pause_agent / resume_agent are handled via the event-bus path at lines 593-594
 
             socket.on('get_agent_session', ({ agentName }, ack) => {
                 const orch = this.getService('orchestration');
@@ -1046,12 +1057,18 @@ class Hub extends EventEmitter {
                 if (typeof cb === 'function') cb(result);
             });
 
-            socket.on('remove_agent', (agentId) => {
+            socket.on('remove_agent', (agentId, cb) => {
                 const agentMgr = this.getService('agentManager');
                 if (agentMgr && agentMgr.deleteAgent) {
-                    agentMgr.deleteAgent(agentId);
-                    socket.emit('agent_removed', { success: true, id: agentId });
-                    this.broadcastTeamFromDB();
+                    const result = agentMgr.deleteAgent(agentId);
+                    if (result && result.success === false) {
+                        if (typeof cb === 'function') cb({ success: false, error: result.error });
+                        else socket.emit('agent_removed', { success: false, error: result.error });
+                    } else {
+                        if (typeof cb === 'function') cb({ success: true, id: agentId });
+                        else socket.emit('agent_removed', { success: true, id: agentId });
+                        this.broadcastTeamFromDB();
+                    }
                 }
             });
 
@@ -1067,6 +1084,213 @@ class Hub extends EventEmitter {
                 } else {
                     socket.emit('agents_list', agents);
                 }
+            });
+
+            // Get security roles (used by Agent Manager UI to populate dropdown)
+            socket.on('get_security_roles', (cb) => {
+                const agentMgr = this.getService('agentManager');
+                const roles = (agentMgr && agentMgr.SECURITY_ROLES) || {};
+                if (typeof cb === 'function') {
+                    cb(roles);
+                } else {
+                    socket.emit('security_roles', roles);
+                }
+            });
+
+            // ── Agent Chat Rooms — let the user watch inter-agent conversations ──
+
+            // User-initiated room: create a new room between 'user' and a target agent
+            socket.on('create_chat_room', (data, cb) => {
+                const orch = this.getService('orchestration');
+                if (!orch || !orch.createChatRoom) {
+                    if (typeof cb === 'function') cb({ success: false, error: 'orchestration not available' });
+                    return;
+                }
+                const toAgent   = data.toAgent || data.agentName;
+                const fromAgent = data.fromAgent || 'user';
+                const reason    = data.reason || `User-initiated room with ${toAgent}`;
+                if (!toAgent) {
+                    if (typeof cb === 'function') cb({ success: false, error: 'toAgent required' });
+                    return;
+                }
+                const room = orch.createChatRoom(fromAgent, toAgent, { reason, tool: 'user_initiated' });
+                // Auto-join the user into this room
+                room.userPresent = true;
+                if (typeof cb === 'function') cb({ success: true, room });
+            });
+
+            socket.on('list_chat_rooms', (cb) => {
+                const orch = this.getService('orchestration');
+                if (!orch || !orch.listChatRooms) { if (typeof cb === 'function') cb([]); return; }
+                if (typeof cb === 'function') cb(orch.listChatRooms());
+            });
+
+            socket.on('get_chat_room', (roomId, cb) => {
+                const orch = this.getService('orchestration');
+                if (!orch || !orch.getChatRoom) { if (typeof cb === 'function') cb(null); return; }
+                if (typeof cb === 'function') cb(orch.getChatRoom(roomId));
+            });
+
+            socket.on('end_chat_room', (roomId, cb) => {
+                const orch = this.getService('orchestration');
+                if (!orch || !orch.endChatRoom) { if (typeof cb === 'function') cb({ success: false }); return; }
+                orch.endChatRoom(roomId, 'ended');
+                if (typeof cb === 'function') cb({ success: true });
+            });
+
+            // User sends a message into an agent chat room (user becomes 3rd participant)
+            socket.on('send_room_message', (data, cb) => {
+                const orch = this.getService('orchestration');
+                if (!orch || !orch.addRoomMessage || !orch.getChatRoom) {
+                    if (typeof cb === 'function') cb({ success: false });
+                    return;
+                }
+                const room = orch.getChatRoom(data.roomId);
+                if (!room) { if (typeof cb === 'function') cb({ success: false }); return; }
+
+                // Stop any ongoing discussion round for this room before starting fresh
+                if (this._roomDiscussionTimers.has(data.roomId)) {
+                    clearTimeout(this._roomDiscussionTimers.get(data.roomId));
+                    this._roomDiscussionTimers.delete(data.roomId);
+                }
+                if (orch.clearRoomAgentCallbacks) orch.clearRoomAgentCallbacks(data.roomId);
+
+                // Add user message to room transcript
+                orch.addRoomMessage(data.roomId, 'user', data.message, 'message');
+
+                const allParticipants = room.participants || [room.fromAgent, room.toAgent];
+                const agentNames = allParticipants.filter(n => n !== 'user');
+
+                if (typeof cb === 'function') cb({ success: true });
+
+                // ── Multi-round discussion — agents talk to each other across rounds ──
+                // Round 0: agents respond to user's message
+                // Rounds 1+: agents respond to each other (autonomous discussion)
+                const MAX_ROUNDS = 4;  // 1 user-prompt round + 3 agent-to-agent rounds
+
+                const buildTranscript = () => {
+                    const msgs = (orch.getChatRoom(data.roomId)?.messages || []).slice(-40);
+                    return msgs.map(m => `[${m.from}]: ${m.content}`).join('\n');
+                };
+
+                const triggerRound = (round) => {
+                    const triggerNext = (index) => {
+                        if (index >= agentNames.length) {
+                            // All agents finished this round — schedule next if not at limit
+                            if (round + 1 < MAX_ROUNDS) {
+                                const timer = setTimeout(() => {
+                                    this._roomDiscussionTimers.delete(data.roomId);
+                                    const r = orch.getChatRoom(data.roomId);
+                                    if (!r) return;
+                                    this.log(`[Room ${data.roomId}] Starting discussion round ${round + 2}/${MAX_ROUNDS}`, 'info');
+                                    triggerRound(round + 1);
+                                }, 1500);
+                                this._roomDiscussionTimers.set(data.roomId, timer);
+                            }
+                            return;
+                        }
+
+                        const agentName = agentNames[index];
+                        const participantList = allParticipants.join(', ');
+                        const transcript = buildTranscript();
+
+                        this.log(`[Room ${data.roomId}] Round ${round + 1}/${MAX_ROUNDS} — triggering ${agentName}`, 'info');
+                        this.broadcast('room_agent_thinking', { roomId: data.roomId, agentName });
+
+                        const prompt = round === 0
+                            ? [
+                                `[Meeting room — Participants: ${participantList}]`,
+                                ``,
+                                `Conversation:`,
+                                transcript,
+                                ``,
+                                `You are ${agentName}. Respond to the conversation above. Be concise and collaborative.`,
+                                `If another agent already addressed the main point, add your own perspective or ask a follow-up question.`
+                            ].join('\n')
+                            : [
+                                `[Meeting room — Participants: ${participantList}]`,
+                                ``,
+                                `Conversation so far:`,
+                                transcript,
+                                ``,
+                                `You are ${agentName}. Continue the discussion — respond directly to what was just said.`,
+                                `Build on the other agents' ideas, challenge assumptions, ask a follow-up, or propose next steps.`,
+                                `Keep it concise (2-4 sentences). Address other agents by name when relevant. Do NOT restart the conversation.`
+                            ].join('\n');
+
+                        if (orch.runAgentSessionInRoom) {
+                            orch.runAgentSessionInRoom(agentName, prompt, data.roomId, () => triggerNext(index + 1));
+                        } else if (orch.runAgentSession) {
+                            orch.runAgentSession(agentName, prompt);
+                            triggerNext(index + 1);
+                        }
+                    };
+
+                    triggerNext(0);
+                };
+
+                triggerRound(0);
+            });
+
+            // Stop the sequential agent chain + any pending discussion rounds for a room
+            socket.on('stop_room_agents', (roomId, cb) => {
+                // Cancel any pending next-round timer
+                if (this._roomDiscussionTimers.has(roomId)) {
+                    clearTimeout(this._roomDiscussionTimers.get(roomId));
+                    this._roomDiscussionTimers.delete(roomId);
+                }
+                const orch = this.getService('orchestration');
+                if (orch?.clearRoomAgentCallbacks) orch.clearRoomAgentCallbacks(roomId);
+                this.broadcast('room_agents_stopped', { roomId });
+                if (typeof cb === 'function') cb({ success: true });
+            });
+
+            // ── Meeting System — pull agents in, leave, generate notes ──
+            socket.on('pull_agent_into_room', (data, cb) => {
+                const orch = this.getService('orchestration');
+                if (!orch || !orch.pullAgentIntoRoom) { if (typeof cb === 'function') cb({ success: false, error: 'Orchestration unavailable' }); return; }
+                const result = orch.pullAgentIntoRoom(data.roomId, data.agentName, data.pulledBy || 'user');
+                if (typeof cb === 'function') cb(result);
+            });
+
+            socket.on('user_join_room', (roomId, cb) => {
+                const orch = this.getService('orchestration');
+                if (!orch || !orch.userJoinRoom) { if (typeof cb === 'function') cb({ success: false }); return; }
+                const result = orch.userJoinRoom(roomId);
+                if (typeof cb === 'function') cb(result);
+            });
+
+            socket.on('user_leave_room', (roomId, cb) => {
+                const orch = this.getService('orchestration');
+                if (!orch || !orch.userLeaveRoom) { if (typeof cb === 'function') cb({ success: false }); return; }
+                const result = orch.userLeaveRoom(roomId);
+                if (typeof cb === 'function') cb(result);
+            });
+
+            socket.on('generate_meeting_notes', async (roomId, cb) => {
+                const orch = this.getService('orchestration');
+                if (!orch || !orch.generateMeetingNotes) { if (typeof cb === 'function') cb({ success: false }); return; }
+                const result = await orch.generateMeetingNotes(roomId);
+                if (typeof cb === 'function') cb(result);
+            });
+
+            socket.on('end_meeting', async (roomId, cb) => {
+                const orch = this.getService('orchestration');
+                if (!orch || !orch.endMeeting) { if (typeof cb === 'function') cb({ success: false }); return; }
+                const result = await orch.endMeeting(roomId);
+                if (typeof cb === 'function') cb(result);
+            });
+
+            socket.on('list_meeting_notes', (data, cb) => {
+                const agentMgr = this.getService('agentManager');
+                if (!agentMgr || !agentMgr.listMeetingNotes) { if (typeof cb === 'function') cb([]); return; }
+                if (typeof cb === 'function') cb(agentMgr.listMeetingNotes(data?.limit || 50));
+            });
+
+            socket.on('get_meeting_notes', (noteId, cb) => {
+                const agentMgr = this.getService('agentManager');
+                if (!agentMgr || !agentMgr.getMeetingNotes) { if (typeof cb === 'function') cb(null); return; }
+                if (typeof cb === 'function') cb(agentMgr.getMeetingNotes(noteId));
             });
 
             // Update agent (edit name, role, description, instructions, tools, securityRole)
@@ -1085,6 +1309,13 @@ class Hub extends EventEmitter {
                 if (!agentMgr) { if (cb) cb(null); return; }
                 const agent = agentMgr.getAgent(agentId);
                 if (cb) cb(agent);
+            });
+
+            // Get all available tools (categorized) for the Agent Manager UI
+            socket.on('get_available_tools', (cb) => {
+                if (typeof cb !== 'function') return;
+                const svc = this.getService('tools');
+                cb(svc && svc.getCategorizedTools ? svc.getCategorizedTools() : {});
             });
 
             // Set agent tool permissions (replaces tools list)
@@ -1467,50 +1698,61 @@ User description: "${data.description.replace(/"/g, '\\"')}"`;
             const TOOL_WEIGHT_PROFILES = {
                 engineering: {
                     always:  ['read_file','read_file_lines','write_file','patch_file','list_dir','bash','recall_notes','record_note'],
-                    likely:  ['append_file','web_search','system_info','get_working_dir','set_working_dir'],
-                    rarely:  ['powershell','understand_image']
+                    likely:  ['append_file','web_search','fetch_webpage','save_webpage_to_vault','system_info','get_working_dir','set_working_dir','git_diff','file_tree','project_info'],
+                    rarely:  ['powershell','understand_image','generate_image','speak']
                 },
                 qa: {
                     always:  ['qa_run_tests','qa_check_lint','qa_check_types','qa_check_coverage','read_file','list_dir','bash','recall_notes','record_note'],
-                    likely:  ['write_file','patch_file','web_search'],
-                    rarely:  ['powershell']
+                    likely:  ['write_file','patch_file','web_search','fetch_webpage','qa_audit_deps','file_tree'],
+                    rarely:  ['powershell','understand_image','save_webpage_to_vault']
                 },
                 devops: {
                     always:  ['bash','read_file','write_file','list_dir','recall_notes','record_note','system_info'],
-                    likely:  ['patch_file','get_working_dir','qa_run_tests','powershell'],
-                    rarely:  ['understand_image']
+                    likely:  ['patch_file','get_working_dir','qa_run_tests','powershell','git_diff','file_tree','fetch_webpage','save_webpage_to_vault'],
+                    rarely:  ['understand_image','generate_image']
                 },
                 management: {
                     always:  ['recall_notes','record_note','list_agents','get_agent_info','read_file','list_dir','web_search'],
-                    likely:  ['get_working_dir','assign_task'],
-                    rarely:  ['bash','write_file']
+                    likely:  ['get_working_dir','recommend_task','create_task','list_tasks','list_milestones','project_info','message_agent','fetch_webpage','save_webpage_to_vault'],
+                    rarely:  ['bash','write_file','delegate_to_agent']
+                },
+                orchestration: {
+                    always:  ['delegate_to_agent','delegate_to_team','create_task','message_agent','recommend_task','close_milestone','request_tool_exception'],
+                    likely:  ['read_file','list_dir','list_agents','get_agent_info','web_search','fetch_webpage','save_webpage_to_vault','recall_notes','record_note'],
+                    rarely:  ['bash','write_file','patch_file']
                 },
                 security: {
                     always:  ['read_file','read_file_lines','list_dir','bash','recall_notes','record_note'],
-                    likely:  ['qa_check_lint','qa_run_tests','web_search'],
+                    likely:  ['qa_check_lint','qa_run_tests','web_search','fetch_webpage','save_webpage_to_vault','qa_audit_deps'],
                     rarely:  ['write_file','patch_file']
                 },
                 design: {
                     always:  ['read_file','write_file','patch_file','list_dir','understand_image','recall_notes','record_note','bash'],
-                    likely:  ['web_search','append_file'],
-                    rarely:  ['powershell']
+                    likely:  ['web_search','fetch_webpage','save_webpage_to_vault','append_file','generate_image','take_screenshot'],
+                    rarely:  ['powershell','qa_run_tests']
+                },
+                documentation: {
+                    always:  ['read_file','write_file','patch_file','list_dir','recall_notes','record_note'],
+                    likely:  ['web_search','fetch_webpage','save_webpage_to_vault','file_tree','project_info','append_file'],
+                    rarely:  ['bash','powershell','understand_image']
                 },
                 default: {
                     always:  ['read_file','list_dir','recall_notes','record_note'],
-                    likely:  ['bash','write_file','patch_file','web_search','get_working_dir'],
-                    rarely:  ['powershell','understand_image']
+                    likely:  ['bash','write_file','patch_file','web_search','get_working_dir','system_info'],
+                    rarely:  ['powershell','understand_image','generate_image']
                 }
             };
 
             function matchToolProfile(hint) {
                 const text = [hint.name||'', hint.role||'', hint.description||'', hint.instructions||''].join(' ').toLowerCase();
-                if (/orchestrat|coordinat|conductor/.test(text))     return 'management';
+                if (/\borchestrator\b|master.?coordinat|conductor|delegat/.test(text)) return 'orchestration';
                 if (/qa|test|quality|lint|audit/.test(text))          return 'qa';
                 if (/devops|infra|deploy|ci.?cd|pipeline/.test(text)) return 'devops';
                 if (/security|compliance|ciso|vuln/.test(text))       return 'security';
-                if (/pm|project.?manag|scrum|product/.test(text))     return 'management';
-                if (/design|ui|ux|css|visual|frontend/.test(text))    return 'design';
-                if (/engineer|develop|code|implement|backend|fullstack/.test(text)) return 'engineering';
+                if (/pm|project.?manag|scrum|product|sprint|agile|coordinat/.test(text)) return 'management';
+                if (/design|ui|ux|css|visual/.test(text))             return 'design';
+                if (/doc|technical.?writ|markdown/.test(text))        return 'documentation';
+                if (/engineer|develop|code|implement|backend|fullstack|frontend/.test(text)) return 'engineering';
                 return 'default';
             }
 
@@ -1523,17 +1765,30 @@ User description: "${data.description.replace(/"/g, '\\"')}"`;
                 const hint         = (data && data.hint)         ? data.hint         : {};
                 const lockedFields = (data && Array.isArray(data.lockedFields)) ? data.lockedFields : [];
 
-                const ALL_TOOLS = [
-                    'bash','powershell',
-                    'read_file','read_file_lines','write_file','patch_file','append_file','list_dir',
-                    'web_search','understand_image',
-                    'system_info','get_working_dir','set_working_dir',
-                    'list_agents','get_agent_info','assign_task',
-                    'qa_run_tests','qa_check_lint','qa_check_types','qa_check_coverage',
-                    'record_note','recall_notes',
-                    'list_skills','get_skill','activate_skill'
-                ];
-                const SECURITY_ROLES = ['developer','security-aware','security-analyst','security-lead','ciso','readonly'];
+                // Dynamic: pull ALL tools from the live tools service
+                const toolsSvc = this.getService('tools');
+                const ALL_TOOLS = (toolsSvc && toolsSvc.getDefinitions)
+                    ? toolsSvc.getDefinitions().map(t => t.name)
+                    : ['bash','read_file','write_file','list_dir','web_search','system_info'];
+
+                // Dynamic: pull security roles from agent manager
+                const agentMgr = this.getService('agentManager');
+                const ROLES_OBJ = (agentMgr && agentMgr.SECURITY_ROLES) || {};
+                const ROLE_NAMES = Object.keys(ROLES_OBJ);
+                const roleDescriptions = ROLE_NAMES.map(k => {
+                    const r = ROLES_OBJ[k];
+                    return `  ${k}: ${r.label || k} — ${r.description || ''}`;
+                }).join('\n');
+
+                // Dynamic: pull groups for context
+                const groups = (agentMgr && agentMgr.listGroups) ? agentMgr.listGroups() : [];
+                const groupNames = groups.map(g => g.name);
+
+                // Dynamic: pull existing agents for delegation context
+                const existingAgents = (agentMgr && agentMgr.listAgents) ? agentMgr.listAgents() : [];
+                const agentSummaries = existingAgents.slice(0, 30).map(a =>
+                    `  ${a.name} (${a.role || 'N/A'}) — role: ${a.securityRole || 'implementer'}, tools: ${(a.tools || []).slice(0, 5).join(', ')}${(a.tools || []).length > 5 ? '…' : ''}`
+                ).join('\n');
 
                 const lockedDesc = lockedFields.length
                     ? 'LOCKED (omit from output): ' + lockedFields.join(', ')
@@ -1545,6 +1800,7 @@ User description: "${data.description.replace(/"/g, '\\"')}"`;
                     hint.description  ? 'description: "' + hint.description + '"' : '',
                     hint.instructions ? 'instructions: "' + hint.instructions.substring(0,300) + '"' : '',
                     hint.securityRole ? 'securityRole: "' + hint.securityRole + '"' : '',
+                    hint.group        ? 'group: "' + hint.group + '"'             : '',
                     hint.tools && hint.tools.length ? 'current tools: ' + hint.tools.join(', ') : '',
                     hint.prompt       ? 'user note: "' + hint.prompt + '"'        : ''
                 ].filter(Boolean).join('\n');
@@ -1554,7 +1810,8 @@ User description: "${data.description.replace(/"/g, '\\"')}"`;
                     role: 'Short Role Title',
                     description: 'One or two sentences describing the agent.',
                     instructions: 'Specific instructions for the system prompt. Be concise and directive.',
-                    securityRole: 'developer',
+                    securityRole: 'implementer',
+                    group: 'Engineering',
                     tools: ['bash', 'read_file', 'write_file']
                 }, null, 2);
 
@@ -1575,10 +1832,23 @@ User description: "${data.description.replace(/"/g, '\\"')}"`;
                     'OUTPUT FORMAT: You MUST respond with ONLY a single raw JSON object. No markdown. No code fences. No prose. No explanation before or after.',
                     'The VERY FIRST character of your response must be `{` and the VERY LAST character must be `}`.',
                     `Example of the exact output format required:\n${EXAMPLE_JSON}`,
-                    `Security roles available: ${SECURITY_ROLES.join(', ')}`,
-                    `Tools available: ${ALL_TOOLS.join(', ')}`,
+                    '',
+                    `SECURITY ROLES (choose the most appropriate one):\n${roleDescriptions}`,
+                    'Role enforcement is ACTIVE: each role controls which tool categories the agent can access. Choose the minimum-privilege role that still lets the agent do its job.',
+                    '',
+                    `GROUPS available: ${groupNames.length ? groupNames.join(', ') : '(none yet)'}`,
+                    'Assign the agent to the most relevant group. Use the exact group name.',
+                    '',
+                    `EXISTING AGENTS (for context — avoid duplicate roles):\n${agentSummaries || '(none yet)'}`,
+                    'Consider what tools OTHER agents already have — if this agent needs a blocked tool, it can delegate via request_tool_exception or message_agent.',
+                    '',
+                    `ALL TOOLS available: ${ALL_TOOLS.join(', ')}`,
                     toolGuidance,
-                    'Field rules: name=lowercase-slug, role=2-5 words, description=1-2 sentences, instructions=2-4 specific directive sentences, securityRole=one of the available values, tools=array of available tool names.',
+                    '',
+                    'DELEGATION TOOLS: delegate_to_agent (orchestrator only), delegate_to_team, message_agent, recommend_task, handoff_to_orchestrator, request_tool_exception.',
+                    'If this agent is a coordinator/manager type, include delegation and communication tools. If it is an implementer, omit delegation tools.',
+                    '',
+                    'Field rules: name=lowercase-slug, role=2-5 words, description=1-2 sentences, instructions=2-4 specific directive sentences, securityRole=one of the available role names, group=one of the available group names, tools=array of available tool names.',
                     lockedDesc,
                     'Only include unlocked fields in your JSON output.'
                 ].join('\n');
@@ -1587,7 +1857,7 @@ User description: "${data.description.replace(/"/g, '\\"')}"`;
                     'Improve or fill this agent configuration. Use the existing values as context — enhance them to be specific, professional, and complete.',
                     ctx ? `Existing values:\n${ctx}` : '(No existing values — generate a useful general-purpose developer agent.)',
                     hint.prompt ? `Additional instructions from user: "${hint.prompt}"` : '',
-                    'Return ONLY the raw JSON object with these keys (omit locked fields): name, role, description, instructions, securityRole, tools'
+                    'Return ONLY the raw JSON object with these keys (omit locked fields): name, role, description, instructions, securityRole, group, tools'
                 ].filter(Boolean).join('\n\n');
 
                 // Helper to extract and parse JSON from potentially-noisy LLM output
@@ -1644,13 +1914,13 @@ User description: "${data.description.replace(/"/g, '\\"')}"`;
 
                 // Sanitize result
                 const out = {};
-                ['name','role','description','instructions','securityRole'].forEach(f => {
+                ['name','role','description','instructions','securityRole','group'].forEach(f => {
                     if (!lockedFields.includes(f) && typeof parsed[f] === 'string' && parsed[f].trim()) {
                         out[f] = parsed[f].trim();
                     }
                 });
                 if (out.name) out.name = out.name.toLowerCase().replace(/[^a-z0-9-]/g,'-').replace(/-+/g,'-').replace(/^-|-$/g,'');
-                if (out.securityRole && !SECURITY_ROLES.includes(out.securityRole)) out.securityRole = 'developer';
+                if (out.securityRole && !ROLE_NAMES.includes(out.securityRole)) out.securityRole = 'implementer';
                 if (!lockedFields.includes('tools') && Array.isArray(parsed.tools)) {
                     out.tools = parsed.tools.filter(t => typeof t === 'string' && ALL_TOOLS.includes(t));
                 }
@@ -1904,8 +2174,11 @@ Rules:
             role: a.role,
             description: a.description || '',
             capabilities: a.capabilities || [],
-            status: a.status || 'IDLE',
-            scope: a.scope || 'global'
+            status: 'idle',   // always idle on broadcast — live state sent via agent_session_state events
+            scope: a.scope || 'global',
+            builtIn: a.builtIn || false,
+            forcedTools: a.forcedTools || [],
+            blockedTools: a.blockedTools || []
         }));
         this.broadcastAll('team_update', team);
     }

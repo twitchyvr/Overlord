@@ -145,7 +145,8 @@ export class SettingsView extends Component {
             ai:      this._renderAITab(),
             tools:   this._renderToolsTab(),
             display: this._renderDisplayTab(),
-            gitops:  this._renderGitOpsTab()
+            gitops:  this._renderGitOpsTab(),
+            prompt:  this._renderPromptTab()
         };
 
         Object.values(this._tabPanels).forEach(p => {
@@ -161,7 +162,8 @@ export class SettingsView extends Component {
                 { id: 'ai',      label: 'AI' },
                 { id: 'tools',   label: 'Tools' },
                 { id: 'display', label: 'Display' },
-                { id: 'gitops',  label: '⚡ GitOps' }
+                { id: 'gitops',  label: '⚡ GitOps' },
+                { id: 'prompt',  label: '🧠 Prompt' }
             ],
             activeId: 'general',
             style: 'underline',
@@ -169,6 +171,7 @@ export class SettingsView extends Component {
                 Object.entries(this._tabPanels).forEach(([key, panel]) => {
                     panel.style.display = key === id ? 'block' : 'none';
                 });
+                if (id === 'prompt') this._refreshSystemPrompt();
             }
         });
         this._tabs.mount();
@@ -849,6 +852,75 @@ export class SettingsView extends Component {
         return panel;
     }
 
+    // ── Prompt Tab ───────────────────────────────────────────────
+
+    _renderPromptTab() {
+        const panel = h('div', { class: 'settings-tab-panel' });
+
+        // ── System Prompt Preview ────────────────────────────────
+        const promptArea = h('textarea', {
+            class: 'settings-textarea settings-prompt-preview',
+            readonly: '',
+            rows: '18',
+            placeholder: 'Click "Refresh" to load the compiled system prompt…',
+            style: 'font-family: monospace; font-size: 11px; resize: vertical; white-space: pre;'
+        });
+        this._promptPreviewEl = promptArea;
+
+        const refreshBtn = Button.create('Refresh', {
+            variant: 'ghost', size: 'sm',
+            onClick: () => this._refreshSystemPrompt()
+        });
+
+        const promptHeader = h('div', { style: 'display:flex; align-items:center; justify-content:space-between; margin-bottom:6px;' },
+            h('div', { class: 'settings-label' }, 'Compiled System Prompt'),
+            refreshBtn
+        );
+
+        panel.appendChild(this._section('System Prompt Inspector',
+            'Live view of the full system prompt sent to the AI on every request. Read-only — edit Custom Instructions below to add your own directives.',
+            promptHeader,
+            promptArea
+        ));
+
+        // ── Custom Instructions (quick-access copy from General tab) ─
+        const instrArea = h('textarea', {
+            class: 'settings-textarea',
+            'data-field': 'customInstructions',
+            maxlength: '4000',
+            placeholder: 'Additional directives appended to the system prompt…',
+            rows: '6'
+        });
+        instrArea.addEventListener('input', () => {
+            this._emitUpdate({ customInstructions: instrArea.value });
+        });
+        this._promptInstrEl = instrArea;
+
+        panel.appendChild(this._section('Custom Instructions',
+            'These directives are appended to the system prompt as a ## CUSTOM INSTRUCTIONS section.',
+            instrArea
+        ));
+
+        // Register for system_prompt_data responses
+        if (this._socket) {
+            this._socket.on('system_prompt_data', (data) => {
+                if (this._promptPreviewEl) {
+                    this._promptPreviewEl.value = data.prompt || '';
+                }
+            });
+        }
+
+        return panel;
+    }
+
+    _refreshSystemPrompt() {
+        if (!this._socket) return;
+        if (this._promptPreviewEl) {
+            this._promptPreviewEl.value = '⏳ Loading…';
+        }
+        this._socket.emit('get_system_prompt');
+    }
+
     // ══════════════════════════════════════════════════════════════
     //  CONFIG APPLY / SAVE
     // ══════════════════════════════════════════════════════════════
@@ -864,12 +936,13 @@ export class SettingsView extends Component {
         const modelEl = body.querySelector('[data-field="model"]');
         if (modelEl && data.model) modelEl.value = data.model;
 
-        // Custom Instructions
-        const instrEl = body.querySelector('[data-field="customInstructions"]');
-        if (instrEl && data.customInstructions !== undefined) {
-            instrEl.value = data.customInstructions || '';
-            const counter = body.querySelector('[data-ref="instrCount"]');
-            if (counter) OverlordUI.setContent(counter, instrEl.value.length + '/4000');
+        // Custom Instructions (General tab + Prompt tab mirror)
+        body.querySelectorAll('[data-field="customInstructions"]').forEach(instrEl => {
+            if (data.customInstructions !== undefined) instrEl.value = data.customInstructions || '';
+        });
+        const counter = body.querySelector('[data-ref="instrCount"]');
+        if (counter && data.customInstructions !== undefined) {
+            OverlordUI.setContent(counter, (data.customInstructions || '').length + '/4000');
         }
 
         // Project Memory

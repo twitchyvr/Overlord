@@ -33,6 +33,9 @@ export class TeamPanel extends PanelComponent {
         this._agentTickers = {};      // processing heartbeat intervals
         this._sparklineInterval = null;
         this._sessionStates = {};     // { agentName: {isProcessing, paused, ...} }
+        this._chatRooms = [];         // Active inter-agent chat rooms
+        this._watchingRoom = null;    // Currently expanded room ID
+        this._viewingNotes = null;    // Meeting notes ID being viewed
     }
 
     mount() {
@@ -67,6 +70,13 @@ export class TeamPanel extends PanelComponent {
             // Subscribe to team agents list
             this.subscribe(OverlordUI._store, 'team.agents', (agents) => {
                 this._agents = agents || [];
+                // Ensure every agent has an initialized session state so filter
+                // logic never encounters undefined (which would break comparisons).
+                for (const a of this._agents) {
+                    if (!this._sessionStates[a.name]) {
+                        this._sessionStates[a.name] = { isProcessing: false, paused: false, inboxCount: 0 };
+                    }
+                }
                 this.render(this._agents);
             });
 
@@ -111,6 +121,111 @@ export class TeamPanel extends PanelComponent {
             }
         }));
 
+        // ── Agent Chat Rooms ──────────────────────────────────────────
+        // Fetch existing rooms on mount
+        if (OverlordUI._socket) {
+            OverlordUI._socket.emit('list_chat_rooms', (rooms) => {
+                this._chatRooms = rooms || [];
+                this.render(this._agents);
+            });
+        }
+
+        // Listen for room lifecycle events
+        this._subs.push(OverlordUI.subscribe('agent_room_opened', (room) => {
+            this._chatRooms = this._chatRooms.filter(r => r.id !== room.id);
+            this._chatRooms.unshift(room);
+            this.render(this._agents);
+        }));
+        this._subs.push(OverlordUI.subscribe('agent_room_message', (data) => {
+            const room = this._chatRooms.find(r => r.id === data.roomId);
+            if (room) {
+                room.messageCount = (room.messageCount || 0) + 1;
+                if (!room.messages) room.messages = [];
+                room.messages.push(data.message);
+                this._updateRoomCard(data.roomId);
+            }
+        }));
+        this._subs.push(OverlordUI.subscribe('agent_room_closed', (data) => {
+            const room = this._chatRooms.find(r => r.id === data.roomId);
+            if (room) {
+                room.status = data.status || 'completed';
+                this._updateRoomCard(data.roomId);
+            }
+        }));
+
+        // Meeting lifecycle events
+        this._subs.push(OverlordUI.subscribe('room_participant_joined', (data) => {
+            const room = this._chatRooms.find(r => r.id === data.roomId);
+            if (room) {
+                room.participants = data.participants;
+                room.isMeeting = data.isMeeting;
+                this._updateRoomCard(data.roomId);
+            }
+        }));
+        this._subs.push(OverlordUI.subscribe('room_participant_left', (data) => {
+            const room = this._chatRooms.find(r => r.id === data.roomId);
+            if (room) {
+                room.participants = data.participants;
+                room.userPresent = data.userPresent;
+                this._updateRoomCard(data.roomId);
+            }
+        }));
+        this._subs.push(OverlordUI.subscribe('room_user_joined', (data) => {
+            const room = this._chatRooms.find(r => r.id === data.roomId);
+            if (room) {
+                room.userPresent = data.userPresent;
+                this._updateRoomCard(data.roomId);
+            }
+        }));
+        this._subs.push(OverlordUI.subscribe('meeting_notes_generated', (data) => {
+            const room = this._chatRooms.find(r => r.id === data.roomId);
+            if (room) {
+                room.meetingNotes = data.notes;
+                this._updateRoomCard(data.roomId);
+            }
+        }));
+
+        // ── Click delegation for agent card buttons ────────────────
+        this.on('click', '[data-action]', (e, el) => {
+            const action = el.dataset.action;
+            const agentName = el.dataset.agent;
+            if (!agentName) return;
+
+            if (action === 'agent-chat') {
+                // Open the Agent Chat overlay for this agent
+                const agent = this._agents.find(a => a.name === agentName);
+                OverlordUI.dispatch('open_agent_chat', {
+                    agentName,
+                    role: agent?.role || '',
+                    status: (this._sessionStates[agentName]?.isProcessing ? 'working' : 'idle'),
+                    paused: this._sessionStates[agentName]?.paused || false,
+                    inboxCount: this._sessionStates[agentName]?.inboxCount || 0
+                });
+            } else if (action === 'agent-pause') {
+                const ses = this._sessionStates[agentName] || {};
+                if (OverlordUI._socket) {
+                    if (ses.paused) {
+                        OverlordUI._socket.emit('resume_agent', { agentName });
+                    } else {
+                        OverlordUI._socket.emit('pause_agent', { agentName });
+                    }
+                }
+            } else if (action === 'start-room') {
+                // Create a new multi-agent room with this agent, then open RoomView
+                if (OverlordUI._socket) {
+                    OverlordUI._socket.emit('create_chat_room', {
+                        fromAgent: 'user',
+                        toAgent: agentName,
+                        reason: `User started a room with ${agentName}`
+                    }, (result) => {
+                        if (result?.success && result.room) {
+                            OverlordUI.dispatch('open_room_view', { room: result.room });
+                        }
+                    });
+                }
+            }
+        });
+
         // Refresh all visible sparklines every 1s
         this._sparklineInterval = setInterval(() => {
             this._agents.forEach(a => this._updateSparklineEl(a.name));
@@ -127,31 +242,42 @@ export class TeamPanel extends PanelComponent {
         if (!this._listEl) return;
         this._agents = agents || this._agents;
 
+        const frag = document.createDocumentFragment();
+
+        // ── Active Chat Rooms section ────────────────────────────────
+        const activeRooms = this._chatRooms.filter(r => r.status === 'active');
+        if (activeRooms.length) {
+            const roomsHeader = h('div', {
+                style: 'display:flex;align-items:center;gap:6px;padding:6px 8px;font-size:10px;font-weight:700;color:var(--accent-primary);letter-spacing:0.05em;text-transform:uppercase;'
+            }, `\u{1F4AC} Agent Rooms (${activeRooms.length})`);
+            frag.appendChild(roomsHeader);
+            for (const room of activeRooms) {
+                frag.appendChild(this._buildRoomCard(room));
+            }
+            frag.appendChild(h('div', { style: 'height:8px;border-bottom:1px solid var(--border-color);margin-bottom:6px;' }));
+        }
+
         const filtered = this._filterAgents(this._agents);
 
-        if (!filtered.length) {
+        if (!filtered.length && !activeRooms.length) {
             OverlordUI.setContent(this._listEl, h('div', {
                 style: 'padding:16px;text-align:center;color:var(--text-muted);font-size:12px;'
             }, this._filter === 'all' ? 'No agents registered' : `No ${this._filter} agents`));
             return;
         }
 
-        // Sort: working agents first, then on-deck (inbox > 0), then idle.
-        // Ported from index-ori.html:8385-8410 (activeNames → sections → concat).
+        // Sort: Orchestrator always first, then Active (isProcessing), On Deck, Idle.
         const sorted = [...filtered].sort((a, b) => {
             const rankOf = (agent) => {
-                if (this._isAgentWorking(agent)) return 0;
-                const ses = this._sessionStates[agent.name] || {};
-                const st = (agent.status || '').toLowerCase();
-                const isOnDeck = (ses.inboxCount || 0) > 0 ||
-                    ['on_deck', 'standby', 'ready'].includes(st);
-                if (isOnDeck) return 1;
-                return 2;
+                if (agent.name === 'orchestrator') return -1;            // Always top
+                const ses = this._sessionStates[agent.name] || { isProcessing: false, paused: false, inboxCount: 0 };
+                if (ses.isProcessing === true && !ses.paused) return 0;  // Active
+                if ((ses.inboxCount || 0) > 0 && !ses.paused)           return 1;  // On Deck
+                return 2;                                                            // Idle
             };
             return rankOf(a) - rankOf(b);
         });
 
-        const frag = document.createDocumentFragment();
         for (const agent of sorted) {
             frag.appendChild(this._buildAgentCard(agent));
         }
@@ -225,19 +351,20 @@ export class TeamPanel extends PanelComponent {
     _filterAgents(agents) {
         if (this._filter === 'all') return agents;
         return agents.filter(a => {
-            const isWorking = this._isAgentWorking(a);
-            const ses = this._sessionStates[a.name] || {};
+            // Orchestrator is always shown in the Active filter — it's the permanent top agent
+            if (a.name === 'orchestrator' && this._filter === 'active') return true;
+
+            // Always normalize ses so filter logic never hits undefined comparisons
+            const ses = this._sessionStates[a.name] || { isProcessing: false, paused: false, inboxCount: 0 };
+            const isWorking = ses.isProcessing === true;
             switch (this._filter) {
                 case 'active':
                     return isWorking && !ses.paused;
                 case 'on_deck':
                     // "On deck" = agent has queued work (inbox items) but is not currently
                     // processing. The backend never emits 'on_deck' status explicitly —
-                    // it must be derived from inboxCount. Also accept explicit status values.
-                    return !isWorking && !ses.paused && (
-                        (ses.inboxCount || 0) > 0 ||
-                        ['on_deck', 'standby', 'ready'].includes((a.status || '').toLowerCase())
-                    );
+                    // it must be derived from inboxCount.
+                    return !isWorking && !ses.paused && (ses.inboxCount || 0) > 0;
                 case 'idle':
                     // Idle = not working, not paused, nothing in inbox
                     return !isWorking && !ses.paused && (ses.inboxCount || 0) === 0;
@@ -328,12 +455,19 @@ export class TeamPanel extends PanelComponent {
         sparkWrap.appendChild(this._renderSparklineSVG(agent.name));
         header.appendChild(sparkWrap);
 
-        // Chat button
+        // Chat button (1:1 direct chat)
         header.appendChild(h('button', {
             class: 'agent-card-btn',
             title: `Chat with ${agent.name}`,
             dataset: { action: 'agent-chat', agent: agent.name }
-        }, '💬'));
+        }, '��'));
+
+        // Start Room button (opens a multi-agent room with this agent)
+        header.appendChild(h('button', {
+            class: 'agent-card-btn',
+            title: `Start a room with ${agent.name}`,
+            dataset: { action: 'start-room', agent: agent.name }
+        }, '��'));
 
         // Pause/resume button
         const pauseIcon = ses.paused ? '▶' : '⏸';
@@ -382,5 +516,168 @@ export class TeamPanel extends PanelComponent {
         }, `↑${stats.sent} ↓${stats.recv}`));
 
         return card;
+    }
+
+    // ── Agent Chat Rooms UI ──────────────────────────────────────
+
+    _buildRoomCard(room) {
+        const esc = (s) => OverlordUI.escapeHtml ? OverlordUI.escapeHtml(String(s)) : String(s);
+        const participants = room.participants || [room.fromAgent, room.toAgent];
+        const isActive = room.status === 'active';
+
+        const card = h('div', {
+            id: `room-card-${room.id}`,
+            style: `background:var(--bg-secondary);border:1px solid ${room.isMeeting ? 'rgba(250,204,21,0.4)' : 'var(--border-color)'};border-radius:6px;margin:0 4px 4px;padding:8px 10px;`
+        });
+
+        // Header: meeting badge + participants + status
+        const header = h('div', { style: 'display:flex;align-items:center;gap:6px;margin-bottom:4px;' });
+        if (room.isMeeting) {
+            header.appendChild(h('span', {
+                style: 'font-size:9px;background:rgba(250,204,21,0.15);color:#fcd34d;padding:1px 5px;border-radius:3px;border:1px solid rgba(250,204,21,0.3);font-weight:700;'
+            }, 'MEETING'));
+        }
+        header.appendChild(h('span', { style: 'font-size:11px;font-weight:600;color:var(--text-primary);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;' },
+            participants.map(p => esc(p)).join(' \u2022 ')));
+        if (room.tool) {
+            header.appendChild(h('span', {
+                style: 'font-size:9px;background:var(--bg-tertiary);color:var(--accent-primary);padding:1px 5px;border-radius:3px;flex-shrink:0;'
+            }, esc(room.tool)));
+        }
+        header.appendChild(h('span', {
+            style: `font-size:9px;flex-shrink:0;color:${isActive ? 'var(--accent-green)' : 'var(--text-muted)'};`
+        }, isActive ? '\u25CF live' : esc(room.status)));
+        card.appendChild(header);
+
+        // Reason subtitle
+        if (room.reason) {
+            card.appendChild(h('div', {
+                style: 'font-size:10px;color:var(--text-muted);margin-bottom:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;'
+            }, esc(room.reason)));
+        }
+
+        // Action row: stats + Open button + End button
+        const actions = h('div', { style: 'display:flex;align-items:center;gap:6px;' });
+        actions.appendChild(h('span', { style: 'font-size:9px;color:var(--text-muted);' },
+            `${room.messageCount || 0} msgs \u2022 ${participants.length} agents` +
+            (room.userPresent ? ' \u2022 \u{1F464} you' : '')
+        ));
+
+        // Open Room button — opens the full-screen RoomView overlay
+        actions.appendChild(h('button', {
+            style: 'margin-left:auto;padding:2px 10px;font-size:10px;background:var(--accent-primary);border:none;border-radius:3px;cursor:pointer;color:#000;font-weight:700;',
+            onClick: (e) => { e.stopPropagation(); this._openRoomView(room); }
+        }, 'Open Room'));
+
+        if (isActive) {
+            actions.appendChild(h('button', {
+                style: 'padding:2px 8px;font-size:10px;background:var(--accent-red, #f85149);border:none;border-radius:3px;cursor:pointer;color:#fff;font-weight:600;',
+                onClick: (e) => { e.stopPropagation(); room.isMeeting ? this._endMeeting(room.id) : this._endRoom(room.id); }
+            }, room.isMeeting ? 'End Meeting' : 'End'));
+        }
+        if (room.meetingNotes) {
+            actions.appendChild(h('button', {
+                style: 'padding:2px 8px;font-size:10px;background:rgba(250,204,21,0.2);border:1px solid rgba(250,204,21,0.3);border-radius:3px;cursor:pointer;color:#fcd34d;font-weight:600;',
+                onClick: (e) => { e.stopPropagation(); this._openRoomView(room); }
+            }, 'Notes'));
+        }
+        card.appendChild(actions);
+
+        return card;
+    }
+
+    _openRoomView(room) {
+        OverlordUI.dispatch('open_room_view', { room });
+    }
+
+    _toggleWatchRoom(roomId) {
+        if (this._watchingRoom === roomId) {
+            this._watchingRoom = null;
+        } else {
+            this._watchingRoom = roomId;
+            // Fetch full room data (with messages) when watching
+            if (OverlordUI._socket) {
+                OverlordUI._socket.emit('get_chat_room', roomId, (fullRoom) => {
+                    if (fullRoom) {
+                        const idx = this._chatRooms.findIndex(r => r.id === roomId);
+                        if (idx >= 0) this._chatRooms[idx] = fullRoom;
+                    }
+                    this.render(this._agents);
+                });
+                return; // render will be called in callback
+            }
+        }
+        this.render(this._agents);
+    }
+
+    _endRoom(roomId) {
+        if (OverlordUI._socket) {
+            OverlordUI._socket.emit('end_chat_room', roomId, () => {
+                const room = this._chatRooms.find(r => r.id === roomId);
+                if (room) room.status = 'ended';
+                this.render(this._agents);
+            });
+        }
+    }
+
+    _pullAgentIn(roomId, agentName) {
+        if (OverlordUI._socket) {
+            OverlordUI._socket.emit('pull_agent_into_room', { roomId, agentName, pulledBy: 'user' }, (result) => {
+                if (result?.success) {
+                    const room = this._chatRooms.find(r => r.id === roomId);
+                    if (room) {
+                        room.participants = result.participants;
+                        room.isMeeting = result.isMeeting;
+                    }
+                    this.render(this._agents);
+                } else {
+                    console.warn('[Team] Pull-in failed:', result?.error);
+                }
+            });
+        }
+    }
+
+    _userJoinRoom(roomId) {
+        if (OverlordUI._socket) {
+            OverlordUI._socket.emit('user_join_room', roomId, (result) => {
+                if (result?.success) {
+                    const room = this._chatRooms.find(r => r.id === roomId);
+                    if (room) room.userPresent = true;
+                    this.render(this._agents);
+                }
+            });
+        }
+    }
+
+    _userLeaveRoom(roomId) {
+        if (OverlordUI._socket) {
+            OverlordUI._socket.emit('user_leave_room', roomId, (result) => {
+                if (result?.success) {
+                    const room = this._chatRooms.find(r => r.id === roomId);
+                    if (room) {
+                        room.userPresent = false;
+                        room.participants = result.participants;
+                    }
+                    this.render(this._agents);
+                }
+            });
+        }
+    }
+
+    _endMeeting(roomId) {
+        if (OverlordUI._socket) {
+            OverlordUI._socket.emit('end_meeting', roomId, (result) => {
+                const room = this._chatRooms.find(r => r.id === roomId);
+                if (room) {
+                    room.status = 'completed';
+                    if (result?.meetingNotes) room.meetingNotes = result.meetingNotes;
+                }
+                this.render(this._agents);
+            });
+        }
+    }
+
+    _updateRoomCard(roomId) {
+        this.render(this._agents);
     }
 }

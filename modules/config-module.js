@@ -34,7 +34,10 @@ function init(hub) {
     const envPath = path.join(baseDir, '.env');
 
     if (fs.existsSync(envPath)) {
-        dotenv.config({ path: envPath });
+        // override: true ensures .env values win over inherited shell env vars
+        // (e.g. Claude Code injects ANTHROPIC_BASE_URL for its own Anthropic API access,
+        //  which would otherwise override the MiniMax URL in .env)
+        dotenv.config({ path: envPath, override: true });
     }
 
     // Detect OS

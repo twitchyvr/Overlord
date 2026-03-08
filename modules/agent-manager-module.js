@@ -1196,11 +1196,13 @@ function deleteAgent(agentId) {
             return { success: false, error: 'Built-in agents cannot be deleted' };
         }
         if (db) {
-            const check = db.query('SELECT built_in FROM agents WHERE id = ? OR name = ? LIMIT 1', [agentId, agentId]);
+            const check = db.query('SELECT id, built_in FROM agents WHERE id = ? OR name = ? LIMIT 1', [agentId, agentId]);
             if (check.success && check.results.length > 0 && check.results[0].built_in) {
                 return { success: false, error: 'Built-in agents cannot be deleted' };
             }
-            db.run('UPDATE agents SET status = ? WHERE id = ?', ['deleted', agentId]);
+            // Resolve the actual row id so the delete matches whether caller passed name or id
+            const actualId = (check.success && check.results.length > 0) ? check.results[0].id : agentId;
+            db.run('UPDATE agents SET status = ? WHERE id = ?', ['deleted', actualId]);
         }
         return { success: true };
     } catch (e) {

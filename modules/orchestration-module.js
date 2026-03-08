@@ -1039,23 +1039,20 @@ async function init(h) {
             }
         }, (input) => {
             const agentMgr = hub.getService('agentManager');
-            if (!agentMgr || !agentMgr.addAgent) return 'ERROR: Agent manager service not available';
+            if (!agentMgr || !agentMgr.createAgent) return 'ERROR: Agent manager service not available';
             const name = String(input.name).toLowerCase().replace(/[^a-z0-9-]/g, '-').replace(/--+/g, '-').trim('-');
             if (!name) return 'ERROR: Invalid agent name — use lowercase letters, numbers, and hyphens only';
-            try {
-                const agent = agentMgr.addAgent({
-                    name,
-                    role: String(input.role).trim(),
-                    description: String(input.description).trim(),
-                    capabilities: Array.isArray(input.capabilities) ? input.capabilities : [],
-                    group: input.group || 'custom'
-                });
-                hub.broadcastAll('agents_updated', {});
-                hub.log(`[add_agent] Created: "${name}"`, 'success');
-                return `Agent "${name}" created with role "${input.role}".`;
-            } catch (e) {
-                return `ERROR creating agent: ${e.message}`;
-            }
+            const result = agentMgr.createAgent({
+                name,
+                role: String(input.role).trim(),
+                description: String(input.description).trim(),
+                capabilities: Array.isArray(input.capabilities) ? input.capabilities : [],
+                group: input.group || 'custom'
+            });
+            if (result && result.success === false) return `ERROR creating agent: ${result.error}`;
+            hub.broadcastAll('agents_updated', {});
+            hub.log(`[add_agent] Created: "${name}"`, 'success');
+            return `Agent "${name}" created with role "${input.role}".`;
         });
         hub.log('✅ add_agent tool registered', 'info');
 
@@ -1074,15 +1071,12 @@ async function init(h) {
             }
         }, (input) => {
             const agentMgr = hub.getService('agentManager');
-            if (!agentMgr || !agentMgr.removeAgent) return 'ERROR: Agent manager service not available';
-            try {
-                agentMgr.removeAgent(input.name);
-                hub.broadcastAll('agents_updated', {});
-                hub.log(`[remove_agent] Removed: "${input.name}"${input.reason ? ' — ' + input.reason : ''}`, 'info');
-                return `Agent "${input.name}" removed.${input.reason ? ' Reason: ' + input.reason : ''}`;
-            } catch (e) {
-                return `ERROR removing agent: ${e.message}`;
-            }
+            if (!agentMgr || !agentMgr.deleteAgent) return 'ERROR: Agent manager service not available';
+            const result = agentMgr.deleteAgent(input.name);
+            if (result && result.success === false) return `ERROR removing agent: ${result.error}`;
+            hub.broadcastAll('agents_updated', {});
+            hub.log(`[remove_agent] Removed: "${input.name}"${input.reason ? ' — ' + input.reason : ''}`, 'info');
+            return `Agent "${input.name}" removed.${input.reason ? ' Reason: ' + input.reason : ''}`;
         });
         hub.log('✅ remove_agent tool registered', 'info');
 

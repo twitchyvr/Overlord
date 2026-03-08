@@ -461,14 +461,40 @@ export class OrchestrationPanel extends PanelComponent {
 
         const s = this._state;
         const maxC = s.maxCycles || 10;
+        const isUnlimited = maxC === 0 || maxC > 99999;
+
+        // ── In-place update guard ─────────────────────────────────────────────
+        // _renderConfig() is called on every state update. Rebuilding the DOM
+        // each time destroys event listeners attached to cycleSlider / unlimCb.
+        // Instead, if the elements already exist, update their values in-place
+        // and return early — preserving all listeners.
+        const existingSlider = el.querySelector('.orch-cycle-slider');
+        if (existingSlider) {
+            const existingCb    = el.querySelector('.orch-unlimited-cb');
+            const existingValue = el.querySelector('.slider-value');
+            existingSlider.disabled = isUnlimited;
+            if (!isUnlimited) existingSlider.value = String(maxC);
+            if (existingValue) existingValue.textContent = isUnlimited ? '∞' : String(maxC);
+            if (existingCb)    existingCb.checked = isUnlimited;
+            // Update toggle rows (Auto QA, AI Context Summarization)
+            const toggles = el.querySelectorAll('.panel-config-toggle');
+            if (toggles[0]) toggles[0].classList.toggle('on', s.autoQA !== false);
+            if (toggles[2]) toggles[2].classList.toggle('on', s.aiSummarization !== false);
+            // Update stats
+            const gauges = el.querySelectorAll('.orch-gauge-label span:last-child');
+            if (gauges[0]) gauges[0].textContent = `${s.autoApprovedCount || 0} auto / ${s.humanApprovedCount || 0} manual`;
+            if (gauges[1]) gauges[1].textContent = `${s.qaPassCount || 0} pass / ${s.qaFailCount || 0} fail`;
+            if (gauges[2]) gauges[2].textContent = `${s.sessionNotesCount || 0} saved`;
+            return;
+        }
 
         const frag = document.createDocumentFragment();
 
         // ── Max Cycles slider ──
-        const isUnlimited = maxC === 0 || maxC > 99999;
         const cycleRow = h('div', { class: 'orch-slider-row' });
         cycleRow.appendChild(h('label', null, 'Max Cycles'));
         const cycleSlider = h('input', {
+            class: 'orch-cycle-slider',
             type: 'range', min: '1', max: '100', value: String(isUnlimited ? 100 : maxC)
         });
         if (isUnlimited) cycleSlider.disabled = true;
@@ -482,7 +508,7 @@ export class OrchestrationPanel extends PanelComponent {
 
         // ── Unlimited checkbox ──
         const unlimLabel = h('label', { style: 'display:flex;align-items:center;gap:4px;font-size:10px;color:var(--text-muted);margin-left:8px;cursor:pointer;' });
-        const unlimCb = h('input', { type: 'checkbox' });
+        const unlimCb = h('input', { class: 'orch-unlimited-cb', type: 'checkbox' });
         if (isUnlimited) unlimCb.checked = true;
         unlimCb.addEventListener('change', () => {
             if (unlimCb.checked) {

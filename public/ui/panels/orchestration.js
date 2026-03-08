@@ -99,8 +99,6 @@ export class OrchestrationPanel extends PanelComponent {
         this._renderPipeline();
         this._renderStrategy();
         this._renderFleet();
-        this._renderTimeline();
-        this._renderConfig();
         this._updateStatusDot();
 
         // Re-render recommendations if we have them

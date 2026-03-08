@@ -100,6 +100,74 @@ export class TasksPanel extends PanelComponent {
         this.on('click', '.tasks-add-btn', () => {
             OverlordUI.dispatch('open_add_task_modal');
         });
+
+        // ── Click task title → drill into detail ────────────────────
+        this.on('click', '.task-title', (e, el) => {
+            const item = el.closest('.task-item');
+            if (item?.dataset?.taskId) this._openTaskDetail(item.dataset.taskId);
+        });
+
+        // ── Drag-to-reorder ─────────────────────────────────────────
+        this._dragSrcId = null;
+        this._setupDragReorder();
+    }
+
+    _setupDragReorder() {
+        const getSocket = () => this.opts?.socket;
+
+        this.on('dragstart', '.task-item', (e, el) => {
+            this._dragSrcId = el.dataset.taskId;
+            el.classList.add('dragging');
+            e.dataTransfer.effectAllowed = 'move';
+            e.dataTransfer.setData('text/plain', el.dataset.taskId);
+        });
+
+        this.on('dragend', '.task-item', (e, el) => {
+            el.classList.remove('dragging');
+            this._dragSrcId = null;
+            // Remove all drop indicators
+            if (this._listEl) {
+                this._listEl.querySelectorAll('.task-drop-indicator').forEach(d => d.remove());
+                this._listEl.querySelectorAll('.drag-over').forEach(d => d.classList.remove('drag-over'));
+            }
+        });
+
+        this.on('dragover', '.task-item', (e, el) => {
+            if (!this._dragSrcId || el.dataset.taskId === this._dragSrcId) return;
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+            // Remove previous indicators
+            if (this._listEl) {
+                this._listEl.querySelectorAll('.drag-over').forEach(d => d.classList.remove('drag-over'));
+            }
+            el.classList.add('drag-over');
+        });
+
+        this.on('dragleave', '.task-item', (e, el) => {
+            el.classList.remove('drag-over');
+        });
+
+        this.on('drop', '.task-item', (e, el) => {
+            e.preventDefault();
+            el.classList.remove('drag-over');
+            const srcId = this._dragSrcId;
+            const targetId = el.dataset.taskId;
+            if (!srcId || !targetId || srcId === targetId) return;
+
+            // Optimistic reorder
+            const srcIdx = this._tasks.findIndex(t => String(t.id) === String(srcId));
+            const tgtIdx = this._tasks.findIndex(t => String(t.id) === String(targetId));
+            if (srcIdx === -1 || tgtIdx === -1) return;
+
+            const [moved] = this._tasks.splice(srcIdx, 1);
+            this._tasks.splice(tgtIdx, 0, moved);
+            this.render(this._tasks);
+
+            // Emit reorder to server
+            const orderedIds = this._tasks.map(t => t.id);
+            const sock = getSocket();
+            if (sock) sock.emit('tasks_reorder', { orderedIds });
+        });
     }
 
     render(tasks) {

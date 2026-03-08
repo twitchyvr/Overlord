@@ -499,20 +499,7 @@
                                 <div id="orch-parallel-slider"></div>
                             </div>
                         </div>
-                        <!-- Timeline -->
-                        <div class="orch-section" id="orch-section-timeline">
-                            <div class="orch-section-header" data-section="timeline"><span>Timeline</span><span class="orch-section-arrow">▾</span></div>
-                            <div class="orch-section-body" id="orch-timeline-body">
-                                <div id="orch-tool-timeline"></div>
-                            </div>
-                        </div>
-                        <!-- Config -->
-                        <div class="orch-section" id="orch-section-config">
-                            <div class="orch-section-header" data-section="config"><span>Config</span><span class="orch-section-arrow">▾</span></div>
-                            <div class="orch-section-body" id="orch-config-body">
-                                <div id="orch-config-controls"></div>
-                            </div>
-                        </div>
+                        <!-- Timeline + Config moved to Activity panel and Settings modal -->
                         <!-- Recommendations -->
                         <div class="orch-section" id="orch-section-recommendations">
                             <div class="orch-section-header" data-section="recommendations">
@@ -1295,6 +1282,120 @@
                 badge.textContent = count || '';
             }
         });
+
+
+        // ── Task Action Dispatches (wire panel → socket) ────────────
+        OverlordUI.subscribe('task_action', (data) => {
+            if (!data) return;
+            if (data.action === 'toggle' && data.task) {
+                socket.emit('task_toggled', { id: data.task.id, completed: data.task.completed });
+            }
+            if (data.action === 'skip') {
+                socket.emit('task_updated', { id: data.taskId, status: data.status });
+            }
+            if (data.action === 'delete') {
+                socket.emit('task_deleted', { id: data.taskId, cascade: true });
+            }
+            if (data.action === 'status_change' && data.task) {
+                socket.emit('task_updated', { id: data.task.id, status: data.task.status, completed: data.task.completed });
+            }
+        });
+
+        // ── Task Detail (scroll + highlight) ────────────────────────
+        OverlordUI.subscribe('open_task_detail', (data) => {
+            if (!data?.taskId) return;
+            const el = document.querySelector(`[data-task-id="${data.taskId}"]`);
+            if (el) {
+                el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                el.style.outline = '2px solid var(--electric)';
+                setTimeout(() => { el.style.outline = ''; }, 1500);
+            }
+        });
+
+        // ── Add Task Modal ──────────────────────────────────────────
+        OverlordUI.subscribe('open_add_task_modal', () => {
+            const content = document.createElement('div');
+            content.innerHTML = `
+                <div style="display:flex;flex-direction:column;gap:10px;padding:4px;">
+                    <input id="add-task-title" placeholder="Task title" style="padding:8px;background:var(--bg-input);border:1px solid var(--border);border-radius:6px;color:var(--text-primary);font-size:13px;">
+                    <textarea id="add-task-desc" placeholder="Description (optional)" rows="3" style="padding:8px;background:var(--bg-input);border:1px solid var(--border);border-radius:6px;color:var(--text-primary);font-size:12px;resize:vertical;"></textarea>
+                    <div style="display:flex;gap:8px;">
+                        <select id="add-task-priority" style="flex:1;padding:6px;background:var(--bg-input);border:1px solid var(--border);border-radius:6px;color:var(--text-primary);font-size:12px;">
+                            <option value="normal">Normal</option>
+                            <option value="low">Low</option>
+                            <option value="medium">Medium</option>
+                            <option value="high">High</option>
+                            <option value="critical">Critical</option>
+                        </select>
+                        <input id="add-task-assignee" placeholder="Assignee (optional)" style="flex:1;padding:6px;background:var(--bg-input);border:1px solid var(--border);border-radius:6px;color:var(--text-primary);font-size:12px;">
+                    </div>
+                    <button id="add-task-submit" style="padding:8px 16px;background:var(--electric);color:#000;border:none;border-radius:6px;font-weight:600;cursor:pointer;font-size:13px;">Create Task</button>
+                </div>`;
+            Modal.open('add-task-modal', {
+                title: 'New Task',
+                content,
+                size: 'sm',
+                position: window.innerWidth < 768 ? 'bottom-sheet' : 'center'
+            });
+            setTimeout(() => {
+                const submitBtn = document.getElementById('add-task-submit');
+                if (submitBtn) {
+                    submitBtn.addEventListener('click', () => {
+                        const title = document.getElementById('add-task-title')?.value?.trim();
+                        if (!title) return;
+                        socket.emit('task_added', {
+                            title,
+                            description: document.getElementById('add-task-desc')?.value?.trim() || '',
+                            priority: document.getElementById('add-task-priority')?.value || 'normal',
+                            assignee: document.getElementById('add-task-assignee')?.value?.trim() || ''
+                        });
+                        Modal.close('add-task-modal');
+                    });
+                }
+                document.getElementById('add-task-title')?.focus();
+            }, 100);
+        });
+
+        // ── Tool Inspector Open/Close ───────────────────────────────
+        {
+            const tiDrawer   = document.getElementById('tool-inspector');
+            const tiBackdrop = document.getElementById('ti-backdrop');
+            const tiCloseBtn = document.getElementById('ti-close-btn');
+
+            window.openToolInspector = function() {
+                if (tiDrawer)   tiDrawer.classList.add('open');
+                if (tiBackdrop) tiBackdrop.style.display = 'block';
+            };
+            window.closeToolInspector = function() {
+                if (tiDrawer)   tiDrawer.classList.remove('open');
+                if (tiBackdrop) tiBackdrop.style.display = 'none';
+            };
+
+            if (tiCloseBtn)  tiCloseBtn.addEventListener('click', window.closeToolInspector);
+            if (tiBackdrop)  tiBackdrop.addEventListener('click', window.closeToolInspector);
+
+            // Status bar click → open tool inspector when tool is running
+            const statusEl = document.getElementById('status');
+            if (statusEl) {
+                statusEl.addEventListener('click', () => {
+                    const state = store.peek('orchestration.state', {});
+                    if (state.status === 'tool' || state.tool) {
+                        window.openToolInspector();
+                    }
+                });
+            }
+
+            // Make status bar show pointer cursor when tool is active
+            store.subscribe('orchestration.state', (state) => {
+                if (statusEl) {
+                    statusEl.style.cursor = (state?.status === 'tool' || state?.tool) ? 'pointer' : '';
+                }
+            });
+
+            OverlordUI.subscribe('open_tool_inspector', () => {
+                window.openToolInspector();
+            });
+        }
 
 
         // ── Chat Mode Buttons ──────────────────────────────────────

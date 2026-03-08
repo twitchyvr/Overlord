@@ -1119,9 +1119,8 @@ class Hub extends EventEmitter {
                 // Add user message to room transcript
                 orch.addRoomMessage(data.roomId, 'user', data.message, 'message');
 
-                // Relay message to both agents as a user directive
-                // Use existing message_agent-like flow to inject into active sessions
-                const agentNames = [room.fromAgent, room.toAgent];
+                // Relay message to all agents in the room as a user directive
+                const agentNames = room.participants || [room.fromAgent, room.toAgent];
                 for (const agentName of agentNames) {
                     this.log(`[Room ${data.roomId}] User message relayed to ${agentName}: ${(data.message || '').substring(0, 80)}`, 'info');
                     // Push to agent's backchannel so it appears in their context
@@ -1134,6 +1133,54 @@ class Hub extends EventEmitter {
                     });
                 }
                 if (typeof cb === 'function') cb({ success: true });
+            });
+
+            // ── Meeting System — pull agents in, leave, generate notes ──
+            socket.on('pull_agent_into_room', (data, cb) => {
+                const orch = this.getService('orchestration');
+                if (!orch || !orch.pullAgentIntoRoom) { if (typeof cb === 'function') cb({ success: false, error: 'Orchestration unavailable' }); return; }
+                const result = orch.pullAgentIntoRoom(data.roomId, data.agentName, data.pulledBy || 'user');
+                if (typeof cb === 'function') cb(result);
+            });
+
+            socket.on('user_join_room', (roomId, cb) => {
+                const orch = this.getService('orchestration');
+                if (!orch || !orch.userJoinRoom) { if (typeof cb === 'function') cb({ success: false }); return; }
+                const result = orch.userJoinRoom(roomId);
+                if (typeof cb === 'function') cb(result);
+            });
+
+            socket.on('user_leave_room', (roomId, cb) => {
+                const orch = this.getService('orchestration');
+                if (!orch || !orch.userLeaveRoom) { if (typeof cb === 'function') cb({ success: false }); return; }
+                const result = orch.userLeaveRoom(roomId);
+                if (typeof cb === 'function') cb(result);
+            });
+
+            socket.on('generate_meeting_notes', async (roomId, cb) => {
+                const orch = this.getService('orchestration');
+                if (!orch || !orch.generateMeetingNotes) { if (typeof cb === 'function') cb({ success: false }); return; }
+                const result = await orch.generateMeetingNotes(roomId);
+                if (typeof cb === 'function') cb(result);
+            });
+
+            socket.on('end_meeting', async (roomId, cb) => {
+                const orch = this.getService('orchestration');
+                if (!orch || !orch.endMeeting) { if (typeof cb === 'function') cb({ success: false }); return; }
+                const result = await orch.endMeeting(roomId);
+                if (typeof cb === 'function') cb(result);
+            });
+
+            socket.on('list_meeting_notes', (data, cb) => {
+                const agentMgr = this.getService('agentManager');
+                if (!agentMgr || !agentMgr.listMeetingNotes) { if (typeof cb === 'function') cb([]); return; }
+                if (typeof cb === 'function') cb(agentMgr.listMeetingNotes(data?.limit || 50));
+            });
+
+            socket.on('get_meeting_notes', (noteId, cb) => {
+                const agentMgr = this.getService('agentManager');
+                if (!agentMgr || !agentMgr.getMeetingNotes) { if (typeof cb === 'function') cb(null); return; }
+                if (typeof cb === 'function') cb(agentMgr.getMeetingNotes(noteId));
             });
 
             // Update agent (edit name, role, description, instructions, tools, securityRole)

@@ -59,10 +59,22 @@ export class TeamPanel extends PanelComponent {
             this._filterTabs.mount();
         }
 
-        // Subscribe to team updates
         if (OverlordUI._store) {
+            // Seed _sessionStates from whatever the store already holds (handles
+            // the case where agent_session_state events fired before this panel mounted).
+            this._sessionStates = { ...(OverlordUI._store.peek('agents.sessions') || {}) };
+
+            // Subscribe to team agents list
             this.subscribe(OverlordUI._store, 'team.agents', (agents) => {
                 this._agents = agents || [];
+                this.render(this._agents);
+            });
+
+            // Subscribe to agents.sessions — socket-bridge merges every
+            // agent_session_state event here, so this fires whenever any agent
+            // starts or stops working → re-sort and re-filter in real time.
+            this.subscribe(OverlordUI._store, 'agents.sessions', (sessions) => {
+                this._sessionStates = sessions || {};
                 this.render(this._agents);
             });
         }
@@ -86,9 +98,9 @@ export class TeamPanel extends PanelComponent {
             }
         }));
 
-        // Listen for agent_session_state to drive heartbeat tickers
+        // Listen for agent_session_state to drive heartbeat sparkline tickers.
+        // (Re-sorting is handled by the agents.sessions store subscription above.)
         this._subs.push(OverlordUI.subscribe('agent_session_state', (data) => {
-            this._sessionStates[data.agentName] = data;
             if (data.isProcessing && !this._agentTickers[data.agentName]) {
                 this._agentTickers[data.agentName] = setInterval(() => {
                     this._logActivity(data.agentName, 'tick');
@@ -124,15 +136,16 @@ export class TeamPanel extends PanelComponent {
             return;
         }
 
-        // Sort: working/thinking agents first, then on-deck, then idle.
+        // Sort: working agents first, then on-deck (inbox > 0), then idle.
         // Ported from index-ori.html:8385-8410 (activeNames → sections → concat).
         const sorted = [...filtered].sort((a, b) => {
             const rankOf = (agent) => {
+                if (this._isAgentWorking(agent)) return 0;
                 const ses = this._sessionStates[agent.name] || {};
                 const st = (agent.status || '').toLowerCase();
-                const isWorking = ses.isProcessing || st === 'working' || st === 'thinking' || st === 'active';
-                if (isWorking) return 0;
-                if (st === 'on_deck' || st === 'standby' || st === 'ready') return 1;
+                const isOnDeck = (ses.inboxCount || 0) > 0 ||
+                    ['on_deck', 'standby', 'ready'].includes(st);
+                if (isOnDeck) return 1;
                 return 2;
             };
             return rankOf(a) - rankOf(b);
@@ -212,24 +225,38 @@ export class TeamPanel extends PanelComponent {
     _filterAgents(agents) {
         if (this._filter === 'all') return agents;
         return agents.filter(a => {
-            const status = (a.status || '').toLowerCase();
+            const isWorking = this._isAgentWorking(a);
             const ses = this._sessionStates[a.name] || {};
-            // Use the same isWorking logic as _buildAgentCard (line 214) as the single
-            // source of truth for whether an agent is actively processing.
-            // Ported from index-ori.html:8296: if (a.status === 'WORKING' || ses.isProcessing)
-            const isWorking = ses.isProcessing || status === 'working' || status === 'thinking' || status === 'active';
             switch (this._filter) {
-                case 'active':  return isWorking && !ses.paused;
-                case 'on_deck': return !isWorking && (status === 'on_deck' || status === 'standby' || status === 'ready');
-                case 'idle':    return !isWorking && (status === 'idle' || status === 'offline' || !status);
-                default:        return true;
+                case 'active':
+                    return isWorking && !ses.paused;
+                case 'on_deck':
+                    // "On deck" = agent has queued work (inbox items) but is not currently
+                    // processing. The backend never emits 'on_deck' status explicitly —
+                    // it must be derived from inboxCount. Also accept explicit status values.
+                    return !isWorking && !ses.paused && (
+                        (ses.inboxCount || 0) > 0 ||
+                        ['on_deck', 'standby', 'ready'].includes((a.status || '').toLowerCase())
+                    );
+                case 'idle':
+                    // Idle = not working, not paused, nothing in inbox
+                    return !isWorking && !ses.paused && (ses.inboxCount || 0) === 0;
+                default:
+                    return true;
             }
         });
     }
 
+    // Single source of truth: is this agent currently processing work?
+    _isAgentWorking(agent) {
+        const ses = this._sessionStates[agent.name] || {};
+        const status = (agent.status || '').toLowerCase();
+        return ses.isProcessing || status === 'working' || status === 'thinking' || status === 'active';
+    }
+
     _buildAgentCard(agent) {
         const ses = this._sessionStates[agent.name] || {};
-        const isWorking = ses.isProcessing || (agent.status || '').toLowerCase() === 'working' || (agent.status || '').toLowerCase() === 'active';
+        const isWorking = this._isAgentWorking(agent);
         const dotCls = ses.paused ? 'paused' : (isWorking ? 'working' : (agent.status || 'idle').toLowerCase());
         const effectiveStatus = ses.paused ? 'PAUSED' : isWorking ? 'WORKING' : (agent.status || 'IDLE').toUpperCase();
         const safeName = agent.name.replace(/\s+/g, '_');

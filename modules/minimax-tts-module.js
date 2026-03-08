@@ -120,7 +120,10 @@ async function synthesize(text, options = {}) {
     });
 }
 
-// Save audio buffer to .overlord/audio/ and return serve path
+// Save audio buffer to .overlord/audio/ and return serve path.
+// NOTE: Always anchored to __dirname (server root), NOT the conversation's
+// working directory — audio files are app-level cache, not project files.
+// Express serves /audio from __dirname/../.overlord/audio, so these must match.
 function saveAudio(buffer, format) {
     const audioDir = path.join(__dirname, '..', '.overlord', 'audio');
 

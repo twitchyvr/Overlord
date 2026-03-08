@@ -839,6 +839,23 @@ class Hub extends EventEmitter {
                 this.emit('gitops_commit_now');
             });
 
+            // Get computed system prompt (for Prompt inspector in Settings)
+            socket.on('get_system_prompt', async () => {
+                try {
+                    const config  = this.getService('config');
+                    const aiMod   = this.getService('ai');
+                    const toolsMod = this.getService('tools');
+                    if (aiMod && typeof aiMod.buildSystemPrompt === 'function') {
+                        const prompt = await aiMod.buildSystemPrompt(toolsMod);
+                        socket.emit('system_prompt_data', { prompt });
+                    } else {
+                        socket.emit('system_prompt_data', { prompt: '[System prompt unavailable — AI module not ready]' });
+                    }
+                } catch (err) {
+                    socket.emit('system_prompt_data', { prompt: '[Error building system prompt: ' + err.message + ']' });
+                }
+            });
+
             // ── Voice Clone handlers ──────────────────────────────────────────
             socket.on('voice_clone_create', (data) => this.emit('voice_clone_create', data, socket));
             socket.on('voice_clone_upload', (data) => this.emit('voice_clone_upload', data, socket));

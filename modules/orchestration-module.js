@@ -4149,7 +4149,7 @@ async function dispatchAgentAndAwait(agentName, task, taskScope = {}) {
 
     // Push task into the agent's history so it has context
     session.history.push({ role: 'user', content: task });
-    hub.broadcast('agent_message', { agentName, role: 'user', content: task, ts: Date.now() });
+    hub.broadcast('agent_message', { agentName, role: 'user', content: task, ts: Date.now(), speaker: 'orchestrator', speakerRole: 'orchestrator', to: agentName });
 
     // Save the previous orchestrator state and point it at this agent.
     // This is what lights up the agent card activity line in the Team panel.
@@ -4307,7 +4307,7 @@ function runAgentSession(agentName, userMessage) {
 
     // Push user message to session history
     session.history.push({ role: 'user', content: userMessage });
-    hub.broadcast('agent_message', { agentName, role: 'user', content: userMessage, ts: Date.now() });
+    hub.broadcast('agent_message', { agentName, role: 'user', content: userMessage, ts: Date.now(), speaker: 'orchestrator', speakerRole: 'orchestrator', to: agentName });
 
     // Fire and forget — true parallelism
     runAgentCycle(session).catch(err => {
@@ -4349,7 +4349,10 @@ async function runAgentCycle(session) {
             content: isNet
                 ? `[Network error: ${agentErrDesc} — check connection]`
                 : `[Error: ${agentErrDesc}]`,
-            ts: Date.now()
+            ts: Date.now(),
+            speaker: session.name,
+            speakerRole: session.name === 'orchestrator' ? 'orchestrator' : 'agent',
+            to: session._activeRoomId ? 'room' : 'user'
         });
     } finally {
         session.isProcessing = false;
@@ -4387,7 +4390,10 @@ async function runAgentAICycle(session) {
             agentName: session.name,
             role: 'assistant',
             content: `⚠️ Cycle limit (${MAX_CYCLES}) reached. Stopping.`,
-            ts: Date.now()
+            ts: Date.now(),
+            speaker: session.name,
+            speakerRole: session.name === 'orchestrator' ? 'orchestrator' : 'agent',
+            to: session._activeRoomId ? 'room' : 'user'
         });
         return;
     }
@@ -4478,7 +4484,10 @@ async function runAgentAICycle(session) {
                 agentName: session.name,
                 role: 'assistant',
                 content: displayText,
-                ts: Date.now()
+                ts: Date.now(),
+                speaker: session.name,
+                speakerRole: session.name === 'orchestrator' ? 'orchestrator' : 'agent',
+                to: session._activeRoomId ? 'room' : (session.name === 'orchestrator' ? 'user' : 'orchestrator')
             });
             // Push to agent comms backchannel so orchestrator/user can see all agent responses
             hub.emit('backchannel_push', {

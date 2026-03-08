@@ -64,7 +64,8 @@ class McpSubprocessClient {
                     MINIMAX_API_KEY: this.apiKey,
                     MINIMAX_API_HOST: 'https://api.minimax.io'
                 },
-                stdio: ['pipe', 'pipe', 'pipe']
+                stdio: ['pipe', 'pipe', 'pipe'],
+                shell: process.platform === 'win32'  // Windows needs shell:true for .cmd wrappers
             });
 
             this.proc.stdout.on('data', d => this._onData(d.toString()));

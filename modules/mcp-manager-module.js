@@ -122,7 +122,7 @@ class McpServerConnection {
             this.proc = spawn(this.config.command, this.config.args || [], {
                 env,
                 stdio: ['pipe', 'pipe', 'pipe'],
-                shell: false
+                shell: process.platform === 'win32'  // Windows needs shell:true for .cmd wrappers (npx.cmd, uvx.cmd)
             });
 
             this.proc.stdout.on('data', (chunk) => this._onData(chunk));

@@ -289,7 +289,7 @@ function handleSetOverlay(data) {
 }
 
 function handleKillAgent(data, cb) {
-    const agentName = data.agent;
+    const agentName = data.agentName || data.agent;
     const session = agentSessions.get(agentName);
     if (!session) {
         if (typeof cb === 'function') cb({ error: 'Agent not found: ' + agentName });
@@ -297,6 +297,8 @@ function handleKillAgent(data, cb) {
     }
     session.status = 'killed';
     session.aborted = true;
+    // Abort any in-flight AI stream for this agent
+    try { hub.getService('ai')?.abort(); } catch (_e) { /* best-effort */ }
     agentSessions.delete(agentName);
     broadcastOrchestratorDashboard();
     hub.log(`[kill_agent] Agent "${agentName}" killed by user`, 'warning');
@@ -450,8 +452,8 @@ async function init(h) {
         hub.log(`[recommendation] Rejected: "${rec ? rec.title : data.id}"${data.reason ? ' — ' + data.reason : ''}`, 'info');
     });
 
-    hub.on('pause_agent',        ({ data, cb }) => { pauseAgent(data.agent); if (typeof cb === 'function') cb({ success: true }); });
-    hub.on('resume_agent',       ({ data, cb }) => { resumeAgent(data.agent); if (typeof cb === 'function') cb({ success: true }); });
+    hub.on('pause_agent',        ({ data, cb }) => { pauseAgent(data.agentName || data.agent); if (typeof cb === 'function') cb({ success: true }); });
+    hub.on('resume_agent',       ({ data, cb }) => { resumeAgent(data.agentName || data.agent); if (typeof cb === 'function') cb({ success: true }); });
     hub.on('kill_agent',         ({ data, cb }) => handleKillAgent(data, cb));
 
     hub.registerService('orchestration', {
@@ -4377,6 +4379,7 @@ async function runAgentCycle(session) {
 }
 
 async function runAgentAICycle(session) {
+    if (session.aborted || session.paused) return;
     session.cycleDepth++;
     if (session.cycleDepth > MAX_CYCLES) {
         hub.log(`[agent:${session.name}] Max cycles reached`, 'warning');
@@ -4501,8 +4504,10 @@ async function runAgentAICycle(session) {
     }
 
     if (toolCalls.length > 0) {
+        if (session.aborted || session.paused) return;
         await executeAgentTools(session, toolCalls, agentSystem, tools);
-        // Continue cycle after tools
+        // Continue cycle after tools (guard again — kill/pause may have arrived during tool execution)
+        if (session.aborted || session.paused) return;
         await runAgentAICycle(session);
     }
 }

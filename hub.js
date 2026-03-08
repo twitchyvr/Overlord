@@ -849,15 +849,7 @@ class Hub extends EventEmitter {
                 if (orch && orch.runAgentSession) orch.runAgentSession(agentName, message);
             });
 
-            socket.on('pause_agent', ({ agentName }) => {
-                const orch = this.getService('orchestration');
-                if (orch && orch.pauseAgent) orch.pauseAgent(agentName);
-            });
-
-            socket.on('resume_agent', ({ agentName }) => {
-                const orch = this.getService('orchestration');
-                if (orch && orch.resumeAgent) orch.resumeAgent(agentName);
-            });
+            // pause_agent / resume_agent are handled via the event-bus path at lines 593-594
 
             socket.on('get_agent_session', ({ agentName }, ack) => {
                 const orch = this.getService('orchestration');

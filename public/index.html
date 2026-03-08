@@ -533,22 +533,22 @@
              ═══════════════════════════════════════════════════════════ -->
         <div class="mobile-nav" id="mobile-nav">
             <div class="mobile-nav-items">
-                <div class="mobile-nav-item active" data-panel="chat">
+                <div class="mobile-nav-item active" data-view="chat">
                     <span class="icon">💬</span><span>Chat</span>
                 </div>
-                <div class="mobile-nav-item" data-panel="tasks">
+                <div class="mobile-nav-item" data-view="tasks">
                     <span class="icon">✅</span><span>Tasks</span>
                 </div>
-                <div class="mobile-nav-item" data-panel="team">
+                <div class="mobile-nav-item" data-view="team">
                     <span class="icon">👥</span><span>Team</span>
                 </div>
-                <div class="mobile-nav-item" data-panel="activity">
+                <div class="mobile-nav-item" data-view="activity">
                     <span class="icon">⚡</span><span>Activity</span>
                 </div>
-                <div class="mobile-nav-item" data-panel="log">
+                <div class="mobile-nav-item" data-view="log">
                     <span class="icon">📜</span><span>Log</span>
                 </div>
-                <div class="mobile-nav-item" data-panel="project" style="position:relative;">
+                <div class="mobile-nav-item" data-view="project" style="position:relative;">
                     <span class="icon">📊</span><span>Project</span>
                 </div>
             </div>
@@ -603,6 +603,9 @@
             <button id="agent-chat-send-btn" style="background:var(--accent-cyan);color:#000;border:none;border-radius:8px;padding:6px 14px;font-weight:700;font-size:12px;cursor:pointer;">Send</button>
         </div>
     </div>
+
+    <!-- Room View Overlay (full-screen multi-agent room / meeting) -->
+    <div class="room-view-overlay" id="room-view-overlay"></div>
 
     <!-- Tool Inspector Drawer -->
     <div class="tool-inspector" id="tool-inspector">
@@ -956,6 +959,7 @@
         import { KanbanView }       from '/ui/views/kanban.js';
         import { AgentChatView }    from '/ui/views/agent-chat.js';
         import { AgentManagerView } from '/ui/views/agent-manager.js';
+        import { RoomView }         from '/ui/views/room-view.js';
 
 
         // ═════════════════════════════════════════════════════════════
@@ -975,6 +979,9 @@
         });
         // Expose socket globally so the non-module approval script can use it
         window._overlordSocket = socket;
+        // Expose on engine so module-scoped components (team.js etc.) can emit via OverlordUI._socket
+        OverlordUI._socket = socket;
+
         const store = createStore();
 
         // Initialize engine
@@ -1105,6 +1112,15 @@
                 agentChat.mount();
             }
         } catch (e) { console.error('[Overlord] AgentChatView failed to mount:', e); }
+
+        try {
+            const roomViewEl = document.getElementById('room-view-overlay');
+            if (roomViewEl) {
+                const roomView = new RoomView(roomViewEl, { socket });
+                OverlordUI.registerComponent('room-view', roomView);
+                roomView.mount();
+            }
+        } catch (e) { console.error('[Overlord] RoomView failed to mount:', e); }
 
 
         // ── Settings & Agent Manager (modal-based) ──────────────────

@@ -3,8 +3,11 @@
   "configurations": [
     {
       "name": "overlord-web",
-      "runtimeExecutable": "/Users/mattrogers/.nvm/versions/node/v20.19.2/bin/node",
-      "runtimeArgs": ["launcher.js"],
+      "runtimeExecutable": "/Users/mattrogers/.nvm/versions/node/v22.16.0/bin/node",
+      "runtimeArgs": [
+        "launcher.js"
+      ],
+      "request": "launch",
       "port": 3031
     }
   ]

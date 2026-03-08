@@ -79,8 +79,9 @@ let _consecutiveToolErrors = 0;
 let _agentChainDepth = 0;
 
 // ── Agent Chat Rooms — visible inter-agent conversations the user can watch ──
-const agentChatRooms = new Map(); // roomId → { id, fromAgent, toAgent, tool, reason, messages[], status, createdAt }
+const agentChatRooms = new Map(); // roomId → { id, fromAgent, toAgent, participants[], tool, reason, messages[], status, isMeeting, meetingNotes, userPresent, pulledInBy, createdAt }
 let _nextRoomId = 1;
+const MAX_ROOM_AGENTS = 5; // Maximum agents per room (user is separate)
 
 // Current orchestration state (visible to clients via 'get_orchestration_state')
 // Expanded for the Orchestration Manager panel — comprehensive dashboard data.
@@ -467,13 +468,26 @@ async function init(h) {
             if (cfg.maxParallelAgents !== null) maxParallelAgents = Math.max(1, Math.min(8, parseInt(cfg.maxParallelAgents, 10) || 3));
         },
         runAgentSession,
+        runAgentSessionInRoom,
         pauseAgent,
         resumeAgent,
         getAgentSessionState,
         getAgentHistory,
         getAgentInbox,
         getOrchestratorState: getState,
-        getAllAgentStates
+        getAllAgentStates,
+        // ── Chat room / meeting functions ──────────────────────────────
+        createChatRoom,
+        addRoomMessage,
+        endChatRoom,
+        listChatRooms,
+        getChatRoom,
+        pullAgentIntoRoom,
+        userLeaveRoom,
+        userJoinRoom,
+        endMeeting,
+        generateMeetingNotes,
+        clearRoomAgentCallbacks
     });
 
     // Allow clients to request current orchestration state
@@ -4073,6 +4087,34 @@ async function dispatchAgentAndAwait(agentName, task, taskScope = {}) {
     return baseResult + verifyBlock + scopeCheckBlock;
 }
 
+/**
+ * Run an agent session triggered from within a chat room.
+ * The agent's first text response will be routed back to the room transcript.
+ */
+function runAgentSessionInRoom(agentName, userMessage, roomId, onComplete) {
+    const session = getOrCreateSession(agentName);
+    session._activeRoomId = roomId;             // cleared after first response in runAgentAICycle
+    session._roomResponseCallback = onComplete || null;  // fired after response added to room
+    runAgentSession(agentName, userMessage);
+}
+
+/**
+ * Stop the sequential agent chain for a room. Clears pending callbacks so no further
+ * agents in the sequence will be triggered after the current one finishes.
+ */
+function clearRoomAgentCallbacks(roomId) {
+    for (const session of agentSessions.values()) {
+        if (session._activeRoomId === roomId) {
+            session._activeRoomId = null;
+            session._roomResponseCallback = null;
+        } else if (session._roomResponseCallback) {
+            // May be a pending next-in-chain — clear it too
+            session._roomResponseCallback = null;
+        }
+    }
+    hub.log(`[Room ${roomId}] Sequential chain stopped by user`, 'info');
+}
+
 function runAgentSession(agentName, userMessage) {
     const session = getOrCreateSession(agentName);
 
@@ -4275,6 +4317,18 @@ async function runAgentAICycle(session) {
                 ts: Date.now(),
                 type: 'agent_to_orchestrator'
             });
+            // Route response back to active room if this session was triggered from one
+            if (session._activeRoomId) {
+                const roomId = session._activeRoomId;
+                session._activeRoomId = null;   // clear before callback to avoid re-entry
+                addRoomMessage(roomId, session.name, displayText, 'message');
+                // Fire sequential-chain callback if set (allows next agent to respond after this one)
+                if (session._roomResponseCallback) {
+                    const cb = session._roomResponseCallback;
+                    session._roomResponseCallback = null;
+                    cb();
+                }
+            }
         }
     }
 
@@ -4701,10 +4755,15 @@ function createChatRoom(fromAgent, toAgent, opts = {}) {
         id: roomId,
         fromAgent,
         toAgent,
+        participants: [fromAgent, toAgent],  // full list of agents in this room
         tool: opts.tool || null,
         reason: opts.reason || '',
         messages: [],
         status: 'active', // active | completed | ended
+        isMeeting: false,           // true when orchestrator/PM is pulled in
+        meetingNotes: null,         // populated on meeting end
+        userPresent: false,         // true when user has joined
+        pulledInBy: {},             // { agentName: 'user' } — tracks who pulled which agent in
         createdAt: Date.now()
     };
     agentChatRooms.set(roomId, room);
@@ -4736,9 +4795,12 @@ function listChatRooms() {
         id: r.id,
         fromAgent: r.fromAgent,
         toAgent: r.toAgent,
+        participants: r.participants || [r.fromAgent, r.toAgent],
         tool: r.tool,
         reason: r.reason,
         status: r.status,
+        isMeeting: r.isMeeting || false,
+        userPresent: r.userPresent || false,
         messageCount: r.messages.length,
         createdAt: r.createdAt
     }));
@@ -4748,4 +4810,250 @@ function getChatRoom(roomId) {
     return agentChatRooms.get(roomId) || null;
 }
 
-module.exports = { init, createChatRoom, addRoomMessage, endChatRoom, listChatRooms, getChatRoom };
+// ── Meeting System — extends chat rooms with orchestrator/PM pull-in ─────────
+// A "meeting" is a chat room where the user has pulled in the orchestrator
+// and/or project-manager. Meetings get full notes (summary, RAID log, action items)
+// generated from the transcript when the meeting ends.
+
+const MEETING_AGENTS = ['orchestrator', 'project-manager'];
+
+/**
+ * Pull an agent into an existing room. Upgrades to a "meeting" if the agent
+ * is an orchestrator or project-manager.
+ */
+function pullAgentIntoRoom(roomId, agentName, pulledBy = 'user') {
+    const room = agentChatRooms.get(roomId);
+    if (!room) return { success: false, error: 'Room not found' };
+    if (room.status !== 'active') return { success: false, error: 'Room is not active' };
+
+    // Capacity check
+    if (room.participants.length >= MAX_ROOM_AGENTS) {
+        return { success: false, error: `Maximum ${MAX_ROOM_AGENTS} agents per room` };
+    }
+
+    // Already present?
+    if (room.participants.includes(agentName)) {
+        return { success: false, error: `${agentName} is already in this room` };
+    }
+
+    // If pulling a non-orchestrator/PM agent, require that orchestrator or PM is already in
+    const hasMeetingAgent = room.participants.some(p => MEETING_AGENTS.includes(p));
+    if (!MEETING_AGENTS.includes(agentName) && !hasMeetingAgent) {
+        return { success: false, error: 'Pull in orchestrator or project-manager first before adding other agents' };
+    }
+
+    // Add the agent
+    room.participants.push(agentName);
+    room.pulledInBy[agentName] = pulledBy;
+
+    // Upgrade to meeting if orchestrator/PM was added
+    if (MEETING_AGENTS.includes(agentName) && !room.isMeeting) {
+        room.isMeeting = true;
+        hub.log(`📋 [MEETING] Room ${roomId} upgraded to meeting (${agentName} joined)`, 'info');
+    }
+
+    // Mark user as present
+    if (pulledBy === 'user') room.userPresent = true;
+
+    // Notify the room
+    addRoomMessage(roomId, 'system', `${agentName} joined the room (pulled in by ${pulledBy})`, 'note');
+
+    // Broadcast the update
+    hub.broadcast('room_participant_joined', { roomId, agentName, pulledBy, participants: room.participants, isMeeting: room.isMeeting });
+
+    // Notify the pulled-in agent via backchannel
+    const transcript = room.messages
+        .filter(m => m.type !== 'note')
+        .slice(-20)
+        .map(m => `[${m.from}]: ${String(m.content).substring(0, 200)}`)
+        .join('\n');
+    hub.emit('backchannel_push', {
+        from: 'user',
+        to: agentName,
+        content: `[You have been added to meeting room ${roomId}]\nParticipants: ${room.participants.join(', ')}\nRecent context:\n${transcript}\n\nPlease contribute to the discussion.`,
+        type: 'agent_to_agent_task',
+        ts: Date.now()
+    });
+
+    return { success: true, participants: room.participants, isMeeting: room.isMeeting };
+}
+
+/**
+ * User leaves a room — any agents they pulled in also leave.
+ */
+function userLeaveRoom(roomId) {
+    const room = agentChatRooms.get(roomId);
+    if (!room) return { success: false, error: 'Room not found' };
+
+    // Find all agents pulled in by user
+    const agentsToRemove = Object.entries(room.pulledInBy)
+        .filter(([_, by]) => by === 'user')
+        .map(([name]) => name);
+
+    // Remove pulled-in agents
+    for (const agentName of agentsToRemove) {
+        room.participants = room.participants.filter(p => p !== agentName);
+        delete room.pulledInBy[agentName];
+        addRoomMessage(roomId, 'system', `${agentName} left the room (user departed)`, 'note');
+    }
+
+    room.userPresent = false;
+
+    // If the only remaining participants are the original pair, downgrade from meeting
+    const hasMeetingAgent = room.participants.some(p => MEETING_AGENTS.includes(p) && room.pulledInBy[p]);
+    if (!hasMeetingAgent && room.isMeeting) {
+        // Meeting agents were pulled in by user and removed — keep isMeeting for notes
+    }
+
+    addRoomMessage(roomId, 'system', 'User left the room', 'note');
+    hub.broadcast('room_participant_left', { roomId, agentsRemoved: agentsToRemove, participants: room.participants, userPresent: false });
+
+    return { success: true, agentsRemoved: agentsToRemove, participants: room.participants };
+}
+
+/**
+ * User joins a room as participant (sends messages, sees live feed).
+ */
+function userJoinRoom(roomId) {
+    const room = agentChatRooms.get(roomId);
+    if (!room) return { success: false, error: 'Room not found' };
+    room.userPresent = true;
+    addRoomMessage(roomId, 'system', 'User joined the room', 'note');
+    hub.broadcast('room_user_joined', { roomId, userPresent: true });
+    return { success: true };
+}
+
+/**
+ * Generate meeting notes from the transcript using AI.
+ * Called when a meeting ends or on-demand.
+ */
+async function generateMeetingNotes(roomId) {
+    const room = agentChatRooms.get(roomId);
+    if (!room) return { success: false, error: 'Room not found' };
+    if (!room.isMeeting) return { success: false, error: 'Not a meeting' };
+
+    const transcript = room.messages
+        .map(m => {
+            const time = new Date(m.ts).toISOString().substring(11, 19);
+            return `[${time}] ${m.from} (${m.type}): ${m.content}`;
+        })
+        .join('\n');
+
+    const participants = room.participants.join(', ');
+    const duration = room.messages.length > 0
+        ? Math.round((room.messages[room.messages.length - 1].ts - room.messages[0].ts) / 60000)
+        : 0;
+
+    // Use the AI provider to generate structured meeting notes
+    const aiService = hub.getService('ai');
+    if (!aiService || !aiService.chat) {
+        // Fallback: simple extraction without AI
+        const notes = {
+            title: `Meeting: ${room.reason || room.fromAgent + ' ↔ ' + room.toAgent}`,
+            date: new Date(room.createdAt).toISOString(),
+            duration: `${duration} minutes`,
+            participants: room.participants,
+            summary: `Meeting between ${participants} regarding: ${room.reason || 'general discussion'}. ${room.messages.length} messages exchanged.`,
+            raid: { risks: [], assumptions: [], issues: [], dependencies: [] },
+            actionItems: [],
+            transcript: transcript
+        };
+        room.meetingNotes = notes;
+        hub.broadcast('meeting_notes_generated', { roomId, notes });
+        return { success: true, notes };
+    }
+
+    try {
+        const prompt = `You are a meeting notes assistant. Analyze the following meeting transcript and generate structured meeting notes in JSON format.
+
+Meeting context:
+- Participants: ${participants}
+- Topic/Reason: ${room.reason || 'Not specified'}
+- Duration: ~${duration} minutes
+- Message count: ${room.messages.length}
+
+Transcript:
+${transcript}
+
+Generate a JSON object with this exact structure (no markdown, just valid JSON):
+{
+  "summary": "2-3 sentence summary of the meeting",
+  "keyDecisions": ["decision 1", "decision 2"],
+  "raid": {
+    "risks": ["risk 1"],
+    "assumptions": ["assumption 1"],
+    "issues": ["issue 1"],
+    "dependencies": ["dependency 1"]
+  },
+  "actionItems": [
+    { "action": "description", "assignee": "agent-name", "priority": "high|medium|low" }
+  ],
+  "nextSteps": ["step 1", "step 2"]
+}`;
+
+        const response = await aiService.chat([{ role: 'user', content: prompt }], {
+            model: 'fast',
+            maxTokens: 2000,
+            temperature: 0.3
+        });
+
+        let parsed;
+        try {
+            // Extract JSON from response
+            const jsonMatch = (response.content || response).match(/\{[\s\S]*\}/);
+            parsed = jsonMatch ? JSON.parse(jsonMatch[0]) : {};
+        } catch (_) {
+            parsed = { summary: String(response.content || response).substring(0, 500) };
+        }
+
+        const notes = {
+            title: `Meeting: ${room.reason || room.fromAgent + ' ↔ ' + room.toAgent}`,
+            date: new Date(room.createdAt).toISOString(),
+            duration: `${duration} minutes`,
+            participants: room.participants,
+            summary: parsed.summary || '',
+            keyDecisions: parsed.keyDecisions || [],
+            raid: parsed.raid || { risks: [], assumptions: [], issues: [], dependencies: [] },
+            actionItems: parsed.actionItems || [],
+            nextSteps: parsed.nextSteps || [],
+            transcript: transcript
+        };
+
+        room.meetingNotes = notes;
+
+        // Persist to DB if agent-manager has meeting_notes table
+        const agentMgr = hub.getService('agentManager');
+        if (agentMgr && agentMgr.saveMeetingNotes) {
+            agentMgr.saveMeetingNotes(roomId, notes);
+        }
+
+        hub.broadcast('meeting_notes_generated', { roomId, notes });
+        hub.log(`📋 [MEETING] Notes generated for ${roomId}`, 'info');
+        return { success: true, notes };
+    } catch (err) {
+        hub.log(`📋 [MEETING] Notes generation failed for ${roomId}: ${err.message}`, 'error');
+        return { success: false, error: err.message };
+    }
+}
+
+/**
+ * End a meeting — generates notes first if it's a meeting, then closes room.
+ */
+async function endMeeting(roomId) {
+    const room = agentChatRooms.get(roomId);
+    if (!room) return { success: false, error: 'Room not found' };
+
+    // Generate notes before closing if this is a meeting
+    if (room.isMeeting && !room.meetingNotes) {
+        await generateMeetingNotes(roomId);
+    }
+
+    endChatRoom(roomId, 'completed');
+    return { success: true, meetingNotes: room.meetingNotes };
+}
+
+module.exports = {
+    init, createChatRoom, addRoomMessage, endChatRoom, listChatRooms, getChatRoom,
+    pullAgentIntoRoom, userLeaveRoom, userJoinRoom, generateMeetingNotes, endMeeting,
+    runAgentSessionInRoom, clearRoomAgentCallbacks, MAX_ROOM_AGENTS
+};

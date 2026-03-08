@@ -225,6 +225,20 @@ export function initSocketBridge(socket, store, engine) {
         engine.dispatch('delegation_request', data);
     });
 
+    // Meeting system events
+    socket.on('room_participant_joined', (data) => {
+        engine.dispatch('room_participant_joined', data);
+    });
+    socket.on('room_participant_left', (data) => {
+        engine.dispatch('room_participant_left', data);
+    });
+    socket.on('room_user_joined', (data) => {
+        engine.dispatch('room_user_joined', data);
+    });
+    socket.on('meeting_notes_generated', (data) => {
+        engine.dispatch('meeting_notes_generated', data);
+    });
+
     // ══════════════════════════════════════════════════════════════
     //  AGENT ORCHESTRATION
     // ══════════════════════════════════════════════════════════════

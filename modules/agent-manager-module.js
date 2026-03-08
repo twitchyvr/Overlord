@@ -1143,6 +1143,14 @@ function getAllowedTools(agentId) {
 }
 
 function getAllTools() {
+    // Dynamic: pull from the live tools service (static + dynamic tools)
+    if (HUB) {
+        const svc = HUB.getService('tools');
+        if (svc && svc.getDefinitions) {
+            return svc.getDefinitions().map(t => t.name);
+        }
+    }
+    // Fallback to hardcoded categories if tools service unavailable
     const tools = [];
     for (const category of Object.values(TOOL_CATEGORIES)) {
         tools.push(...category);

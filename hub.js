@@ -1087,6 +1087,13 @@ class Hub extends EventEmitter {
                 if (cb) cb(agent);
             });
 
+            // Get all available tools (categorized) for the Agent Manager UI
+            socket.on('get_available_tools', (cb) => {
+                if (typeof cb !== 'function') return;
+                const svc = this.getService('tools');
+                cb(svc && svc.getCategorizedTools ? svc.getCategorizedTools() : {});
+            });
+
             // Set agent tool permissions (replaces tools list)
             socket.on('set_agent_tools', (data, cb) => {
                 const agentMgr = this.getService('agentManager');
@@ -1496,16 +1503,11 @@ User description: "${data.description.replace(/"/g, '\\"')}"`;
                 const hint         = (data && data.hint)         ? data.hint         : {};
                 const lockedFields = (data && Array.isArray(data.lockedFields)) ? data.lockedFields : [];
 
-                const ALL_TOOLS = [
-                    'bash','powershell',
-                    'read_file','read_file_lines','write_file','patch_file','append_file','list_dir',
-                    'web_search','understand_image',
-                    'system_info','get_working_dir','set_working_dir',
-                    'list_agents','get_agent_info','assign_task',
-                    'qa_run_tests','qa_check_lint','qa_check_types','qa_check_coverage',
-                    'record_note','recall_notes',
-                    'list_skills','get_skill','activate_skill'
-                ];
+                // Dynamic: pull ALL tools from the live tools service
+                const toolsSvc = this.getService('tools');
+                const ALL_TOOLS = (toolsSvc && toolsSvc.getDefinitions)
+                    ? toolsSvc.getDefinitions().map(t => t.name)
+                    : ['bash','read_file','write_file','list_dir','web_search','system_info'];
                 const SECURITY_ROLES = ['developer','security-aware','security-analyst','security-lead','ciso','readonly'];
 
                 const lockedDesc = lockedFields.length

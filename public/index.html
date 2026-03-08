@@ -858,6 +858,30 @@
                 console.warn('[Approval] Cannot respond — socket or toolId not available');
             }
         }
+
+        // ==================== AUDIO PLAYBACK (TTS) ====================
+        var currentAudio = null;
+
+        window.playAudio = function(src, audioId) {
+            if (currentAudio) {
+                currentAudio.pause();
+                currentAudio = null;
+            }
+            document.querySelectorAll('.audio-play-btn').forEach(function(btn) {
+                btn.textContent = '▶';
+            });
+            var audio = new Audio(src);
+            currentAudio = audio;
+            var btn = document.getElementById('btn-' + audioId);
+            if (btn) btn.textContent = '⏸';
+            audio.play().catch(function(e) {
+                console.error('[Audio] Playback error:', e.message);
+            });
+            audio.onended = function() {
+                if (btn) btn.textContent = '▶';
+                currentAudio = null;
+            };
+        };
     </script>
 
     <!-- Input Request Modal (ask_user tool) -->

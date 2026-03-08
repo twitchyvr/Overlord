@@ -478,13 +478,16 @@ async function init(h) {
         getAllAgentStates,
         // ── Chat room / meeting functions ──────────────────────────────
         createChatRoom,
+        addRoomMessage,
+        endChatRoom,
         listChatRooms,
         getChatRoom,
         pullAgentIntoRoom,
         userLeaveRoom,
         userJoinRoom,
         endMeeting,
-        generateMeetingNotes
+        generateMeetingNotes,
+        clearRoomAgentCallbacks
     });
 
     // Allow clients to request current orchestration state
@@ -4088,10 +4091,28 @@ async function dispatchAgentAndAwait(agentName, task, taskScope = {}) {
  * Run an agent session triggered from within a chat room.
  * The agent's first text response will be routed back to the room transcript.
  */
-function runAgentSessionInRoom(agentName, userMessage, roomId) {
+function runAgentSessionInRoom(agentName, userMessage, roomId, onComplete) {
     const session = getOrCreateSession(agentName);
-    session._activeRoomId = roomId;  // cleared after first response in runAgentAICycle
+    session._activeRoomId = roomId;             // cleared after first response in runAgentAICycle
+    session._roomResponseCallback = onComplete || null;  // fired after response added to room
     runAgentSession(agentName, userMessage);
+}
+
+/**
+ * Stop the sequential agent chain for a room. Clears pending callbacks so no further
+ * agents in the sequence will be triggered after the current one finishes.
+ */
+function clearRoomAgentCallbacks(roomId) {
+    for (const session of agentSessions.values()) {
+        if (session._activeRoomId === roomId) {
+            session._activeRoomId = null;
+            session._roomResponseCallback = null;
+        } else if (session._roomResponseCallback) {
+            // May be a pending next-in-chain — clear it too
+            session._roomResponseCallback = null;
+        }
+    }
+    hub.log(`[Room ${roomId}] Sequential chain stopped by user`, 'info');
 }
 
 function runAgentSession(agentName, userMessage) {
@@ -4298,8 +4319,15 @@ async function runAgentAICycle(session) {
             });
             // Route response back to active room if this session was triggered from one
             if (session._activeRoomId) {
-                addRoomMessage(session._activeRoomId, session.name, displayText, 'message');
-                session._activeRoomId = null;  // clear — one response per trigger
+                const roomId = session._activeRoomId;
+                session._activeRoomId = null;   // clear before callback to avoid re-entry
+                addRoomMessage(roomId, session.name, displayText, 'message');
+                // Fire sequential-chain callback if set (allows next agent to respond after this one)
+                if (session._roomResponseCallback) {
+                    const cb = session._roomResponseCallback;
+                    session._roomResponseCallback = null;
+                    cb();
+                }
             }
         }
     }
@@ -5027,5 +5055,5 @@ async function endMeeting(roomId) {
 module.exports = {
     init, createChatRoom, addRoomMessage, endChatRoom, listChatRooms, getChatRoom,
     pullAgentIntoRoom, userLeaveRoom, userJoinRoom, generateMeetingNotes, endMeeting,
-    runAgentSessionInRoom, MAX_ROOM_AGENTS
+    runAgentSessionInRoom, clearRoomAgentCallbacks, MAX_ROOM_AGENTS
 };

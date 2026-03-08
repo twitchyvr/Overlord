@@ -34,6 +34,7 @@ export class RoomView extends Component {
         this._currentRoom = null;     // Full room object
         this._visible = false;
         this._showNotes = false;
+        this._thinkingAgents = new Set();  // agents currently processing in this room
     }
 
     // ══════════════════════════════════════════════════════════════
@@ -64,7 +65,21 @@ export class RoomView extends Component {
                 if (!this._currentRoom.messages) this._currentRoom.messages = [];
                 this._currentRoom.messages.push(data.message);
                 this._currentRoom.messageCount = (this._currentRoom.messageCount || 0) + 1;
-                if (this._visible) this._renderMessages();
+                // Clear thinking state for this agent when their message arrives
+                if (data.message?.from) this._thinkingAgents.delete(data.message.from);
+                if (this._visible) { this._renderMessages(); this._updateThinkingBar(); }
+            }),
+
+            OverlordUI.subscribe('room_agent_thinking', (data) => {
+                if (!this._currentRoom || data.roomId !== this._currentRoom.id) return;
+                this._thinkingAgents.add(data.agentName);
+                if (this._visible) this._updateThinkingBar();
+            }),
+
+            OverlordUI.subscribe('room_agents_stopped', (data) => {
+                if (!this._currentRoom || data.roomId !== this._currentRoom.id) return;
+                this._thinkingAgents.clear();
+                if (this._visible) this._updateThinkingBar();
             }),
 
             OverlordUI.subscribe('room_participant_joined', (data) => {
@@ -109,6 +124,20 @@ export class RoomView extends Component {
         this.on('click', '.rv-send-btn', () => this._sendMessage());
         this.on('click', '.rv-pull-orchestrator', () => this._pullIn('orchestrator'));
         this.on('click', '.rv-pull-pm', () => this._pullIn('project-manager'));
+        this.on('click', '.rv-stop-agent-btn', (e, el) => {
+            const agentName = el.dataset.agent;
+            if (agentName && this._socket) {
+                this._socket.emit('pause_agent', { agentName });
+                this._thinkingAgents.delete(agentName);
+                this._updateThinkingBar();
+            }
+        });
+        this.on('click', '.rv-stop-all-btn', () => {
+            if (!this._currentRoom || !this._socket) return;
+            this._socket.emit('stop_room_agents', this._currentRoom.id);
+            this._thinkingAgents.clear();
+            this._updateThinkingBar();
+        });
         this.on('keydown', '.rv-input', (e) => {
             if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); this._sendMessage(); }
         });
@@ -127,6 +156,7 @@ export class RoomView extends Component {
         this._currentRoom = { ...room, messages: room.messages ? [...room.messages] : [] };
         this._visible = true;
         this._showNotes = false;
+        this._thinkingAgents.clear();
         this.el.classList.add('open');
 
         // Fetch full room data (messages) from server
@@ -151,6 +181,7 @@ export class RoomView extends Component {
         this.el.classList.remove('open');
         this._currentRoom = null;
         this._showNotes = false;
+        this._thinkingAgents.clear();
     }
 
     // ══════════════════════════════════════════════════════════════
@@ -167,6 +198,7 @@ export class RoomView extends Component {
                 this._renderPullInBar(room),
                 this._renderMessages(true),
                 room.meetingNotes && this._showNotes ? this._renderNotes(room.meetingNotes) : null,
+                this._thinkingAgents.size > 0 ? this._buildThinkingBar() : null,
                 room.status === 'active' ? this._renderInput(room) : this._renderClosedBanner(room)
             )
         );
@@ -319,6 +351,50 @@ export class RoomView extends Component {
         );
     }
 
+    _buildThinkingBar() {
+        const bar = h('div', { class: 'rv-thinking-bar' });
+        for (const agentName of this._thinkingAgents) {
+            const color = this._getAgentColor(agentName);
+            bar.appendChild(
+                h('div', { class: 'rv-thinking-item', style: `--agent-color: ${color}` },
+                    h('span', { class: 'rv-thinking-dots' },
+                        h('span', {}), h('span', {}), h('span', {})
+                    ),
+                    h('span', { class: 'rv-thinking-name' }, `${agentName} is thinking...`),
+                    h('button', { class: 'rv-stop-agent-btn', 'data-agent': agentName, title: `Stop ${agentName}` }, '⏹')
+                )
+            );
+        }
+        if (this._thinkingAgents.size > 1) {
+            bar.appendChild(h('button', { class: 'rv-stop-all-btn' }, '⏹ Stop All'));
+        }
+        return bar;
+    }
+
+    /** Replace or insert the thinking bar without a full re-render. */
+    _updateThinkingBar() {
+        const existing = this.$('.rv-thinking-bar');
+        if (!this._thinkingAgents.size) {
+            if (existing) existing.remove();
+            return;
+        }
+        const bar = this._buildThinkingBar();
+        if (existing) {
+            existing.replaceWith(bar);
+        } else {
+            // Insert before the input area (or closed banner)
+            const anchor = this.$('.rv-input-area') || this.$('.rv-closed-banner');
+            if (anchor) anchor.insertAdjacentElement('beforebegin', bar);
+        }
+    }
+
+    _getAgentColor(agentName) {
+        const colors = ['#58a6ff', '#3fb950', '#f78166', '#d2a8ff', '#ffa657', '#79c0ff'];
+        const participants = this._currentRoom?.participants || [];
+        const idx = participants.indexOf(agentName);
+        return colors[Math.max(0, idx) % colors.length];
+    }
+
     _renderNotes(notes) {
         const esc = (s) => String(s || '');
         const section = (title, items) => {
@@ -374,13 +450,10 @@ export class RoomView extends Component {
         if (!message) return;
         input.value = '';
 
+        // Emit to server — server calls addRoomMessage which broadcasts agent_room_message
+        // back to ALL clients (including sender), so no local push needed here
         if (this._socket) {
-            this._socket.emit('send_room_message', { roomId: this._currentRoom.id, message }, () => {
-                if (!this._currentRoom) return;
-                if (!this._currentRoom.messages) this._currentRoom.messages = [];
-                this._currentRoom.messages.push({ from: 'user', content: message, type: 'message', ts: Date.now() });
-                this._renderMessages();
-            });
+            this._socket.emit('send_room_message', { roomId: this._currentRoom.id, message });
         }
     }
 

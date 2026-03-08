@@ -1140,30 +1140,59 @@ class Hub extends EventEmitter {
                 // Add user message to room transcript
                 orch.addRoomMessage(data.roomId, 'user', data.message, 'message');
 
-                // Relay message to all agents in the room and trigger AI response
                 const allParticipants = room.participants || [room.fromAgent, room.toAgent];
                 const agentNames = allParticipants.filter(n => n !== 'user');
-                const participantList = allParticipants.join(', ');
 
-                for (const agentName of agentNames) {
-                    this.log(`[Room ${data.roomId}] User message → ${agentName}: ${(data.message || '').substring(0, 80)}`, 'info');
-                    // Visibility in Activity feed
-                    this.emit('backchannel_push', {
-                        from: 'user',
-                        to: agentName,
-                        content: `[Room message]: ${data.message}`,
-                        type: 'agent_to_agent_task',
-                        ts: Date.now()
-                    });
-                    // Actually trigger the agent to process and respond (response routes back to room)
-                    const roomContext = `[Meeting room ${data.roomId}] Participants: ${participantList}`;
-                    const prompt = `${roomContext}\n[User says]: ${data.message}\n\nPlease respond to the user's message. Be concise and collaborative — you are in a group meeting with other agents and the user.`;
+                if (typeof cb === 'function') cb({ success: true });
+
+                // ── Sequential agent chain — each agent sees the previous agents' responses ──
+                // Build a transcript string from room messages (last 30) for context
+                const buildTranscript = () => {
+                    const msgs = (orch.getChatRoom(data.roomId)?.messages || []).slice(-30);
+                    return msgs.map(m => `[${m.from}]: ${m.content}`).join('\n');
+                };
+
+                const triggerNext = (index) => {
+                    if (index >= agentNames.length) return;
+                    const agentName = agentNames[index];
+                    const participantList = allParticipants.join(', ');
+                    const transcript = buildTranscript();
+
+                    this.log(`[Room ${data.roomId}] Triggering ${agentName} (${index + 1}/${agentNames.length})`, 'info');
+
+                    // Signal UI to show thinking dots before the agent responds
+                    this.broadcast('room_agent_thinking', { roomId: data.roomId, agentName });
+
+                    const prompt = [
+                        `[Meeting room ${data.roomId}] Participants: ${participantList}`,
+                        ``,
+                        `Recent conversation:`,
+                        transcript,
+                        ``,
+                        `You are ${agentName}. Respond to the conversation above. Be concise and collaborative.`,
+                        `If another agent already answered the main question, add your own perspective or ask a follow-up.`
+                    ].join('\n');
+
                     if (orch.runAgentSessionInRoom) {
-                        orch.runAgentSessionInRoom(agentName, prompt, data.roomId);
+                        orch.runAgentSessionInRoom(agentName, prompt, data.roomId, () => triggerNext(index + 1));
                     } else if (orch.runAgentSession) {
                         orch.runAgentSession(agentName, prompt);
+                        triggerNext(index + 1);
                     }
+                };
+
+                triggerNext(0);
+            });
+
+            // Stop the sequential agent chain for a room (clears callbacks + broadcasts done)
+            socket.on('stop_room_agents', (roomId, cb) => {
+                const orch = this.getService('orchestration');
+                if (!orch || !orch.clearRoomAgentCallbacks) {
+                    if (typeof cb === 'function') cb({ success: false });
+                    return;
                 }
+                orch.clearRoomAgentCallbacks(roomId);
+                this.broadcast('room_agents_stopped', { roomId });
                 if (typeof cb === 'function') cb({ success: true });
             });
 

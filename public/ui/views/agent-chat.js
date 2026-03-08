@@ -255,9 +255,9 @@ export class AgentChatView extends Component {
             ts: Date.now()
         });
 
-        // Emit via socket
+        // Emit via socket — server listens on 'direct_message' to trigger runAgentSession
         if (this._socket) {
-            this._socket.emit('agent_message', { agentName, content });
+            this._socket.emit('direct_message', { agentName, message: content });
         }
 
         // Clear input and re-render

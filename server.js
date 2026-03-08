@@ -27,6 +27,9 @@ const isHttps = false;
 const io = new Server(server, {
     pingTimeout: 60000,
     pingInterval: 25000,
+    // Raise buffer to 50 MB so voice-clone audio files (base64-encoded) can
+    // transit over socket.io. Default is 1 MB which silently drops larger payloads.
+    maxHttpBufferSize: 50 * 1024 * 1024,
     // Connection State Recovery: Socket.IO v4 feature.
     // When a client reconnects within maxDisconnectionDuration, missed events are replayed
     // automatically so manual state resync logic (get_message_queue, etc.) becomes a fallback.

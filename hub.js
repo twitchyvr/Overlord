@@ -1877,7 +1877,9 @@ Rules:
             role: a.role,
             description: a.description || '',
             capabilities: a.capabilities || [],
-            status: a.status || 'IDLE',
+            // DB status is registration state ('active'/'deleted'), NOT runtime processing state.
+            // Always send 'IDLE' — real-time processing is communicated via agent_session_state events.
+            status: 'IDLE',
             scope: a.scope || 'global'
         }));
         this.broadcastAll('team_update', team);

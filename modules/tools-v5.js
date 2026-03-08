@@ -1258,156 +1258,157 @@ async function understandImage(imagePath, prompt) {
 }
 
 // ==================== WEBPAGE FETCH ====================
+// Uses Node 22 native fetch (global) with AbortController for timeouts.
+// Automatic redirect following and decompression (gzip, deflate, br) via undici.
+
+const WF_MAX_BYTES_HTML = 5  * 1024 * 1024;   // 5 MB
+const WF_MAX_BYTES_JINA = 10 * 1024 * 1024;   // 10 MB
+const WF_TIMEOUT_HTML   = 15_000;              // 15 s
+const WF_TIMEOUT_JINA   = 30_000;             // 30 s — headless rendering is slower
+
+/**
+ * Stream a fetch Response body into a UTF-8 string with a hard byte cap.
+ * Returns null if the body exceeds maxBytes.
+ */
+async function readResponseBody(response, maxBytes) {
+    const reader = response.body.getReader();
+    const chunks = [];
+    let total = 0;
+    try {
+        while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            total += value.byteLength;
+            if (total > maxBytes) { reader.cancel(); return null; }
+            chunks.push(value);
+        }
+    } finally {
+        reader.releaseLock();
+    }
+    const merged = new Uint8Array(total);
+    let offset = 0;
+    for (const chunk of chunks) { merged.set(chunk, offset); offset += chunk.byteLength; }
+    return Buffer.from(merged).toString('utf8');
+}
 
 async function fetchWebpage(url) {
     if (!url || typeof url !== 'string') {
         return { success: false, content: 'fetch_webpage: url is required' };
     }
     const trimmed = url.trim();
-    // HTTPS-only enforcement — upgrade http to https
     if (!trimmed.startsWith('https://') && !trimmed.startsWith('http://')) {
-        return { success: false, content: 'fetch_webpage: URL must start with https:// (HTTP not allowed)' };
+        return { success: false, content: 'fetch_webpage: URL must start with https://' };
     }
     const finalUrl = trimmed.startsWith('http://') ? 'https://' + trimmed.slice(7) : trimmed;
 
-    const MAX_BYTES  = 5 * 1024 * 1024; // 5 MB
-    const TIMEOUT_MS = 15000;
+    const ctrl  = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), WF_TIMEOUT_HTML);
 
-    return new Promise((resolve) => {
-        let settled = false;
-        const done = (val) => { if (!settled) { settled = true; resolve(val); } };
-
-        const timer = setTimeout(() => {
-            req.destroy();
-            done({ success: false, content: 'fetch_webpage: request timed out after 15 seconds' });
-        }, TIMEOUT_MS);
-
-        const req = https.get(finalUrl, {
-            headers: {
-                'User-Agent': 'Mozilla/5.0 (compatible; Overlord-Agent/1.0)',
-                'Accept': 'text/html,text/plain,*/*',
-                'Accept-Encoding': 'gzip, deflate, identity'
-            }
-        }, (res) => {
-            clearTimeout(timer);
-            // Follow one redirect
-            if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
-                res.resume();
-                fetchWebpage(res.headers.location).then(done);
-                return;
-            }
-            if (res.statusCode !== 200) {
-                res.resume();
-                done({ success: false, content: `fetch_webpage: HTTP ${res.statusCode} for ${finalUrl}` });
-                return;
-            }
-
-            // Decompress if server returned compressed content
-            const encoding = (res.headers['content-encoding'] || '').toLowerCase();
-            let stream = res;
-            if (encoding === 'gzip') {
-                stream = res.pipe(zlib.createGunzip());
-            } else if (encoding === 'deflate') {
-                stream = res.pipe(zlib.createInflate());
-            }
-
-            const chunks = [];
-            let totalBytes = 0;
-            stream.on('data', (chunk) => {
-                totalBytes += chunk.length;
-                if (totalBytes > MAX_BYTES) {
-                    res.destroy();
-                    done({ success: false, content: 'fetch_webpage: response exceeds 5 MB limit' });
-                    return;
+    try {
+        let response;
+        try {
+            response = await fetch(finalUrl, {
+                signal: ctrl.signal,
+                redirect: 'follow',
+                headers: {
+                    'User-Agent':      'Mozilla/5.0 (compatible; Overlord-Agent/1.0)',
+                    'Accept':          'text/html,application/xhtml+xml,text/plain,application/json,*/*;q=0.8',
+                    'Accept-Language': 'en-US,en;q=0.9',
+                    'Accept-Encoding': 'gzip, deflate, br'
                 }
-                chunks.push(chunk);
             });
-            stream.on('end', async () => {
-                const raw  = Buffer.concat(chunks).toString('utf8');
-                const text = extractTextFromHtml(raw, finalUrl);
-                // SPA detected — retry via Jina Reader (headless-browser proxy → clean Markdown)
-                if (text.length < 300 && raw.length > 2000) {
-                    const jinaResult = await fetchViaJina(finalUrl);
-                    done(jinaResult);
-                    return;
-                }
-                done({ success: true, content: text });
-            });
-            stream.on('error', (e) => done({ success: false, content: 'fetch_webpage: response error: ' + e.message }));
-        });
-
-        req.on('error', (e) => {
+        } finally {
             clearTimeout(timer);
-            done({ success: false, content: 'fetch_webpage: request error: ' + e.message });
-        });
-    });
+        }
+
+        if (!response.ok) {
+            return { success: false, content: `fetch_webpage: HTTP ${response.status} for ${finalUrl}` };
+        }
+
+        // Reject oversized responses early via Content-Length when available
+        const clHeader = parseInt(response.headers.get('content-length') || '0', 10);
+        if (clHeader > WF_MAX_BYTES_HTML) {
+            return { success: false, content: `fetch_webpage: response too large (${Math.round(clHeader / 1024 / 1024)} MB)` };
+        }
+
+        const raw = await readResponseBody(response, WF_MAX_BYTES_HTML);
+        if (raw === null) {
+            return { success: false, content: 'fetch_webpage: response exceeds 5 MB limit' };
+        }
+
+        const ct = (response.headers.get('content-type') || '').toLowerCase();
+
+        // JSON → pretty-print inside a fenced block
+        if (ct.includes('application/json')) {
+            try {
+                return { success: true, content: '```json\n' + JSON.stringify(JSON.parse(raw), null, 2) + '\n```' };
+            } catch { return { success: true, content: raw }; }
+        }
+
+        // Plain text / Markdown → return as-is
+        if (ct.includes('text/plain') || ct.includes('text/markdown')) {
+            return { success: true, content: raw.trim() };
+        }
+
+        // HTML → extract to Markdown; fall back to Jina for SPAs
+        const resolvedUrl = response.url || finalUrl;
+        const text = extractTextFromHtml(raw, resolvedUrl);
+        if (text.length < 300 && raw.length > 2000) {
+            return fetchViaJina(finalUrl);
+        }
+        return { success: true, content: text };
+
+    } catch (err) {
+        clearTimeout(timer);
+        if (err.name === 'AbortError') {
+            return { success: false, content: 'fetch_webpage: request timed out after 15 seconds' };
+        }
+        // Network-level error → try Jina as best-effort fallback
+        return fetchViaJina(finalUrl);
+    }
 }
 
 /**
  * Fetch a URL via Jina Reader (https://r.jina.ai/{url}).
- * Jina runs a headless browser server-side and returns clean Markdown, making
- * it the ideal fallback for JavaScript-rendered (SPA) pages that return an
- * empty HTML shell on a plain GET.
- * - No API key required for public pages.
- * - Returns { success, content } matching the fetchWebpage contract.
+ * Jina runs a headless browser server-side and returns clean Markdown — the
+ * ideal fallback for JavaScript-rendered SPAs that return an empty HTML shell.
+ * No API key required for public pages.
  */
 async function fetchViaJina(url) {
     const jinaUrl = 'https://r.jina.ai/' + url;
-    const MAX_BYTES  = 10 * 1024 * 1024; // 10 MB
-    const TIMEOUT_MS = 30000;             // 30 s — rendering takes longer
+    const spaNote = `# ${url}\nSource: ${url}\n\n` +
+        '[Note: This page is JavaScript-rendered and could not be fetched. ' +
+        'The headless-browser fallback also failed. Try web_search instead.]';
 
-    return new Promise((resolve) => {
-        let settled = false;
-        const done = (val) => { if (!settled) { settled = true; resolve(val); } };
+    const ctrl  = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), WF_TIMEOUT_JINA);
 
-        const fallback = () => done({
-            success: true,
-            content: `# ${url}\nSource: ${url}\n\n[Note: This page is JavaScript-rendered and could not be fetched as plain HTML. The headless-browser fallback also failed. Try web_search for content from this page.]`
-        });
-
-        const timer = setTimeout(() => { req.destroy(); fallback(); }, TIMEOUT_MS);
-
-        const req = https.get(jinaUrl, {
-            headers: {
-                'Accept':          'text/markdown',
-                'X-Return-Format': 'markdown',
-                'User-Agent':      'Mozilla/5.0 (compatible; Overlord-Agent/1.0)'
-            }
-        }, (res) => {
+    try {
+        let response;
+        try {
+            response = await fetch(jinaUrl, {
+                signal: ctrl.signal,
+                redirect: 'follow',
+                headers: {
+                    'Accept':          'text/markdown',
+                    'X-Return-Format': 'markdown',
+                    'User-Agent':      'Mozilla/5.0 (compatible; Overlord-Agent/1.0)'
+                }
+            });
+        } finally {
             clearTimeout(timer);
-            if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
-                res.resume();
-                fetchViaJina(url).then(done);
-                return;
-            }
-            if (res.statusCode !== 200) {
-                res.resume();
-                fallback();
-                return;
-            }
+        }
 
-            const encoding = (res.headers['content-encoding'] || '').toLowerCase();
-            let stream = res;
-            if (encoding === 'gzip')    stream = res.pipe(zlib.createGunzip());
-            else if (encoding === 'deflate') stream = res.pipe(zlib.createInflate());
+        if (!response.ok) return { success: true, content: spaNote };
 
-            const chunks = [];
-            let totalBytes = 0;
-            stream.on('data', (chunk) => {
-                totalBytes += chunk.length;
-                if (totalBytes > MAX_BYTES) { res.destroy(); fallback(); return; }
-                chunks.push(chunk);
-            });
-            stream.on('end', () => {
-                const markdown = Buffer.concat(chunks).toString('utf8').trim();
-                if (!markdown || markdown.length < 50) { fallback(); return; }
-                done({ success: true, content: markdown });
-            });
-            stream.on('error', () => fallback());
-        });
+        const markdown = await readResponseBody(response, WF_MAX_BYTES_JINA);
+        if (!markdown || markdown.trim().length < 50) return { success: true, content: spaNote };
+        return { success: true, content: markdown.trim() };
 
-        req.on('error', () => { clearTimeout(timer); fallback(); });
-    });
+    } catch {
+        clearTimeout(timer);
+        return { success: true, content: spaNote };
+    }
 }
 
 /**
@@ -1505,42 +1506,78 @@ async function saveWebpageToVault(input) {
     }
 }
 
+// ── HTML → Markdown helpers ──────────────────────────────────────────────────
+
+function stripTags(html) {
+    return html.replace(/<[^>]+>/g, '');
+}
+
+function decodeEntities(text) {
+    return text
+        .replace(/&amp;/g,    '&').replace(/&lt;/g,     '<').replace(/&gt;/g,  '>')
+        .replace(/&quot;/g,   '"').replace(/&apos;/g,   "'").replace(/&nbsp;/g, ' ')
+        .replace(/&mdash;/g,  '—').replace(/&ndash;/g,  '–').replace(/&hellip;/g, '…')
+        .replace(/&lsquo;/g, '\u2018').replace(/&rsquo;/g, '\u2019')
+        .replace(/&ldquo;/g, '\u201C').replace(/&rdquo;/g, '\u201D')
+        .replace(/&#(\d+);/g,      (_, n) => String.fromCharCode(Number(n)))
+        .replace(/&#x([0-9a-f]+);/gi, (_, h) => String.fromCharCode(parseInt(h, 16)));
+}
+
+/** Convert inline HTML tags to their Markdown equivalents. */
+function inlineToMarkdown(html) {
+    return html
+        .replace(/<strong[^>]*>([\s\S]*?)<\/strong>/gi, (_, t) => `**${stripTags(t)}**`)
+        .replace(/<b[^>]*>([\s\S]*?)<\/b>/gi,          (_, t) => `**${stripTags(t)}**`)
+        .replace(/<em[^>]*>([\s\S]*?)<\/em>/gi,         (_, t) => `_${stripTags(t)}_`)
+        .replace(/<i[^>]*>([\s\S]*?)<\/i>/gi,           (_, t) => `_${stripTags(t)}_`)
+        .replace(/<code[^>]*>([\s\S]*?)<\/code>/gi,     (_, t) => `\`${stripTags(t)}\``)
+        .replace(/<a[^>]*href="([^"]*)"[^>]*>([\s\S]*?)<\/a>/gi, (_, href, inner) => {
+            const label = stripTags(inner).trim();
+            return href ? `[${label}](${href})` : label;
+        })
+        .replace(/<br\s*\/?>/gi, '\n')
+        .replace(/<[^>]+>/g, '');
+}
+
 function extractTextFromHtml(html, url) {
-    // Strip script/style/comments entirely
+    // Strip noise: scripts, styles, noscript blocks, comments
     let text = html
         .replace(/<script[\s\S]*?<\/script>/gi, '')
         .replace(/<style[\s\S]*?<\/style>/gi, '')
+        .replace(/<noscript[\s\S]*?<\/noscript>/gi, '')
         .replace(/<!--[\s\S]*?-->/g, '');
 
     // Extract page title
     const titleMatch = text.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
-    const title = titleMatch ? titleMatch[1].replace(/<[^>]+>/g, '').trim() : '';
+    const title = titleMatch ? stripTags(titleMatch[1]).trim() : '';
 
-    // Convert semantic block tags → markdown-like text
+    // Block-level semantic tags → Markdown equivalents
     text = text
         .replace(/<h([1-6])[^>]*>([\s\S]*?)<\/h\1>/gi, (_, lvl, inner) =>
-            '\n' + '#'.repeat(Number(lvl)) + ' ' + inner.replace(/<[^>]+>/g, '').trim() + '\n')
-        .replace(/<p[^>]*>([\s\S]*?)<\/p>/gi, (_, inner) =>
-            '\n' + inner.replace(/<[^>]+>/g, '').trim() + '\n')
-        .replace(/<li[^>]*>([\s\S]*?)<\/li>/gi, (_, inner) =>
-            '\n- ' + inner.replace(/<[^>]+>/g, '').trim())
-        .replace(/<br\s*\/?>/gi, '\n')
+            '\n' + '#'.repeat(Number(lvl)) + ' ' + stripTags(inner).trim() + '\n')
+        .replace(/<blockquote[^>]*>([\s\S]*?)<\/blockquote>/gi, (_, inner) =>
+            '\n> ' + stripTags(inner).trim().replace(/\n/g, '\n> ') + '\n')
         .replace(/<pre[^>]*>([\s\S]*?)<\/pre>/gi, (_, inner) =>
-            '\n```\n' + inner.replace(/<[^>]+>/g, '').trim() + '\n```\n')
-        .replace(/<code[^>]*>([\s\S]*?)<\/code>/gi, (_, inner) =>
-            '`' + inner.replace(/<[^>]+>/g, '') + '`')
-        .replace(/<a[^>]*href="([^"]*)"[^>]*>([\s\S]*?)<\/a>/gi, (_, href, inner) =>
-            inner.replace(/<[^>]+>/g, '').trim() + (href ? ' [' + href + ']' : ''))
-        .replace(/<[^>]+>/g, ' ');
+            '\n```\n' + stripTags(inner).trim() + '\n```\n')
+        .replace(/<p[^>]*>([\s\S]*?)<\/p>/gi, (_, inner) =>
+            '\n' + inlineToMarkdown(inner).trim() + '\n')
+        .replace(/<li[^>]*>([\s\S]*?)<\/li>/gi, (_, inner) =>
+            '\n- ' + inlineToMarkdown(inner).trim())
+        .replace(/<tr[^>]*>([\s\S]*?)<\/tr>/gi, (_, inner) =>
+            '\n' + stripTags(inner)
+                .replace(/<\/t[dh]>/gi, ' | ')
+                .replace(/<t[dh][^>]*>/gi, '| ')
+                .trim())
+        .replace(/<hr[^>]*\/?>/gi, '\n---\n')
+        .replace(/<br\s*\/?>/gi, '\n')
+        .replace(/<img[^>]+alt="([^"]+)"[^>]*>/gi, (_, alt) => `[image: ${alt}]`)
+        .replace(/<img[^>]*>/gi, '');
 
-    // Decode common HTML entities
-    text = text
-        .replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>')
-        .replace(/&quot;/g, '"').replace(/&apos;/g, "'").replace(/&nbsp;/g, ' ')
-        .replace(/&#(\d+);/g, (_, n) => String.fromCharCode(Number(n)))
-        .replace(/&#x([0-9a-f]+);/gi, (_, h) => String.fromCharCode(parseInt(h, 16)));
+    // Apply inline formatting to whatever HTML remains, then strip residual tags
+    text = inlineToMarkdown(text).replace(/<[^>]+>/g, ' ');
 
-    // Collapse excessive whitespace / blank lines
+    // Decode entities and normalise whitespace
+    text = decodeEntities(text);
     text = text.replace(/[ \t]{2,}/g, ' ').replace(/\n{3,}/g, '\n\n').trim();
 
     return `# ${title || url}\nSource: ${url}\n\n${text}`;

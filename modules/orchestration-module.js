@@ -3707,6 +3707,8 @@ function buildAgentSystemPrompt(session) {
         '5. When done, report your result clearly. Do not loop or continue working after task completion.',
         '6. If you identify improvements outside scope, mention them in your response — do NOT implement them.',
         '7. Use `recommend_task` instead of `create_task` — you cannot create tasks directly. Your recommendations go to the orchestrator for review.',
+        '8. COMPLETION HONESTY: You MUST NOT claim a bulk task is complete unless you have processed EVERY item in scope. If asked to update "all" files in a directory, call list_dir first, count the files, then process ALL of them. Report the exact count: "Updated X of Y files." Never say "done" or "complete" if X < Y.',
+        '9. BULK SCOPE DECLARATION: Before beginning any task that involves multiple files or items, explicitly state your scope in your response: "I will process N items: [list or pattern]." After completion, confirm: "I processed N of N items." If you ran out of tool cycles before finishing, say "I processed X of N items — the remaining Y items were not processed."',
     ];
 
     // ── Code Quality Enforcement (injected for all agents — cannot be waived) ──
@@ -3779,6 +3781,36 @@ ${cfg?.autoQATests ? '14. Run qa_run_tests after implementing features. ALL test
 ## PERSISTENT MEMORY (from past sessions)
 The following notes were saved by you or other agents in previous sessions. Use this context to inform your decisions:
 ${session.persistentContext}`);
+    }
+
+    // ── Orchestrator-specific verification mandate ────────────────────────
+    // Injected only for the orchestrator session so it knows it must verify
+    // subagent completion claims — especially for bulk operations — before
+    // reporting "done" to the user.
+    if (session.name === 'orchestrator') {
+        parts.push(`
+## VERIFICATION MANDATE (orchestrator-only — non-negotiable)
+
+When any subagent reports task completion, you MUST verify before relaying results to the user:
+
+1. **Check the [FILE VERIFICATION] block** appended to every delegation result.
+   - ❌ files = task is NOT done. Re-delegate or report failure.
+   - ⚠️ empty files = write likely failed. Investigate before marking done.
+
+2. **Check the [SCOPE CHECK] block** if present (indicates a bulk operation).
+   - If count mismatch is detected, do NOT say "done". Re-delegate remaining items.
+   - If you see "Agent claimed completion" — run list_dir yourself and count actual vs. expected.
+
+3. **For ANY task involving "all files", "every X", or a numbered set:**
+   - Verify actual count: call list_dir on the target directory.
+   - Compare to what the agent reported processing.
+   - Only tell the user "complete" after YOU have confirmed the counts match.
+
+4. **Never relay an agent's "all done" claim directly to the user** without your own check.
+   If you cannot verify, say: "Agent reports completion — verifying…" then verify.
+
+5. **If verification fails**, automatically re-delegate the remaining items.
+   Break large bulk tasks into batches and track which batch is in progress.`);
     }
 
     // Inject per-task scope constraints when dispatched via delegate_to_agent
@@ -3904,8 +3936,42 @@ async function dispatchAgentAndAwait(agentName, task, taskScope = {}) {
     }
     // ──────────────────────────────────────────────────────────────────────
 
+    // ── Bulk-operation scope check ─────────────────────────────────────────
+    // If the delegated task used bulk language ("all", "every", "each", "all N
+    // files", etc.) and the agent's output claims completion, we append a
+    // [SCOPE CHECK] block so the orchestrator knows it MUST verify count before
+    // reporting "done" to the user.
+    let scopeCheckBlock = '';
+    const taskLower = task.toLowerCase();
+    const isBulkTask = /\ball\b|\bevery\b|\beach\b|\ball \d|\d+\s*files?\b|\bevery\s+file\b/.test(taskLower);
+    if (isBulkTask) {
+        const completionClaim = /\b(all done|completed?|finished?|done|updated all|processed all|success)\b/i.test(text);
+        // Extract explicit count from the agent's output if it reported "X of Y"
+        const countMatch = text && text.match(/(?:processed|updated|wrote|created|modified)\s+(\d+)\s+(?:of|out of)\s+(\d+)/i);
+        const agentReported  = countMatch ? parseInt(countMatch[1], 10) : null;
+        const scopeReported  = countMatch ? parseInt(countMatch[2], 10) : null;
+        const countMismatch  = agentReported !== null && scopeReported !== null && agentReported < scopeReported;
+
+        if (completionClaim || countMismatch) {
+            let scopeLines = [
+                `[SCOPE CHECK — ${agentName}]`,
+                `⚠️  This task contained bulk language ("all"/"every"/"each" files/items).`,
+            ];
+            if (countMismatch) {
+                scopeLines.push(`❌ Agent reported processing ${agentReported} of ${scopeReported} items — task is NOT complete.`);
+                scopeLines.push(`   Re-delegate the remaining ${scopeReported - agentReported} items or expand the agent's cycle budget.`);
+            } else if (completionClaim) {
+                scopeLines.push(`⚠️  Agent claimed completion. You MUST verify the actual count before reporting "done" to the user.`);
+                scopeLines.push(`   Action: call list_dir on the target directory and count items, or ask the agent "how many total items did you process vs. how many were in scope?"`);
+            }
+            scopeLines.push(`   NEVER relay this completion claim to the user without your own independent verification.`);
+            scopeCheckBlock = '\n\n' + scopeLines.join('\n');
+        }
+    }
+    // ──────────────────────────────────────────────────────────────────────
+
     const baseResult = text || `[NO_OUTPUT:${agentName}] Agent ran but produced no text response. The agent likely could not perform the task (unsupported language, missing tool access, or task too vague). Verify expected files exist with list_dir/read_file before retrying. Do NOT retry without changing delegation strategy.`;
-    return baseResult + verifyBlock;
+    return baseResult + verifyBlock + scopeCheckBlock;
 }
 
 function runAgentSession(agentName, userMessage) {

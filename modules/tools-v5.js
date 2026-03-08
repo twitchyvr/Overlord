@@ -11,7 +11,7 @@
 // Tool Categories:
 //   Shell:    bash, powershell, cmd
 //   Files:    read_file, read_file_lines, write_file, patch_file, append_file, list_dir
-//   AI/MCP:   web_search, understand_image
+//   AI/MCP:   web_search, understand_image, fetch_webpage
 //   System:   system_info, get_working_dir, set_working_dir, set_thinking_level
 //   Agents:   (managed via orchestration-module dynamic tools)
 //   QA:       qa_run_tests, qa_check_lint, qa_check_types, qa_check_coverage, qa_audit_deps
@@ -22,6 +22,7 @@ const path = require('path');
 const os = require('os');
 const { spawn } = require('child_process');
 const https = require('https');
+const zlib  = require('zlib');
 
 let HUB = null;
 let CONFIG = null;
@@ -72,6 +73,17 @@ const TOOL_ALIASES = new Map([
     ['analyze_image',   'understand_image'],
     ['read_image',      'understand_image'],
     ['describe_image',  'understand_image'],
+    // Web fetch aliases
+    ['fetch_url',       'fetch_webpage'],
+    ['get_url',         'fetch_webpage'],
+    ['read_url',        'fetch_webpage'],
+    ['read_webpage',    'fetch_webpage'],
+    ['get_webpage',     'fetch_webpage'],
+    ['curl',            'fetch_webpage'],
+    // Save-to-vault aliases
+    ['save_to_vault',    'save_webpage_to_vault'],
+    ['webpage_to_vault', 'save_webpage_to_vault'],
+    ['clip_to_vault',    'save_webpage_to_vault'],
     // Notes aliases
     ['get_notes',       'recall_notes'],
     ['read_notes',      'recall_notes'],
@@ -103,6 +115,16 @@ function init(hub) {
     HUB.registerService('tools', {
         execute: execute,
         getDefinitions: () => [...TOOL_DEFS, ...DYNAMIC_TOOL_DEFS],
+        getCategorizedTools: () => {
+            const all = [...TOOL_DEFS, ...DYNAMIC_TOOL_DEFS];
+            const cats = {};
+            for (const def of all) {
+                const cat = def.category || 'other';
+                if (!cats[cat]) cats[cat] = [];
+                cats[cat].push(def.name);
+            }
+            return cats;
+        },
         startTask: startTask,
         endTask: endTask,
         registerTool: (def, handler) => {
@@ -110,6 +132,8 @@ function init(hub) {
                 HUB.log('[Tools] registerTool: invalid def or handler for ' + (def && def.name), 'warn');
                 return;
             }
+            // Default category for dynamically registered tools
+            if (!def.category) def.category = 'dynamic';
             // Avoid duplicates
             const existing = DYNAMIC_TOOL_DEFS.findIndex(d => d.name === def.name);
             if (existing >= 0) {
@@ -136,6 +160,7 @@ const TOOL_DEFS = [
     // --- Shell ---
     {
         name: 'bash',
+        category: 'shell',
         description: 'Execute a shell command using bash (or zsh on macOS). Use for running scripts, git commands, npm commands, file system operations, and any other terminal command. Returns stdout, stderr, and exit code.',
         input_schema: {
             type: 'object',
@@ -147,6 +172,7 @@ const TOOL_DEFS = [
     },
     {
         name: 'powershell',
+        category: 'shell',
         description: 'Execute a PowerShell command (Windows only). Use for Windows-specific scripting and automation.',
         input_schema: {
             type: 'object',
@@ -158,6 +184,7 @@ const TOOL_DEFS = [
     },
     {
         name: 'cmd',
+        category: 'shell',
         description: 'Execute a Windows CMD command. Use for Windows batch commands and legacy scripts.',
         input_schema: {
             type: 'object',
@@ -171,6 +198,7 @@ const TOOL_DEFS = [
     // --- File Operations ---
     {
         name: 'read_file',
+        category: 'files',
         description: 'Read the entire contents of a file. Use for files under 50KB. For larger files, use read_file_lines instead. Supports relative paths (resolved from working directory) and absolute paths.',
         input_schema: {
             type: 'object',
@@ -182,6 +210,7 @@ const TOOL_DEFS = [
     },
     {
         name: 'read_file_lines',
+        category: 'files',
         description: 'Read specific lines from a file. Use for large files or when you only need a section. Line numbers are 1-based.',
         input_schema: {
             type: 'object',
@@ -195,6 +224,7 @@ const TOOL_DEFS = [
     },
     {
         name: 'write_file',
+        category: 'files',
         description: 'Write content to a file, creating it if it does not exist. IMPORTANT: Always read_file first before overwriting an existing file to avoid data loss. Creates parent directories automatically.',
         input_schema: {
             type: 'object',
@@ -207,6 +237,7 @@ const TOOL_DEFS = [
     },
     {
         name: 'patch_file',
+        category: 'files',
         description: 'Find and replace a specific string in a file. Use for targeted edits without rewriting the entire file. The search string must match exactly.',
         input_schema: {
             type: 'object',
@@ -220,6 +251,7 @@ const TOOL_DEFS = [
     },
     {
         name: 'append_file',
+        category: 'files',
         description: 'Append content to the end of a file. Creates the file if it does not exist. Use for adding to log files, configuration, or any file where you want to add without overwriting.',
         input_schema: {
             type: 'object',
@@ -232,6 +264,7 @@ const TOOL_DEFS = [
     },
     {
         name: 'list_dir',
+        category: 'files',
         description: 'List files and directories in a given path. Shows directories first (prefixed DIR), then files (prefixed FILE). Defaults to the current working directory if no path is given.',
         input_schema: {
             type: 'object',
@@ -245,6 +278,7 @@ const TOOL_DEFS = [
     // --- AI & MCP ---
     {
         name: 'web_search',
+        category: 'ai',
         description: 'Search the web for current information. Returns relevant results for the given query. Use when you need up-to-date information not in your training data.',
         input_schema: {
             type: 'object',
@@ -256,6 +290,7 @@ const TOOL_DEFS = [
     },
     {
         name: 'understand_image',
+        category: 'ai',
         description: 'Analyze an image using AI vision. Provide a file path or URL. Returns a description of the image content. Use for understanding screenshots, diagrams, UI mockups, etc.',
         input_schema: {
             type: 'object',
@@ -266,10 +301,37 @@ const TOOL_DEFS = [
             required: ['path']
         }
     },
+    {
+        name: 'fetch_webpage',
+        category: 'ai',
+        description: 'Fetch the text content of a webpage by URL and return it as clean Markdown. Automatically handles JavaScript-rendered pages (React, Vue, SPAs) by retrying via a headless-browser proxy (Jina Reader) when the initial fetch returns minimal content. HTTPS-only. Use to read documentation, Obsidian Help, GitHub READMEs, or any publicly-accessible URL.',
+        input_schema: {
+            type: 'object',
+            properties: {
+                url: { type: 'string', description: 'The full HTTPS URL to fetch (must start with https://)' }
+            },
+            required: ['url']
+        }
+    },
+    {
+        name: 'save_webpage_to_vault',
+        category: 'ai',
+        description: 'Fetch a webpage (including JavaScript-rendered pages) and save it as a Markdown note in the configured Obsidian vault. Adds YAML frontmatter with the source URL and fetch date. If no vault is configured, returns instructions to set one up in Settings → Obsidian Vault.',
+        input_schema: {
+            type: 'object',
+            properties: {
+                url:      { type: 'string', description: 'Full HTTPS URL of the page to fetch and save' },
+                folder:   { type: 'string', description: 'Subfolder within the vault to save into (e.g. "References/Web"). Created if it does not exist. Optional — defaults to vault root.' },
+                filename: { type: 'string', description: 'Override the auto-generated filename. Do not include the .md extension. Optional.' }
+            },
+            required: ['url']
+        }
+    },
 
     // --- System & Config ---
     {
         name: 'system_info',
+        category: 'system',
         description: 'Get current system information including platform, OS, Node.js version, working directory, shell, AI model, and current date/time.',
         input_schema: {
             type: 'object',
@@ -279,6 +341,7 @@ const TOOL_DEFS = [
     },
     {
         name: 'get_working_dir',
+        category: 'system',
         description: 'Get the current working directory path. All relative file paths are resolved against this directory.',
         input_schema: {
             type: 'object',
@@ -288,6 +351,7 @@ const TOOL_DEFS = [
     },
     {
         name: 'set_working_dir',
+        category: 'system',
         description: 'Change the working directory. All subsequent file operations and shell commands will use this as the base path.',
         input_schema: {
             type: 'object',
@@ -299,6 +363,7 @@ const TOOL_DEFS = [
     },
     {
         name: 'set_thinking_level',
+        category: 'system',
         description: 'Adjust the AI thinking depth. Level 1=minimal (512 tokens), 2=low (1024), 3=normal (2048), 4=high (4096), 5=maximum (8192). Higher levels give deeper analysis but use more tokens.',
         input_schema: {
             type: 'object',
@@ -312,6 +377,7 @@ const TOOL_DEFS = [
     // --- QA & Testing ---
     {
         name: 'qa_run_tests',
+        category: 'qa',
         description: 'Run project tests. Supports types: "unit", "integration", "e2e", or "all" (default). Uses npm test with appropriate filters.',
         input_schema: {
             type: 'object',
@@ -323,6 +389,7 @@ const TOOL_DEFS = [
     },
     {
         name: 'qa_check_lint',
+        category: 'qa',
         description: 'Run linting checks on the project. Tries npm run lint, then falls back to npx eslint.',
         input_schema: {
             type: 'object',
@@ -332,6 +399,7 @@ const TOOL_DEFS = [
     },
     {
         name: 'qa_check_types',
+        category: 'qa',
         description: 'Run TypeScript type checking (npx tsc --noEmit). Reports type errors without emitting files.',
         input_schema: {
             type: 'object',
@@ -341,6 +409,7 @@ const TOOL_DEFS = [
     },
     {
         name: 'qa_check_coverage',
+        category: 'qa',
         description: 'Run test coverage report. Uses npm run coverage if configured.',
         input_schema: {
             type: 'object',
@@ -352,6 +421,7 @@ const TOOL_DEFS = [
     },
     {
         name: 'qa_audit_deps',
+        category: 'qa',
         description: 'Audit project dependencies for security vulnerabilities using npm audit.',
         input_schema: {
             type: 'object',
@@ -363,6 +433,7 @@ const TOOL_DEFS = [
     // --- Notes (Session Memory) ---
     {
         name: 'record_note',
+        category: 'notes',
         description: 'Record important information as session notes for future reference. Use this to record key facts, user preferences, decisions, or context that should be recalled later in the agent execution chain. Each note is timestamped.',
         input_schema: {
             type: 'object',
@@ -381,6 +452,7 @@ const TOOL_DEFS = [
     },
     {
         name: 'recall_notes',
+        category: 'notes',
         description: 'Recall all previously recorded session notes. Use this to retrieve important information, context, or decisions from earlier in the session or previous agent execution chains.',
         input_schema: {
             type: 'object',
@@ -397,6 +469,7 @@ const TOOL_DEFS = [
     // --- Skills (Claude Skills) ---
     {
         name: 'list_skills',
+        category: 'skills',
         description: 'List all available skills. Use this to see what specialized skills are available.',
         input_schema: {
             type: 'object',
@@ -406,6 +479,7 @@ const TOOL_DEFS = [
     },
     {
         name: 'get_skill',
+        category: 'skills',
         description: 'Get detailed information about a specific skill including its full content and capabilities.',
         input_schema: {
             type: 'object',
@@ -420,6 +494,7 @@ const TOOL_DEFS = [
     },
     {
         name: 'activate_skill',
+        category: 'skills',
         description: 'Activate a skill to add its specialized guidance to the current context. Use list_skills first to see available skills.',
         input_schema: {
             type: 'object',
@@ -434,6 +509,7 @@ const TOOL_DEFS = [
     },
     {
         name: 'deactivate_skill',
+        category: 'skills',
         description: 'Deactivate a previously activated skill.',
         input_schema: {
             type: 'object',
@@ -450,6 +526,7 @@ const TOOL_DEFS = [
     // --- Session Notes (persistent across context compaction) ---
     {
         name: 'session_note',
+        category: 'notes',
         description: 'Write a persistent session note. Use to capture important decisions, failures, lessons learned, or things to avoid. Notes survive context compaction and are injected into every subsequent system prompt.',
         input_schema: {
             type: 'object',
@@ -464,6 +541,7 @@ const TOOL_DEFS = [
     // --- GitHub ---
     {
         name: 'github',
+        category: 'github',
         description: 'Interact with GitHub using the gh CLI. Actions: get_repo (view repo info), list_issues, create_issue, close_issue, list_prs, create_pr. Requires gh CLI to be installed and authenticated.',
         input_schema: {
             type: 'object',
@@ -481,6 +559,7 @@ const TOOL_DEFS = [
     // --- Socket.IO UI tools ---
     {
         name: 'ui_action',
+        category: 'ui',
         description: 'Send a UI action to all connected browser clients. Use to open/close panels, show toast notifications, set the status bar message, or switch chat modes. Never use for destructive or irreversible operations.',
         input_schema: {
             type: 'object',
@@ -500,6 +579,7 @@ const TOOL_DEFS = [
     },
     {
         name: 'show_chart',
+        category: 'ui',
         description: 'Render an interactive chart as an overlay in the browser. Supports bar, line, and pie charts. Great for visualising data, metrics, task progress, agent performance, etc.',
         input_schema: {
             type: 'object',
@@ -515,6 +595,7 @@ const TOOL_DEFS = [
     },
     {
         name: 'ask_user',
+        category: 'ui',
         description: 'Request structured input from the user and wait for their answer before continuing. Ideal for confirmations, picking from choices, or collecting a short text/number input. Times out after 2 minutes.',
         input_schema: {
             type: 'object',
@@ -533,6 +614,7 @@ const TOOL_DEFS = [
     },
     {
         name: 'kv_set',
+        category: 'storage',
         description: 'Store a value in the persistent key-value store. Survives server restarts. Use for cross-session memory, caching, flags, and small data blobs.',
         input_schema: {
             type: 'object',
@@ -546,6 +628,7 @@ const TOOL_DEFS = [
     },
     {
         name: 'kv_get',
+        category: 'storage',
         description: 'Retrieve a value from the persistent key-value store. Returns null if the key does not exist or has expired.',
         input_schema: {
             type: 'object',
@@ -557,6 +640,7 @@ const TOOL_DEFS = [
     },
     {
         name: 'kv_list',
+        category: 'storage',
         description: 'List keys in the persistent key-value store, optionally filtered by prefix.',
         input_schema: {
             type: 'object',
@@ -568,6 +652,7 @@ const TOOL_DEFS = [
     },
     {
         name: 'kv_delete',
+        category: 'storage',
         description: 'Delete one or more keys from the persistent key-value store.',
         input_schema: {
             type: 'object',
@@ -579,6 +664,7 @@ const TOOL_DEFS = [
     },
     {
         name: 'socket_push',
+        category: 'ui',
         description: 'Emit a custom Socket.IO event to all connected browser clients. Event name must start with "agent_". Useful for custom UI integrations and live data feeds captured by onAgentEvent() in the browser.',
         input_schema: {
             type: 'object',
@@ -689,7 +775,9 @@ async function execute(tool, inputOverride) {
                 result = await webSearch(input.query); 
                 HUB.log(`[Tools] web_search result: ${result.success}`, 'info');
                 break;
-            case 'understand_image': result = await understandImage(input.path, input.prompt); break;
+            case 'understand_image':      result = await understandImage(input.path, input.prompt); break;
+            case 'fetch_webpage':         result = await fetchWebpage(input.url); break;
+            case 'save_webpage_to_vault': result = await saveWebpageToVault(input); break;
 
             // System
             case 'system_info':       result = await systemInfo(); break;
@@ -1167,6 +1255,332 @@ async function understandImage(imagePath, prompt) {
         }
     }
     return { success: false, content: 'Image understanding not available. MCP module not loaded or not registered.' };
+}
+
+// ==================== WEBPAGE FETCH ====================
+// Uses Node 22 native fetch (global) with AbortController for timeouts.
+// Automatic redirect following and decompression (gzip, deflate, br) via undici.
+
+const WF_MAX_BYTES_HTML = 5  * 1024 * 1024;   // 5 MB
+const WF_MAX_BYTES_JINA = 10 * 1024 * 1024;   // 10 MB
+const WF_TIMEOUT_HTML   = 15_000;              // 15 s
+const WF_TIMEOUT_JINA   = 30_000;             // 30 s — headless rendering is slower
+
+/**
+ * Stream a fetch Response body into a UTF-8 string with a hard byte cap.
+ * Returns null if the body exceeds maxBytes.
+ */
+async function readResponseBody(response, maxBytes) {
+    const reader = response.body.getReader();
+    const chunks = [];
+    let total = 0;
+    try {
+        while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            total += value.byteLength;
+            if (total > maxBytes) { reader.cancel(); return null; }
+            chunks.push(value);
+        }
+    } finally {
+        reader.releaseLock();
+    }
+    const merged = new Uint8Array(total);
+    let offset = 0;
+    for (const chunk of chunks) { merged.set(chunk, offset); offset += chunk.byteLength; }
+    return Buffer.from(merged).toString('utf8');
+}
+
+async function fetchWebpage(url) {
+    if (!url || typeof url !== 'string') {
+        return { success: false, content: 'fetch_webpage: url is required' };
+    }
+    const trimmed = url.trim();
+    if (!trimmed.startsWith('https://') && !trimmed.startsWith('http://')) {
+        return { success: false, content: 'fetch_webpage: URL must start with https://' };
+    }
+    const finalUrl = trimmed.startsWith('http://') ? 'https://' + trimmed.slice(7) : trimmed;
+
+    const ctrl  = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), WF_TIMEOUT_HTML);
+
+    try {
+        let response;
+        try {
+            response = await fetch(finalUrl, {
+                signal: ctrl.signal,
+                redirect: 'follow',
+                headers: {
+                    'User-Agent':      'Mozilla/5.0 (compatible; Overlord-Agent/1.0)',
+                    'Accept':          'text/html,application/xhtml+xml,text/plain,application/json,*/*;q=0.8',
+                    'Accept-Language': 'en-US,en;q=0.9',
+                    'Accept-Encoding': 'gzip, deflate, br'
+                }
+            });
+        } finally {
+            clearTimeout(timer);
+        }
+
+        if (!response.ok) {
+            return { success: false, content: `fetch_webpage: HTTP ${response.status} for ${finalUrl}` };
+        }
+
+        // Reject oversized responses early via Content-Length when available
+        const clHeader = parseInt(response.headers.get('content-length') || '0', 10);
+        if (clHeader > WF_MAX_BYTES_HTML) {
+            return { success: false, content: `fetch_webpage: response too large (${Math.round(clHeader / 1024 / 1024)} MB)` };
+        }
+
+        const raw = await readResponseBody(response, WF_MAX_BYTES_HTML);
+        if (raw === null) {
+            return { success: false, content: 'fetch_webpage: response exceeds 5 MB limit' };
+        }
+
+        const ct = (response.headers.get('content-type') || '').toLowerCase();
+
+        // JSON → pretty-print inside a fenced block
+        if (ct.includes('application/json')) {
+            try {
+                return { success: true, content: '```json\n' + JSON.stringify(JSON.parse(raw), null, 2) + '\n```' };
+            } catch { return { success: true, content: raw }; }
+        }
+
+        // Plain text / Markdown → return as-is
+        if (ct.includes('text/plain') || ct.includes('text/markdown')) {
+            return { success: true, content: raw.trim() };
+        }
+
+        // HTML → extract to Markdown; fall back to Jina for SPAs
+        const resolvedUrl = response.url || finalUrl;
+        const text = extractTextFromHtml(raw, resolvedUrl);
+        if (text.length < 300 && raw.length > 2000) {
+            return fetchViaJina(finalUrl);
+        }
+        return { success: true, content: text };
+
+    } catch (err) {
+        clearTimeout(timer);
+        if (err.name === 'AbortError') {
+            return { success: false, content: 'fetch_webpage: request timed out after 15 seconds' };
+        }
+        // Network-level error → try Jina as best-effort fallback
+        return fetchViaJina(finalUrl);
+    }
+}
+
+/**
+ * Fetch a URL via Jina Reader (https://r.jina.ai/{url}).
+ * Jina runs a headless browser server-side and returns clean Markdown — the
+ * ideal fallback for JavaScript-rendered SPAs that return an empty HTML shell.
+ * No API key required for public pages.
+ */
+async function fetchViaJina(url) {
+    const jinaUrl = 'https://r.jina.ai/' + url;
+    const spaNote = `# ${url}\nSource: ${url}\n\n` +
+        '[Note: This page is JavaScript-rendered and could not be fetched. ' +
+        'The headless-browser fallback also failed. Try web_search instead.]';
+
+    const ctrl  = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), WF_TIMEOUT_JINA);
+
+    try {
+        let response;
+        try {
+            response = await fetch(jinaUrl, {
+                signal: ctrl.signal,
+                redirect: 'follow',
+                headers: {
+                    'Accept':          'text/markdown',
+                    'X-Return-Format': 'markdown',
+                    'User-Agent':      'Mozilla/5.0 (compatible; Overlord-Agent/1.0)'
+                }
+            });
+        } finally {
+            clearTimeout(timer);
+        }
+
+        if (!response.ok) return { success: true, content: spaNote };
+
+        const markdown = await readResponseBody(response, WF_MAX_BYTES_JINA);
+        if (!markdown || markdown.trim().length < 50) return { success: true, content: spaNote };
+        return { success: true, content: markdown.trim() };
+
+    } catch {
+        clearTimeout(timer);
+        return { success: true, content: spaNote };
+    }
+}
+
+/**
+ * Fetch a URL and save the result as a Markdown note in the configured Obsidian vault.
+ * Uses fetchWebpage (with Jina SPA fallback) so JS-rendered pages work automatically.
+ * Adds YAML frontmatter with source URL, fetch date, and a 'web-clip' tag.
+ * If no vault path is configured, returns a helpful setup message.
+ */
+async function saveWebpageToVault(input) {
+    const { url, folder, filename: filenameOverride } = input || {};
+    if (!url) return { success: false, content: 'save_webpage_to_vault: url is required' };
+
+    // ── 1. Resolve vault path ─────────────────────────────────────────────────
+    const configSvc = HUB?.getService?.('config');
+    const vaultSvc  = HUB?.getService?.('obsidianVault');
+    const vaultPath = configSvc?.get?.('obsidianVaultPath')
+                   || vaultSvc?.getVaultPath?.()
+                   || null;
+
+    if (!vaultPath) {
+        return {
+            success: false,
+            content: [
+                'No Obsidian vault configured.',
+                'To fix: open ⚙ Settings → Obsidian Vault → enter your vault folder path → click Set.',
+                'Then call save_webpage_to_vault again.'
+            ].join('\n')
+        };
+    }
+
+    if (!fs.existsSync(vaultPath)) {
+        return {
+            success: false,
+            content: `Vault path does not exist on disk: ${vaultPath}\nUpdate it in Settings → Obsidian Vault.`
+        };
+    }
+
+    // ── 2. Fetch the page (SPA-aware) ────────────────────────────────────────
+    const fetched = await fetchWebpage(url);
+    if (!fetched.success) return fetched;
+
+    // ── 3. Derive filename from first H1 heading or URL ───────────────────────
+    let title = '';
+    const h1Match = fetched.content.match(/^#\s+(.+)$/m);
+    if (h1Match) {
+        title = h1Match[1].trim();
+    } else {
+        try {
+            const parsed = new URL(url);
+            title = (parsed.pathname.split('/').filter(Boolean).pop() || parsed.hostname)
+                        .replace(/[-_]/g, ' ');
+        } catch (_) {
+            title = url;
+        }
+    }
+
+    const safeFilename = filenameOverride
+        ? filenameOverride.replace(/[/\\:*?"<>|]/g, '-').slice(0, 100)
+        : title.replace(/[/\\:*?"<>|]/g, '-').replace(/\s+/g, '-').replace(/-{2,}/g, '-').slice(0, 80);
+
+    // ── 4. Build note path and guard against traversal ────────────────────────
+    const relPath  = folder
+        ? path.join(folder, safeFilename + '.md')
+        : safeFilename + '.md';
+    const fullPath = path.resolve(vaultPath, relPath);
+
+    if (!fullPath.startsWith(path.resolve(vaultPath))) {
+        return { success: false, content: 'save_webpage_to_vault: path traversal rejected' };
+    }
+
+    // ── 5. Prepend YAML frontmatter ────────────────────────────────────────────
+    const frontmatter = [
+        '---',
+        `source: "${url}"`,
+        `fetched: "${new Date().toISOString()}"`,
+        'tags: [web-clip]',
+        '---',
+        ''
+    ].join('\n');
+
+    const noteContent = frontmatter + fetched.content;
+
+    // ── 6. Write to disk ──────────────────────────────────────────────────────
+    try {
+        const dir = path.dirname(fullPath);
+        if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+        const existed = fs.existsSync(fullPath);
+        fs.writeFileSync(fullPath, noteContent, 'utf8');
+        return {
+            success: true,
+            content: `${existed ? 'Updated' : 'Saved'} note: ${relPath}\nVault: ${vaultPath}`
+        };
+    } catch (e) {
+        return { success: false, content: `save_webpage_to_vault: write error — ${e.message}` };
+    }
+}
+
+// ── HTML → Markdown helpers ──────────────────────────────────────────────────
+
+function stripTags(html) {
+    return html.replace(/<[^>]+>/g, '');
+}
+
+function decodeEntities(text) {
+    return text
+        .replace(/&amp;/g,    '&').replace(/&lt;/g,     '<').replace(/&gt;/g,  '>')
+        .replace(/&quot;/g,   '"').replace(/&apos;/g,   "'").replace(/&nbsp;/g, ' ')
+        .replace(/&mdash;/g,  '—').replace(/&ndash;/g,  '–').replace(/&hellip;/g, '…')
+        .replace(/&lsquo;/g, '\u2018').replace(/&rsquo;/g, '\u2019')
+        .replace(/&ldquo;/g, '\u201C').replace(/&rdquo;/g, '\u201D')
+        .replace(/&#(\d+);/g,      (_, n) => String.fromCharCode(Number(n)))
+        .replace(/&#x([0-9a-f]+);/gi, (_, h) => String.fromCharCode(parseInt(h, 16)));
+}
+
+/** Convert inline HTML tags to their Markdown equivalents. */
+function inlineToMarkdown(html) {
+    return html
+        .replace(/<strong[^>]*>([\s\S]*?)<\/strong>/gi, (_, t) => `**${stripTags(t)}**`)
+        .replace(/<b[^>]*>([\s\S]*?)<\/b>/gi,          (_, t) => `**${stripTags(t)}**`)
+        .replace(/<em[^>]*>([\s\S]*?)<\/em>/gi,         (_, t) => `_${stripTags(t)}_`)
+        .replace(/<i[^>]*>([\s\S]*?)<\/i>/gi,           (_, t) => `_${stripTags(t)}_`)
+        .replace(/<code[^>]*>([\s\S]*?)<\/code>/gi,     (_, t) => `\`${stripTags(t)}\``)
+        .replace(/<a[^>]*href="([^"]*)"[^>]*>([\s\S]*?)<\/a>/gi, (_, href, inner) => {
+            const label = stripTags(inner).trim();
+            return href ? `[${label}](${href})` : label;
+        })
+        .replace(/<br\s*\/?>/gi, '\n')
+        .replace(/<[^>]+>/g, '');
+}
+
+function extractTextFromHtml(html, url) {
+    // Strip noise: scripts, styles, noscript blocks, comments
+    let text = html
+        .replace(/<script[\s\S]*?<\/script>/gi, '')
+        .replace(/<style[\s\S]*?<\/style>/gi, '')
+        .replace(/<noscript[\s\S]*?<\/noscript>/gi, '')
+        .replace(/<!--[\s\S]*?-->/g, '');
+
+    // Extract page title
+    const titleMatch = text.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
+    const title = titleMatch ? stripTags(titleMatch[1]).trim() : '';
+
+    // Block-level semantic tags → Markdown equivalents
+    text = text
+        .replace(/<h([1-6])[^>]*>([\s\S]*?)<\/h\1>/gi, (_, lvl, inner) =>
+            '\n' + '#'.repeat(Number(lvl)) + ' ' + stripTags(inner).trim() + '\n')
+        .replace(/<blockquote[^>]*>([\s\S]*?)<\/blockquote>/gi, (_, inner) =>
+            '\n> ' + stripTags(inner).trim().replace(/\n/g, '\n> ') + '\n')
+        .replace(/<pre[^>]*>([\s\S]*?)<\/pre>/gi, (_, inner) =>
+            '\n```\n' + stripTags(inner).trim() + '\n```\n')
+        .replace(/<p[^>]*>([\s\S]*?)<\/p>/gi, (_, inner) =>
+            '\n' + inlineToMarkdown(inner).trim() + '\n')
+        .replace(/<li[^>]*>([\s\S]*?)<\/li>/gi, (_, inner) =>
+            '\n- ' + inlineToMarkdown(inner).trim())
+        .replace(/<tr[^>]*>([\s\S]*?)<\/tr>/gi, (_, inner) =>
+            '\n' + stripTags(inner)
+                .replace(/<\/t[dh]>/gi, ' | ')
+                .replace(/<t[dh][^>]*>/gi, '| ')
+                .trim())
+        .replace(/<hr[^>]*\/?>/gi, '\n---\n')
+        .replace(/<br\s*\/?>/gi, '\n')
+        .replace(/<img[^>]+alt="([^"]+)"[^>]*>/gi, (_, alt) => `[image: ${alt}]`)
+        .replace(/<img[^>]*>/gi, '');
+
+    // Apply inline formatting to whatever HTML remains, then strip residual tags
+    text = inlineToMarkdown(text).replace(/<[^>]+>/g, ' ');
+
+    // Decode entities and normalise whitespace
+    text = decodeEntities(text);
+    text = text.replace(/[ \t]{2,}/g, ' ').replace(/\n{3,}/g, '\n\n').trim();
+
+    return `# ${title || url}\nSource: ${url}\n\n${text}`;
 }
 
 // ==================== SYSTEM INFO ====================

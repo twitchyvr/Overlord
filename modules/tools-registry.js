@@ -868,15 +868,22 @@ function init(hub) {
     HUB = hub;
     CONFIG = hub.getService('config');
 
-    // Register tools
-    const tools = hub.getService('tools');
-    if (tools && tools.registerTool) {
-        TOOL_DEFS.forEach(def => {
-            tools.registerTool(def, null);
-        });
-    }
+    // Register the tools service — this makes tools available to:
+    //   chat-stream.js (sends tools array to the API)
+    //   ai-module.js   (context: "Tools Available: N tools")
+    //   tool-executor.js (tools.execute(tool))
+    hub.registerService('tools', {
+        getDefinitions: () => TOOL_DEFS.concat(DYNAMIC_TOOL_DEFS),
+        execute: executeToolCall,
+        registerTool: (def, handler) => {
+            if (handler) {
+                DYNAMIC_TOOL_HANDLERS.set(def.name, handler);
+                DYNAMIC_TOOL_DEFS.push(def);
+            }
+        }
+    });
 
-    HUB.log('✅ Tools registry initialized', 'info');
+    HUB.log(`✅ Tools registry initialized (${TOOL_DEFS.length} tools)`, 'info');
 }
 
 // Register a dynamic tool at runtime

@@ -207,7 +207,7 @@ class AIClientClass {
                 maxTokens: this.config.maxTokens,
                 thinkingBudget: this.config.thinkingBudget || 0
             },
-            tools: (hub?.getService('tools')?.getDefinitions?.() || []).length
+            tools: hub?.getService('tools')?.getDefinitions?.() || []
         };
     }
 

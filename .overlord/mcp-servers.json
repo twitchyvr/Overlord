@@ -1,0 +1,34 @@
+[
+  {
+    "name": "github",
+    "description": "GitHub MCP: repos, issues, PRs, file browsing",
+    "command": "/Users/mattrogers/.nvm/versions/node/v22.16.0/bin/mcp-server-github",
+    "args": [],
+    "env": {
+      "GITHUB_PERSONAL_ACCESS_TOKEN": ""
+    },
+    "required": false,
+    "enabled": true,
+    "builtin": true
+  },
+  {
+    "name": "filesystem",
+    "description": "Filesystem MCP: read/write files via MCP protocol",
+    "command": "/Users/mattrogers/.nvm/versions/node/v22.16.0/bin/mcp-server-filesystem",
+    "args": ["/tmp"],
+    "env": {},
+    "required": false,
+    "enabled": true,
+    "builtin": true
+  },
+  {
+    "name": "sequential_thinking",
+    "description": "Sequential thinking MCP: structured reasoning steps",
+    "command": "/Users/mattrogers/.nvm/versions/node/v22.16.0/bin/mcp-server-sequential-thinking",
+    "args": [],
+    "env": {},
+    "required": false,
+    "enabled": true,
+    "builtin": true
+  }
+]

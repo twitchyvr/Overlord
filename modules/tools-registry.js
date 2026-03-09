@@ -536,6 +536,34 @@ const TOOL_DEFS = [
             },
             required: ['event']
         }
+    },
+
+    // Todo Tools
+    {
+        name: 'add_todo',
+        category: 'tasks',
+        description: 'Add a checklist item (todo) to an existing task. Use for breaking tasks into atomic sub-items that can be individually checked off.',
+        input_schema: {
+            type: 'object',
+            properties: {
+                task_id: { type: 'string', description: 'ID of the task to add the todo to' },
+                text: { type: 'string', description: 'Text of the todo item' }
+            },
+            required: ['task_id', 'text']
+        }
+    },
+    {
+        name: 'toggle_todo',
+        category: 'tasks',
+        description: 'Toggle the done/undone state of a todo item within a task.',
+        input_schema: {
+            type: 'object',
+            properties: {
+                task_id: { type: 'string', description: 'ID of the parent task' },
+                todo_id: { type: 'string', description: 'ID of the todo item to toggle' }
+            },
+            required: ['task_id', 'todo_id']
+        }
     }
 ];
 
@@ -712,6 +740,20 @@ async function executeToolCall(tool, inputOverride) {
             case 'socket_push':
                 result = systemTools.socketPush(input.event, input.data);
                 break;
+
+            // Todo tools
+            case 'add_todo': {
+                const tasks = HUB.getService('tasks');
+                if (!tasks || !tasks.addTodo) { result = { error: 'Tasks service unavailable' }; break; }
+                result = tasks.addTodo(input.task_id, input.text);
+                break;
+            }
+            case 'toggle_todo': {
+                const tasks = HUB.getService('tasks');
+                if (!tasks || !tasks.toggleTodo) { result = { error: 'Tasks service unavailable' }; break; }
+                result = tasks.toggleTodo(input.task_id, input.todo_id);
+                break;
+            }
 
             // Dynamic tools
             case 'init_context':

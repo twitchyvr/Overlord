@@ -93,7 +93,10 @@ export class ChatView extends Component {
         sub('conversation_loaded', (data) => {
             if (this._messagesEl) this._messagesEl.textContent = '';
             if (data && data.messages) {
-                data.messages.forEach(m => this._addMessage(m.role, m.content));
+                data.messages.forEach(m => {
+                    const text = this._parseMessageContent(m.content);
+                    if (text && text.trim()) this._addMessage(m.role, m.content);
+                });
             }
         });
         sub('conversation_new', () => {

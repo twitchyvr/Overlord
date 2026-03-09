@@ -76,12 +76,58 @@ async function init(h) {
             return { success: true };
         },
 
+        // ── Todo API ─────────────────────────────────────────────────
+        addTodo: (taskId, text) => {
+            const conv = getConv();
+            if (!conv) return { error: 'Conversation service unavailable' };
+            const tasks = conv.getTasks?.() || [];
+            const task = tasks.find(t => String(t.id) === String(taskId));
+            if (!task) return { error: 'Task not found: ' + taskId };
+            if (!task.todos) task.todos = [];
+            const todo = {
+                id: 'td-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6),
+                text: text,
+                done: false,
+                createdAt: Date.now()
+            };
+            task.todos.push(todo);
+            conv.updateTask(taskId, { todos: task.todos });
+            _broadcastTasks();
+            return { success: true, todo };
+        },
+
+        toggleTodo: (taskId, todoId) => {
+            const conv = getConv();
+            if (!conv) return { error: 'Conversation service unavailable' };
+            const tasks = conv.getTasks?.() || [];
+            const task = tasks.find(t => String(t.id) === String(taskId));
+            if (!task || !task.todos) return { error: 'Task or todos not found' };
+            const todo = task.todos.find(td => td.id === todoId);
+            if (!todo) return { error: 'Todo not found: ' + todoId };
+            todo.done = !todo.done;
+            conv.updateTask(taskId, { todos: task.todos });
+            _broadcastTasks();
+            return { success: true, todo };
+        },
+
+        removeTodo: (taskId, todoId) => {
+            const conv = getConv();
+            if (!conv) return { error: 'Conversation service unavailable' };
+            const tasks = conv.getTasks?.() || [];
+            const task = tasks.find(t => String(t.id) === String(taskId));
+            if (!task || !task.todos) return { error: 'Task or todos not found' };
+            task.todos = task.todos.filter(td => td.id !== todoId);
+            conv.updateTask(taskId, { todos: task.todos });
+            _broadcastTasks();
+            return { success: true };
+        },
+
         // Utility
         broadcastSnapshot: () => _broadcastTasks(),
         broadcastTree:     () => _broadcastTree(),
     });
 
-    hub.log('Tasks engine loaded (hierarchy-aware)', 'success');
+    hub.log('Tasks engine loaded (hierarchy-aware, todo-aware)', 'success');
 }
 
 // ── Internal helpers ──────────────────────────────────────────────────────
@@ -278,6 +324,29 @@ function handleGetTaskBreadcrumb(socket, { taskId }, cb) {
     if (!conv) { if (typeof cb === 'function') cb({ error: 'Conversation service unavailable' }); return; }
     const breadcrumb = conv.getBreadcrumb?.(taskId) || [];
     if (typeof cb === 'function') cb({ success: true, breadcrumb });
+}
+
+// ── Todo socket handlers ──────────────────────────────────────────────
+
+function handleAddTodo(socket, { taskId, text }, cb) {
+    const tasks = hub.getService('tasks');
+    if (!tasks) { if (typeof cb === 'function') cb({ error: 'Tasks service unavailable' }); return; }
+    const result = tasks.addTodo(taskId, text);
+    if (typeof cb === 'function') cb(result);
+}
+
+function handleToggleTodo(socket, { taskId, todoId }, cb) {
+    const tasks = hub.getService('tasks');
+    if (!tasks) { if (typeof cb === 'function') cb({ error: 'Tasks service unavailable' }); return; }
+    const result = tasks.toggleTodo(taskId, todoId);
+    if (typeof cb === 'function') cb(result);
+}
+
+function handleRemoveTodo(socket, { taskId, todoId }, cb) {
+    const tasks = hub.getService('tasks');
+    if (!tasks) { if (typeof cb === 'function') cb({ error: 'Tasks service unavailable' }); return; }
+    const result = tasks.removeTodo(taskId, todoId);
+    if (typeof cb === 'function') cb(result);
 }
 
 module.exports = { init };

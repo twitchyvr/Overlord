@@ -1036,6 +1036,11 @@ class Hub extends EventEmitter {
             socket.on('task_deleted', (data)      => this.emit('socket:task_deleted', { socket, data }));
             socket.on('task_updated', (data)      => this.emit('socket:task_updated', { socket, data }));
 
+            // ── Todo events → TasksEngine ────────────────────────────────────────
+            socket.on('add_todo',    (data, cb)  => this.emit('socket:add_todo',    { socket, data, cb }));
+            socket.on('toggle_todo', (data, cb)  => this.emit('socket:toggle_todo', { socket, data, cb }));
+            socket.on('remove_todo', (data, cb)  => this.emit('socket:remove_todo', { socket, data, cb }));
+
             // Agent management (add/remove agents dynamically)
             socket.on('add_agent', (agentData, cb) => {
                 const agentMgr = this.getService('agentManager');

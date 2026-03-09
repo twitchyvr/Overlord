@@ -1,10 +1,28 @@
 // ==================== MESSAGE BUILDER MODULE ====================
 // Build messages for AI communication
 
+const os = require('os');
+const { execSync } = require('child_process');
 const { getAI } = require('./ai-client');
 
 let hub = null;
 let config = null;
+
+// ── Cached git info (refreshed at most every 60s) ────────────────────
+let _gitCache = { log: '', changedFiles: '', fetchedAt: 0 };
+const GIT_CACHE_TTL = 60000;
+
+function _refreshGitCache() {
+    const now = Date.now();
+    if (now - _gitCache.fetchedAt < GIT_CACHE_TTL) return;
+    try {
+        _gitCache.log = execSync('git log --oneline -10', { timeout: 5000, encoding: 'utf8' }).trim();
+    } catch { _gitCache.log = ''; }
+    try {
+        _gitCache.changedFiles = execSync('git diff --name-only HEAD~5 2>/dev/null || git diff --name-only HEAD', { timeout: 5000, encoding: 'utf8' }).trim();
+    } catch { _gitCache.changedFiles = ''; }
+    _gitCache.fetchedAt = now;
+}
 
 // Build a user message
 function buildUserMessage(content) {
@@ -20,11 +38,11 @@ function buildAssistantMessage(content, toolCalls = null) {
         role: 'assistant',
         content: content
     };
-    
+
     if (toolCalls && toolCalls.length > 0) {
         message.tool_calls = toolCalls;
     }
-    
+
     return message;
 }
 
@@ -54,14 +72,14 @@ function buildSystemPrompt(toolsModule) {
     const agents = hub.getService('agents') || hub.getService('agentSystem');
     const agentList = agents ? agents.formatAgentList() : 'No agents configured';
     const platformName = process.platform === 'darwin' ? 'macOS' : process.platform === 'win32' ? 'Windows' : 'Linux';
-    
+
     // Get current context
     const aiClient = getAI();
     const ctx = aiClient?.getContext ? aiClient.getContext() : null;
-    
+
     // Get process state
     const processState = hub?.getProcessState ? hub.getProcessState() : { pid: process.pid, port: 3031 };
-    
+
     // Build context info
     const contextInfo = ctx ? `
 ## CURRENT CONTEXT (ALWAYS INCLUDE THIS INFO)
@@ -69,6 +87,8 @@ function buildSystemPrompt(toolsModule) {
 - **Timezone**: ${ctx.timezone}
 - **Working Directory**: ${ctx.workingDirectory}
 - **Platform**: ${platformName}
+- **OS Version**: ${os.version()} (${os.release()})
+- **Node.js**: ${process.version}
 - **Chat Length**: ${ctx.chatLength.messageCount} messages, started ${ctx.chatLength.durationFormatted} ago
 - **Last Request**: ${ctx.lastRequestDurationFormatted}
 - **Context Window**: ${ctx.contextUsage.estimatedTokens} / ${ctx.contextUsage.maxTokens} tokens (${ctx.contextUsage.usagePercent}% used)
@@ -81,13 +101,13 @@ function buildSystemPrompt(toolsModule) {
 - **Server Port**: ${processState.port}
 ${ctx.contextWarning ? '- **⚠️ WARNING**: Context is ' + ctx.contextUsage.usagePercent + '% full - ' + ctx.contextUsage.status : ''}
 ` : '';
-    
+
     // Custom instructions
     const customInstructions = cfg?.customInstructions || '';
-    
+
     // Project memory
     const projectMemory = cfg?.projectMemory || '';
-    
+
     // Cookbook reference
     const cookbookContent = cfg?.cookbookContent || '';
     const cookbookSection = cookbookContent ? `
@@ -97,7 +117,7 @@ Reference for MiniMax M2.5 APIs, tools, and best practices:
 ${cookbookContent}
 
 ` : '';
-    
+
     // Skills reference
     let skillsSection = '';
     try {
@@ -115,7 +135,7 @@ ${skillsPrompt}
     } catch (e) {
         // Skills module may not be loaded
     }
-    
+
     // Project memory section
     const memorySection = projectMemory ? `
 
@@ -123,7 +143,7 @@ ${skillsPrompt}
 ${projectMemory}
 
 ` : '';
-    
+
     // Custom instructions section
     const instructionsSection = customInstructions ? `
 
@@ -131,15 +151,60 @@ ${projectMemory}
 ${customInstructions}
 
 ` : '';
-    
-    // Available agents section
-    const agentsSection = `
+
+    // Available agents section — enhanced with session states
+    let agentsSection = `
 
 ## AVAILABLE AGENTS
 ${agentList}
-
 `;
-    
+    // Merge agent session states (current task, processing state, inbox)
+    try {
+        const agentSession = require('./agent-session');
+        if (agentSession && agentSession.getAllAgentStates) {
+            const states = agentSession.getAllAgentStates();
+            if (states.length > 0) {
+                agentsSection += '\n### Agent Session States\n';
+                states.forEach(s => {
+                    const taskInfo = s.task ? ` — task: "${s.task.substring(0, 80)}"` : '';
+                    agentsSection += `- **${s.name}**: ${s.status}${taskInfo} (cycles: ${s.cycleCount}, tools: ${s.toolsUsed})\n`;
+                });
+                agentsSection += '\n';
+            }
+        }
+    } catch (e) { /* agent-session may not be loaded yet */ }
+
+    // Active chat rooms / meetings
+    let roomsSection = '';
+    try {
+        const chatRoom = require('./chat-room');
+        if (chatRoom && chatRoom.listChatRooms) {
+            const rooms = chatRoom.listChatRooms();
+            const activeRooms = rooms.filter(r => r.status === 'active');
+            if (activeRooms.length > 0) {
+                roomsSection = '\n## ACTIVE ROOMS\n';
+                activeRooms.forEach(r => {
+                    const meetingTag = r.isMeeting ? ' [MEETING]' : '';
+                    roomsSection += `- ${r.id}${meetingTag}: ${r.participants.join(', ')} (${r.messageCount} messages)\n`;
+                });
+                roomsSection += '\n';
+            }
+        }
+    } catch (e) { /* chat-room may not be loaded yet */ }
+
+    // Recent git changes (cached, refreshed every 60s)
+    let gitSection = '';
+    try {
+        _refreshGitCache();
+        if (_gitCache.log) {
+            gitSection = '\n## RECENT GIT ACTIVITY\n';
+            gitSection += '### Last 10 Commits\n```\n' + _gitCache.log + '\n```\n';
+            if (_gitCache.changedFiles) {
+                gitSection += '### Recently Changed Files\n```\n' + _gitCache.changedFiles + '\n```\n';
+            }
+        }
+    } catch (e) { /* git may not be available */ }
+
     // Build tools section
     let toolsSection = '';
     if (toolsModule) {
@@ -165,10 +230,10 @@ You may call one or more tools to assist with the user query.
             });
         }
     }
-    
+
     // Combine all sections
     const systemPrompt = `You are Overlord, an AI coding assistant powered by MiniMax M2.5.
-${contextInfo}${cookbookSection}${skillsSection}${memorySection}${instructionsSection}${agentsSection}${toolsSection}
+${contextInfo}${cookbookSection}${skillsSection}${memorySection}${instructionsSection}${agentsSection}${roomsSection}${gitSection}${toolsSection}
 
 ## RESPONSE FORMAT
 When you need to use tools, respond with JSON in this format:
@@ -178,7 +243,7 @@ When you have no more tools to call, respond with:
 {"role": "assistant", "content": "your final response here"}
 
 Remember: Think carefully, use tools when needed, and provide accurate, helpful responses.`;
-    
+
     return systemPrompt;
 }
 

@@ -354,6 +354,11 @@ export function initSocketBridge(socket, store, engine) {
     //  MCP SERVERS
     // ══════════════════════════════════════════════════════════════════════
 
+    socket.on('usage_stats', (data) => {
+        store.set('usage.stats', data);
+        engine.dispatch('usage_stats', data);
+    });
+
     socket.on('mcp_servers_updated', (data) => {
         store.set('mcp.servers', data);
         engine.dispatch('mcp_servers_updated', data);

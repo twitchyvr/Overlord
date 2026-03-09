@@ -11,6 +11,17 @@ let config = null;
 // Last API context for debugging
 let _lastApiContext = null;
 
+// Cumulative session token/cache stats
+let _sessionStats = {
+    requests: 0,
+    inputTokens: 0,
+    outputTokens: 0,
+    cacheReadTokens: 0,
+    cacheWriteTokens: 0,
+    cacheHits: 0,
+    cacheMisses: 0
+};
+
 // Convert stored message format to Anthropic API format.
 // Handles:
 //   role:'tool' → role:'user' with tool_result content block (grouped)
@@ -210,12 +221,35 @@ function parseDelta(event) {
     switch (event.type) {
         case 'message_start':
             delta.message = event.message;
-            // Log cache metrics from usage if present
+            // Accumulate and broadcast usage metrics
             if (event.message?.usage && hub) {
                 const u = event.message.usage;
-                if (u.cache_read_input_tokens || u.cache_creation_input_tokens) {
-                    hub.log(`[Cache] read=${u.cache_read_input_tokens || 0}, write=${u.cache_creation_input_tokens || 0}, uncached=${u.input_tokens || 0}`, 'info');
+                const cacheRead = u.cache_read_input_tokens || 0;
+                const cacheWrite = u.cache_creation_input_tokens || 0;
+                const uncached = u.input_tokens || 0;
+
+                _sessionStats.requests++;
+                _sessionStats.inputTokens += uncached + cacheRead;
+                _sessionStats.cacheReadTokens += cacheRead;
+                _sessionStats.cacheWriteTokens += cacheWrite;
+                if (cacheRead > 0) _sessionStats.cacheHits++;
+                else _sessionStats.cacheMisses++;
+
+                const savings = _sessionStats.inputTokens > 0
+                    ? Math.round((_sessionStats.cacheReadTokens / _sessionStats.inputTokens) * 100)
+                    : 0;
+
+                if (cacheRead || cacheWrite) {
+                    hub.log(`[Cache] ✅ read=${cacheRead.toLocaleString()} write=${cacheWrite.toLocaleString()} uncached=${uncached.toLocaleString()} | session savings: ${savings}%`, 'info');
+                } else {
+                    hub.log(`[Tokens] in=${uncached.toLocaleString()} | cache miss (${_sessionStats.cacheMisses} total)`, 'info');
                 }
+
+                // Broadcast live usage stats to UI
+                hub.broadcast('usage_stats', {
+                    request: { cacheRead, cacheWrite, uncachedInput: uncached },
+                    session: { ..._sessionStats, cacheSavingsPct: savings }
+                });
             }
             break;
             
@@ -248,6 +282,13 @@ function parseDelta(event) {
         case 'message_delta':
             delta.delta = event.delta;
             delta.usage = event.usage;
+            // Capture output tokens
+            if (event.usage?.output_tokens && hub) {
+                _sessionStats.outputTokens += event.usage.output_tokens;
+                hub.broadcast('usage_stats', {
+                    session: { ..._sessionStats }
+                });
+            }
             break;
             
         case 'message_stop':
@@ -277,6 +318,24 @@ function getLastApiContext() {
     return _lastApiContext;
 }
 
+// Get cumulative session stats
+function getSessionStats() {
+    return { ..._sessionStats };
+}
+
+// Reset session stats (call on new conversation)
+function resetSessionStats() {
+    _sessionStats = {
+        requests: 0,
+        inputTokens: 0,
+        outputTokens: 0,
+        cacheReadTokens: 0,
+        cacheWriteTokens: 0,
+        cacheHits: 0,
+        cacheMisses: 0
+    };
+}
+
 // Initialize module
 function init(h, cfg) {
     hub = h;
@@ -288,5 +347,7 @@ module.exports = {
     chatStream,
     parseDelta,
     formatDuration,
-    getLastApiContext
+    getLastApiContext,
+    getSessionStats,
+    resetSessionStats
 };

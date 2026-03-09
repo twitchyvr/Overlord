@@ -18,13 +18,16 @@ function addAssistantMessage(message) {
         role: 'assistant',
         ts: Date.now()
     };
-    
+
     if (typeof message === 'string') {
+        msg.content = message;
+    } else if (Array.isArray(message)) {
+        // Content blocks array — store as content, not as numeric properties
         msg.content = message;
     } else {
         Object.assign(msg, message);
     }
-    
+
     return msg;
 }
 

@@ -451,7 +451,11 @@ async function runAICycle() {
             // full reasoning chain: assistant[tool_use] → user[tool_result] → ...
             const conv = hub.getService('conversation');
             if (conv && conv.addMessage) {
-                conv.addMessage('assistant', lastResponse.content);
+                // Store content AND tool_calls so toAnthropicMessages can reconstruct
+                // the proper tool_use content blocks for the API
+                const stored = { content: lastResponse.content };
+                if (lastResponse.tool_calls) stored.tool_calls = lastResponse.tool_calls;
+                conv.addMessage('assistant', stored);
             }
 
             const toolResults = await toolExecutor.executeToolsWithApproval(lastResponse.tool_calls);

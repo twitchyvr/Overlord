@@ -1,0 +1,8 @@
+{
+  "tools": {
+    "Glob": 4,
+    "Read": 5
+  },
+  "posttooluse_count": 4,
+  "pretooluse_count": 5
+}

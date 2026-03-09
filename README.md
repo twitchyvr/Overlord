@@ -230,12 +230,8 @@ OVERLORD ships with six production-ready agents and supports unlimited custom ag
 
 | Agent | Role | Specialties |
 |---|---|---|
-| `code-implementer` | Senior Full-Stack Developer | File writes, bash, all language support |
-| `testing-engineer` | QA & Test Engineer | Jest, lint, coverage, integration tests |
-| `git-keeper` | Version Control Specialist | Git, GitHub, branches, PRs, releases |
-| `ui-expert` | Frontend & UX Designer | HTML/CSS, accessibility, responsive design |
-| `ui-tester` | Visual & E2E Test Engineer | Puppeteer, accessibility testing, visual regression |
-| `regex-expert` | Pattern Matching Specialist | Complex regex, text processing, validation |
+| `orchestrator` | Orchestrator | Master coordinator for all multi-agent workflows. Decomposes goals into tasks, delegates work to specialist agents, tracks progress, and closes milestones. Never implements code directly — always delegates to the right specialist. |
+| `project-manager` | Project Manager | Plans projects, creates milestones, and hands execution plans to the orchestrator. Coordinates scope, timelines, and requirements. Must coordinate and plan rather than implement directly. |
 
 ### How Agents Work
 
@@ -247,7 +243,7 @@ Each agent is an independent AI session with:
 - **Session state** — tracked independently (IDLE / WORKING) with live sparkline graphs
 - **Inbox** — a queue of tasks delegated by the orchestrator or other agents
 
-When you send a message to OVERLORD, the orchestrator may decide to spin up one or more agents — for example, asking `code-implementer` to write the feature while simultaneously asking `testing-engineer` to prepare a test scaffold. Both agents run their full AI+tool cycles and report back.
+When you send a message to OVERLORD, the orchestrator may decide to spin up one or more agents — for example, asking a `backend-developer` or equivalent agent to write the feature while simultaneously asking a `testing-engineer` to prepare a test scaffold. Both agents run their full AI+tool cycles and report back.
 
 ### Agent Activity — Live Sparklines
 
@@ -577,12 +573,12 @@ The **⇄ Agent Comms** panel shows the real-time internal communication stream 
 This is not a log of tool calls. This is the **actual conversation between AI agents** — the briefs, the reports, the clarifications, and the escalations. You're watching the team meeting.
 
 ```
-orchestrator → code-implementer
+orchestrator → backend-developer
   "Implement POST /tasks with input validation. Schema: { title: string,
    description: string, priority: 'low'|'normal'|'high', dueDate: ISO8601 }.
    Use express-validator. Return 201 with the created task object."
 
-code-implementer → orchestrator
+backend-developer → orchestrator
   "Route implemented and validated. Added to src/routes/tasks.js (lines 1–89).
    Input validation covers all fields. Error responses follow RFC 7807."
 

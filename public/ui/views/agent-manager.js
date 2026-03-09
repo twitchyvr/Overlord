@@ -21,6 +21,12 @@ import { Component, OverlordUI, h } from '../engine.js';
 import { Modal }  from '../components/modal.js';
 import { Toast }  from '../components/toast.js';
 
+// Re-export from modular files for backward compatibility
+export { AgentDetailView, buildAgentDetailView, getSelectedTools, getFormValues, validateAgentForm, setSecurityRoles, getSecurityRoles, AGENT_DETAIL_FIELD_IDS } from './agent-detail-view.js';
+export { AgentCard, buildAgentCard, buildAgentRow, renderAgentList, buildAgentChip, getAgentColor, getAgentInitials } from './agent-card.js';
+export { AgentForm, buildAgentForm, getFormValues, validateForm, toKebabCase, validateAgentName, COMMON_LANGUAGES, AGENT_FORM_FIELDS } from './agent-form.js';
+export { AgentPermissions, buildCapabilityManager, renderToolPermissions, getSelectedTools, getSelectedPermissions, buildCategoryFilter, buildCapabilitySummary, getToolStatus, DEFAULT_CAPABILITY_CATEGORIES } from './agent-permissions.js';
+
 const MODAL_ID = 'agent-manager';
 // Fallback roles — replaced at runtime by server-provided roles via get_security_roles
 let SECURITY_ROLES_MAP = {

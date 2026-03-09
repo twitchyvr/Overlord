@@ -20,6 +20,11 @@ import { PanelComponent } from '../components/panel.js';
 import { Tabs } from '../components/tabs.js';
 
 
+// BACKWARD COMPAT RE-EXPORTS
+export { TeamPanel } from './team-panel.js';
+export { buildAgentCard } from './agent-list.js';
+export { buildRoomCard } from './room-list.js';
+
 export class TeamPanel extends PanelComponent {
 
     constructor(el, opts = {}) {
@@ -460,14 +465,14 @@ export class TeamPanel extends PanelComponent {
             class: 'agent-card-btn',
             title: `Chat with ${agent.name}`,
             dataset: { action: 'agent-chat', agent: agent.name }
-        }, '��'));
+        }, '💬'));
 
         // Start Room button (opens a multi-agent room with this agent)
         header.appendChild(h('button', {
             class: 'agent-card-btn',
             title: `Start a room with ${agent.name}`,
             dataset: { action: 'start-room', agent: agent.name }
-        }, '��'));
+        }, '🚪'));
 
         // Pause/resume button
         const pauseIcon = ses.paused ? '▶' : '⏸';

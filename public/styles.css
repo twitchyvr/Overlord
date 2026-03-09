@@ -1643,3 +1643,130 @@ body {
     flex-shrink: 0;
     font-size: 14px;
 }
+
+
+/* Thinking bubble markdown elements (compact 11px context) */
+.tb-markdown {
+    font-size: 11px;
+    line-height: 1.5;
+    color: var(--text-primary);
+}
+
+.tb-markdown h1,
+.tb-markdown h2,
+.tb-markdown h3,
+.tb-markdown h4,
+.tb-markdown h5,
+.tb-markdown h6 {
+    color: var(--accent-cyan);
+    font-weight: 600;
+    margin: 6px 0 3px;
+}
+
+.tb-markdown h1 { font-size: 1.25em; }
+.tb-markdown h2 { font-size: 1.15em; }
+.tb-markdown h3 { font-size: 1.05em; }
+.tb-markdown h4,
+.tb-markdown h5,
+.tb-markdown h6 { font-size: 1em; }
+
+.tb-markdown blockquote {
+    border-left: 2px solid var(--accent-cyan);
+    padding-left: 8px;
+    margin: 4px 0;
+    color: var(--text-secondary);
+    font-style: italic;
+}
+
+.tb-markdown a {
+    color: var(--accent-cyan);
+    text-decoration: none;
+}
+
+.tb-markdown a:hover {
+    text-decoration: underline;
+}
+
+.tb-markdown strong {
+    color: var(--accent-yellow);
+    font-weight: 600;
+}
+
+.tb-markdown em {
+    font-style: italic;
+    color: var(--accent-magenta);
+}
+
+.tb-markdown hr {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 8px 0;
+}
+
+.tb-markdown table {
+    border-collapse: collapse;
+    width: 100%;
+    margin: 6px 0;
+    font-size: 10px;
+}
+
+.tb-markdown th,
+.tb-markdown td {
+    border: 1px solid var(--border);
+    padding: 3px 6px;
+    text-align: left;
+}
+
+.tb-markdown th {
+    background: var(--bg-input);
+    font-weight: 600;
+}
+
+.tb-markdown code {
+    background: var(--code-bg);
+    padding: 1px 4px;
+    border-radius: 3px;
+    font-family: var(--font-mono);
+    font-size: 0.95em;
+    color: var(--accent-magenta);
+}
+
+.tb-markdown pre {
+    background: var(--code-bg);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 6px;
+    margin: 4px 0;
+    overflow-x: auto;
+    font-family: var(--font-mono);
+    font-size: 10px;
+}
+
+.tb-markdown pre code {
+    background: none;
+    padding: 0;
+    color: var(--text-primary);
+}
+
+.tb-markdown s,
+.tb-markdown del {
+    text-decoration: line-through;
+    color: var(--text-secondary);
+}
+
+.tb-markdown ul,
+.tb-markdown ol {
+    margin: 4px 0;
+    padding-left: 16px;
+}
+
+.tb-markdown li {
+    margin: 2px 0;
+}
+
+/* Task list checkboxes */
+.tb-markdown input[type="checkbox"] {
+    margin-right: 4px;
+    accent-color: var(--accent-green);
+    vertical-align: middle;
+}

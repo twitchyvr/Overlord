@@ -532,14 +532,11 @@ Complete reference for all backend modules, organized by architectural layer.
 
 **Built-in agents:**
 
-| Agent | Role | Capabilities |
-|-------|------|-------------|
-| `git-keeper` | Git Operations Specialist | git, github, version-control |
-| `testing-engineer` | QA & Testing Specialist | testing, linting, quality-assurance, coverage |
-| `code-implementer` | Code Implementation Specialist | coding, file-operations, implementation |
-| `ui-expert` | UI/UX Design Specialist | ui-design, ux-design, css, html, accessibility, responsive-design |
-| `ui-tester` | UI Testing Specialist | UI testing, visual regression |
-| `regex-expert` | Regular Expression Specialist | regex, pattern matching |
+
+| Agent | Role | Specialties |
+|---|---|---|
+| `orchestrator` | Orchestrator | Master coordinator for all multi-agent workflows. Decomposes goals into tasks, delegates work to specialist agents, tracks progress, and closes milestones. Never implements code directly — always delegates to the right specialist. |
+| `project-manager` | Project Manager | Plans projects, creates milestones, and hands execution plans to the orchestrator. Coordinates scope, timelines, and requirements. Must coordinate and plan rather than implement directly. |
 
 **AgentManager class:**
 

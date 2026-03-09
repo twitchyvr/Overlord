@@ -1,4 +1,4 @@
-/* ═══════════════════════════════════════════════════════════════════
+﻿/* ═══════════════════════════════════════════════════════════════════
    OVERLORD UI — Chat View
    ═══════════════════════════════════════════════════════════════════
    The main chat interface. Handles message rendering, streaming,
@@ -8,15 +8,6 @@
    ═══════════════════════════════════════════════════════════════════ */
 
 import { Component, OverlordUI, h } from '../engine.js';
-
-import { Component, OverlordUI, h } from '../engine.js';
-
-// Re-export from modular files for backward compatibility
-export { ChatView } from './message-renderer.js';
-export { renderMarkdown, looksLikeMarkdown, looksLikePlan, extractCodeBlocks } from './markdown-handler.js';
-export { createToolChipEl, toolParamSummary, renderToolInput, renderToolOutput } from './tool-chip-renderer.js';
-export { createThoughtsBubble, updateThoughtBubble, markThinkingDone, toggleThoughts } from './thought-bubble.js';
-export { extractPartialJSONFields, buildStructuredThought, tryRenderStructuredThought } from './structured-thought.js';
 
 export class ChatView extends Component {
 
@@ -863,7 +854,7 @@ export class ChatView extends Component {
 
     // Check whether text contains markdown formatting indicators.
     _looksLikeMarkdown(text) {
-        return /^#{1,6}\s|^\s*[-*]\s|\*\*|__|\[.*\]\(|```|^\d+\.\s|^>\s|~~.*~~|-\s*\[ ?\]|\|.*\|.*\|/m.test(text);
+        return /^#{1,6}\s|^\s*[-*]\s|\*\*|__|\[.*\]\(|```|^\d+\.\s/m.test(text);
     }
 
     // Build a labeled structured thought DOM from an object with known fields.
@@ -1630,3 +1621,4 @@ export class ChatView extends Component {
         return text;
     }
 }
+

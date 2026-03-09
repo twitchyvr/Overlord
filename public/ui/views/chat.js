@@ -9,10 +9,7 @@
 
 import { Component, OverlordUI, h } from '../engine.js';
 
-import { Component, OverlordUI, h } from '../engine.js';
-
 // Re-export from modular files for backward compatibility
-export { ChatView } from './message-renderer.js';
 export { renderMarkdown, looksLikeMarkdown, looksLikePlan, extractCodeBlocks } from './markdown-handler.js';
 export { createToolChipEl, toolParamSummary, renderToolInput, renderToolOutput } from './tool-chip-renderer.js';
 export { createThoughtsBubble, updateThoughtBubble, markThinkingDone, toggleThoughts } from './thought-bubble.js';

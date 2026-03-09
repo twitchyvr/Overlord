@@ -18,10 +18,10 @@ import { Tabs } from '../components/tabs.js';
 import { Button } from '../components/button.js';
 
 // Re-export from modular files for backward compatibility
-export { SettingsView, buildSettingsContainer, buildSection, buildToggle, buildConfigToggle, applyConfigToForm } from './settings-main.js';
+export { buildSettingsContainer, buildSection, buildToggle, buildConfigToggle, applyConfigToForm } from './settings-main.js';
 export { SettingsStore, DEFAULT_CONFIG, createSettingsStore } from './settings-store.js';
-export { renderGeneralTab, MODEL_OPTIONS } from './settings-panels/general.js';
-export { renderAITab, TTS_VOICES } from './settings-panels/ai.js';
+export { renderGeneralTab } from './settings-panels/general.js';
+export { renderAITab } from './settings-panels/ai.js';
 export { renderToolsTab } from './settings-panels/tools.js';
 export { renderDisplayTab, renderAppearancePanel } from './settings-panels/appearance.js';
 export { renderSecurityTab } from './settings-panels/security.js';

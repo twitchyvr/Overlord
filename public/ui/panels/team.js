@@ -20,11 +20,6 @@ import { PanelComponent } from '../components/panel.js';
 import { Tabs } from '../components/tabs.js';
 
 
-// BACKWARD COMPAT RE-EXPORTS
-export { TeamPanel } from './team-panel.js';
-export { buildAgentCard } from './agent-list.js';
-export { buildRoomCard } from './room-list.js';
-
 export class TeamPanel extends PanelComponent {
 
     constructor(el, opts = {}) {

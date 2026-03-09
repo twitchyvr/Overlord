@@ -4957,3 +4957,38 @@ ommand": "# Syntax check ALL frontend JS files\ncd /c/Users/mattr/GitRepos/Overl
 {"timestamp": "2026-03-09T20:42:50.755646+00:00", "hook_event_name": "PreToolUse", "tool_name": "Bash", "session_id": "9bab9b91-6c15-4910-a5cb-5c6b96fb5f8a", "command": "git diff modules/tool-executor.js modules/orchestration-core.js modules/message-queue.js"}
 {"timestamp": "2026-03-09T20:42:50.833145+00:00", "hook_event_name": "PostToolUse", "tool_name": "Bash", "session_id": "9bab9b91-6c15-4910-a5cb-5c6b96fb5f8a"}
 {"timestamp": "2026-03-09T20:43:01.888875+00:00", "hook_event_name": "PreToolUse", "tool_name": "Bash", "session_id": "9bab9b91-6c15-4910-a5cb-5c6b96fb5f8a", "command": "git add modules/tool-executor.js modules/orchestration-core.js modules/message-queue.js .claude/hooks/logs/.last_sound_ts .claude/hooks/logs/hooks-log.jsonl .claude/hooks/logs/session-metrics.json && git commit -m \"$(cat <<'EOF'\nfix(orchestration): tool denial injects bare assistant messages breaking API alternation\n\nFour bugs fixed:\n\n1. hub.addMessage('assistant',...) in tool-executor injected plain-text\n   assistant messages into conversation history when tools were denied.\n   These broke the "}
+{"timestamp": "2026-03-09T20:43:01.983730+00:00", "hook_event_name": "PostToolUse", "tool_name": "Bash", "session_id": "9bab9b91-6c15-4910-a5cb-5c6b96fb5f8a"}
+{"timestamp": "2026-03-09T20:43:09.086175+00:00", "hook_event_name": "Stop", "tool_name": null, "session_id": "9bab9b91-6c15-4910-a5cb-5c6b96fb5f8a"}
+{"timestamp": "2026-03-09T20:44:09.149838+00:00", "hook_event_name": "Notification", "tool_name": null, "session_id": "9bab9b91-6c15-4910-a5cb-5c6b96fb5f8a", "message": "Claude is waiting for your input"}
+{"timestamp": "2026-03-09T20:47:31.435096+00:00", "hook_event_name": "UserPromptSubmit", "tool_name": null, "session_id": "9bab9b91-6c15-4910-a5cb-5c6b96fb5f8a"}
+{"timestamp": "2026-03-09T20:47:34.268723+00:00", "hook_event_name": "Stop", "tool_name": null, "session_id": "9bab9b91-6c15-4910-a5cb-5c6b96fb5f8a"}
+{"timestamp": "2026-03-09T20:50:44.307117+00:00", "hook_event_name": "UserPromptSubmit", "tool_name": null, "session_id": "9bab9b91-6c15-4910-a5cb-5c6b96fb5f8a"}
+{"timestamp": "2026-03-09T20:50:57.309236+00:00", "hook_event_name": "PreToolUse", "tool_name": "Grep", "session_id": "9bab9b91-6c15-4910-a5cb-5c6b96fb5f8a"}
+{"timestamp": "2026-03-09T20:50:57.342200+00:00", "hook_event_name": "PostToolUse", "tool_name": "Grep", "session_id": "9bab9b91-6c15-4910-a5cb-5c6b96fb5f8a"}
+{"timestamp": "2026-03-09T20:51:01.394067+00:00", "hook_event_name": "PreToolUse", "tool_name": "Grep", "session_id": "9bab9b91-6c15-4910-a5cb-5c6b96fb5f8a"}
+{"timestamp": "2026-03-09T20:51:01.412878+00:00", "hook_event_name": "PostToolUse", "tool_name": "Grep", "session_id": "9bab9b91-6c15-4910-a5cb-5c6b96fb5f8a"}
+{"timestamp": "2026-03-09T20:51:09.489910+00:00", "hook_event_name": "PreToolUse", "tool_name": "Grep", "session_id": "9bab9b91-6c15-4910-a5cb-5c6b96fb5f8a"}
+{"timestamp": "2026-03-09T20:51:09.503202+00:00", "hook_event_name": "PostToolUse", "tool_name": "Grep", "session_id": "9bab9b91-6c15-4910-a5cb-5c6b96fb5f8a"}
+{"timestamp": "2026-03-09T20:51:13.792091+00:00", "hook_event_name": "PreToolUse", "tool_name": "Grep", "session_id": "9bab9b91-6c15-4910-a5cb-5c6b96fb5f8a"}
+{"timestamp": "2026-03-09T20:51:13.809757+00:00", "hook_event_name": "PostToolUse", "tool_name": "Grep", "session_id": "9bab9b91-6c15-4910-a5cb-5c6b96fb5f8a"}
+{"timestamp": "2026-03-09T20:51:17.869991+00:00", "hook_event_name": "PreToolUse", "tool_name": "Grep", "session_id": "9bab9b91-6c15-4910-a5cb-5c6b96fb5f8a"}
+{"timestamp": "2026-03-09T20:51:17.905029+00:00", "hook_event_name": "PostToolUse", "tool_name": "Grep", "session_id": "9bab9b91-6c15-4910-a5cb-5c6b96fb5f8a"}
+{"timestamp": "2026-03-09T20:51:21.523024+00:00", "hook_event_name": "PreToolUse", "tool_name": "Grep", "session_id": "9bab9b91-6c15-4910-a5cb-5c6b96fb5f8a"}
+{"timestamp": "2026-03-09T20:51:21.540259+00:00", "hook_event_name": "PostToolUse", "tool_name": "Grep", "session_id": "9bab9b91-6c15-4910-a5cb-5c6b96fb5f8a"}
+{"timestamp": "2026-03-09T20:51:24.926833+00:00", "hook_event_name": "PreToolUse", "tool_name": "Read", "session_id": "9bab9b91-6c15-4910-a5cb-5c6b96fb5f8a", "file_path": "/Users/mattrogers/GitRepos/Overlord/modules/file-tools-module.js"}
+{"timestamp": "2026-03-09T20:51:24.959201+00:00", "hook_event_name": "PostToolUse", "tool_name": "Read", "session_id": "9bab9b91-6c15-4910-a5cb-5c6b96fb5f8a"}
+{"timestamp": "2026-03-09T20:51:29.504977+00:00", "hook_event_name": "PreToolUse", "tool_name": "Grep", "session_id": "9bab9b91-6c15-4910-a5cb-5c6b96fb5f8a"}
+{"timestamp": "2026-03-09T20:51:29.524335+00:00", "hook_event_name": "PostToolUse", "tool_name": "Grep", "session_id": "9bab9b91-6c15-4910-a5cb-5c6b96fb5f8a"}
+{"timestamp": "2026-03-09T20:51:33.417865+00:00", "hook_event_name": "PreToolUse", "tool_name": "Grep", "session_id": "9bab9b91-6c15-4910-a5cb-5c6b96fb5f8a"}
+{"timestamp": "2026-03-09T20:51:33.440925+00:00", "hook_event_name": "PostToolUse", "tool_name": "Grep", "session_id": "9bab9b91-6c15-4910-a5cb-5c6b96fb5f8a"}
+{"timestamp": "2026-03-09T20:51:41.722012+00:00", "hook_event_name": "PreToolUse", "tool_name": "Grep", "session_id": "9bab9b91-6c15-4910-a5cb-5c6b96fb5f8a"}
+{"timestamp": "2026-03-09T20:51:41.744345+00:00", "hook_event_name": "PostToolUse", "tool_name": "Grep", "session_id": "9bab9b91-6c15-4910-a5cb-5c6b96fb5f8a"}
+{"timestamp": "2026-03-09T20:51:45.005585+00:00", "hook_event_name": "PreToolUse", "tool_name": "Grep", "session_id": "9bab9b91-6c15-4910-a5cb-5c6b96fb5f8a"}
+{"timestamp": "2026-03-09T20:51:45.027304+00:00", "hook_event_name": "PostToolUse", "tool_name": "Grep", "session_id": "9bab9b91-6c15-4910-a5cb-5c6b96fb5f8a"}
+{"timestamp": "2026-03-09T20:52:04.572896+00:00", "hook_event_name": "PreToolUse", "tool_name": "Read", "session_id": "9bab9b91-6c15-4910-a5cb-5c6b96fb5f8a", "file_path": "/Users/mattrogers/GitRepos/Overlord/modules/agent-system-module.js"}
+{"timestamp": "2026-03-09T20:52:04.607507+00:00", "hook_event_name": "PostToolUse", "tool_name": "Read", "session_id": "9bab9b91-6c15-4910-a5cb-5c6b96fb5f8a"}
+{"timestamp": "2026-03-09T20:52:18.474374+00:00", "hook_event_name": "PreToolUse", "tool_name": "Edit", "session_id": "9bab9b91-6c15-4910-a5cb-5c6b96fb5f8a", "file_path": "/Users/mattrogers/GitRepos/Overlord/modules/agent-system-module.js"}
+{"timestamp": "2026-03-09T20:52:18.542852+00:00", "hook_event_name": "PostToolUse", "tool_name": "Edit", "session_id": "9bab9b91-6c15-4910-a5cb-5c6b96fb5f8a"}
+{"timestamp": "2026-03-09T20:52:25.285691+00:00", "hook_event_name": "PreToolUse", "tool_name": "Bash", "session_id": "9bab9b91-6c15-4910-a5cb-5c6b96fb5f8a", "command": "node -c modules/agent-system-module.js && echo \"OK\""}
+{"timestamp": "2026-03-09T20:52:25.371034+00:00", "hook_event_name": "PostToolUse", "tool_name": "Bash", "session_id": "9bab9b91-6c15-4910-a5cb-5c6b96fb5f8a"}
+{"timestamp": "2026-03-09T20:52:33.847976+00:00", "hook_event_name": "PreToolUse", "tool_name": "Bash", "session_id": "9bab9b91-6c15-4910-a5cb-5c6b96fb5f8a", "command": "git add modules/agent-system-module.js .claude/hooks/logs/.last_sound_ts .claude/hooks/logs/hooks-log.jsonl .claude/hooks/logs/session-metrics.json && git commit -m \"$(cat <<'EOF'\nfix(approval): register all dynamic tools in tier registry so orchestrator auto-approves\n\nfile_tree, git_diff, project_info and ~15 other dynamic tools from\nfile-tools-module and tools-registry were missing from TOOL_TIER_REGISTRY.\nUnknown tools default to T2/confidence=0.50, which is below the 0.70\nauto-approve thresh"}

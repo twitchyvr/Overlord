@@ -2150,3 +2150,24 @@ ile_path": "C:\\Users\\mattr\\GitRepos\\Overlord\\docs\\App\\Frontend\\store-key
 {"timestamp": "2026-03-09T02:22:35.165159+00:00", "hook_event_name": "PostToolUse", "tool_name": "Read", "session_id": "0e81addc-0448-44b0-828e-205a4f223030"}
 {"timestamp": "2026-03-09T02:22:35.424328+00:00", "hook_event_name": "PreToolUse", "tool_name": "Read", "session_id": "0e81addc-0448-44b0-828e-205a4f223030", "file_path": "C:\\Users\\mattr\\GitRepos\\Overlord\\hub.js"}
 {"timestamp": "2026-03-09T02:22:35.508888+00:00", "hook_event_name": "PostToolUse", "tool_name": "Read", "session_id": "0e81addc-0448-44b0-828e-205a4f223030"}
+{"timestamp": "2026-03-09T02:25:29.040707+00:00", "hook_event_name": "PreToolUse", "tool_name": "Edit", "session_id": "0e81addc-0448-44b0-828e-205a4f223030", "file_path": "C:\\Users\\mattr\\GitRepos\\Overlord\\modules\\tasks-engine.js"}
+{"timestamp": "2026-03-09T02:25:39.261070+00:00", "hook_event_name": "PreToolUse", "tool_name": "Bash", "session_id": "0e81addc-0448-44b0-828e-205a4f223030", "command": "git diff modules/agent-session.js | head -30"}
+{"timestamp": "2026-03-09T02:25:39.542924+00:00", "hook_event_name": "PostToolUse", "tool_name": "Bash", "session_id": "0e81addc-0448-44b0-828e-205a4f223030"}
+{"timestamp": "2026-03-09T02:25:39.709065+00:00", "hook_event_name": "PreToolUse", "tool_name": "Bash", "session_id": "0e81addc-0448-44b0-828e-205a4f223030", "command": "git diff modules/message-builder.js | head -50"}
+{"timestamp": "2026-03-09T02:25:39.999088+00:00", "hook_event_name": "PostToolUse", "tool_name": "Bash", "session_id": "0e81addc-0448-44b0-828e-205a4f223030"}
+{"timestamp": "2026-03-09T02:25:40.270898+00:00", "hook_event_name": "PreToolUse", "tool_name": "Bash", "session_id": "0e81addc-0448-44b0-828e-205a4f223030", "command": "git diff public/ui/views/chat.js | head -20"}
+{"timestamp": "2026-03-09T02:25:40.543326+00:00", "hook_event_name": "PostToolUse", "tool_name": "Bash", "session_id": "0e81addc-0448-44b0-828e-205a4f223030"}
+{"timestamp": "2026-03-09T02:25:48.944651+00:00", "hook_event_name": "PreToolUse", "tool_name": "Bash", "session_id": "0e81addc-0448-44b0-828e-205a4f223030", "command": "ls -la .claude/hooks/ 2>/dev/null && cat .claude/hooks/*.sh 2>/dev/null || echo \"No hooks found\""}
+{"timestamp": "2026-03-09T02:25:49.262354+00:00", "hook_event_name": "PostToolUse", "tool_name": "Bash", "session_id": "0e81addc-0448-44b0-828e-205a4f223030"}
+{"timestamp": "2026-03-09T02:25:49.549454+00:00", "hook_event_name": "PreToolUse", "tool_name": "Bash", "session_id": "0e81addc-0448-44b0-828e-205a4f223030", "command": "cat .claude/settings.local.json 2>/dev/null"}
+{"timestamp": "2026-03-09T02:25:49.845224+00:00", "hook_event_name": "PostToolUse", "tool_name": "Bash", "session_id": "0e81addc-0448-44b0-828e-205a4f223030"}
+{"timestamp": "2026-03-09T02:25:52.329497+00:00", "hook_event_name": "PreToolUse", "tool_name": "Bash", "session_id": "0e81addc-0448-44b0-828e-205a4f223030", "command": "ls .claude/hooks/scripts/ && cat .claude/hooks/scripts/*"}
+{"timestamp": "2026-03-09T02:25:52.623043+00:00", "hook_event_name": "PostToolUse", "tool_name": "Bash", "session_id": "0e81addc-0448-44b0-828e-205a4f223030"}
+{"timestamp": "2026-03-09T02:26:01.197226+00:00", "hook_event_name": "PreToolUse", "tool_name": "Bash", "session_id": "0e81addc-0448-44b0-828e-205a4f223030", "command": "grep -n \"os.version\\|_refreshGitCache\\|AVAILABLE TOOLS\" modules/message-builder.js | head -10"}
+{"timestamp": "2026-03-09T02:26:01.487298+00:00", "hook_event_name": "PostToolUse", "tool_name": "Bash", "session_id": "0e81addc-0448-44b0-828e-205a4f223030"}
+{"timestamp": "2026-03-09T02:26:02.122210+00:00", "hook_event_name": "PreToolUse", "tool_name": "Bash", "session_id": "0e81addc-0448-44b0-828e-205a4f223030", "command": "grep -n \"_parseMessageContent\\|text && text.trim\" public/ui/views/chat.js | head -5"}
+{"timestamp": "2026-03-09T02:26:02.431339+00:00", "hook_event_name": "PostToolUse", "tool_name": "Bash", "session_id": "0e81addc-0448-44b0-828e-205a4f223030"}
+{"timestamp": "2026-03-09T02:26:03.113433+00:00", "hook_event_name": "PreToolUse", "tool_name": "Bash", "session_id": "0e81addc-0448-44b0-828e-205a4f223030", "command": "grep -n \"os.version\\|ENVIRONMENT\\|AVAILABLE TOOLS\" modules/agent-session.js | head -5"}
+{"timestamp": "2026-03-09T02:26:03.364857+00:00", "hook_event_name": "PostToolUse", "tool_name": "Bash", "session_id": "0e81addc-0448-44b0-828e-205a4f223030"}
+{"timestamp": "2026-03-09T02:26:13.102692+00:00", "hook_event_name": "PreToolUse", "tool_name": "Read", "session_id": "0e81addc-0448-44b0-828e-205a4f223030", "file_path": "C:\\Users\\mattr\\GitRepos\\Overlord\\modules\\message-builder.js"}
+{"timestamp": "2026-03-09T02:26:13.103688+00:00", "hook_event_name": "PostToolUse", "tool_name": "Read", "session_id": "0e81addc-0448-44b0-828e-205a4f223030"}

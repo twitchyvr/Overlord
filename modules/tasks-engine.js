@@ -27,6 +27,11 @@ async function init(h) {
     hub.on('socket:get_task_children',  ({ socket, data, cb }) => handleGetTaskChildren(socket, data, cb));
     hub.on('socket:get_task_breadcrumb',({ socket, data, cb }) => handleGetTaskBreadcrumb(socket, data, cb));
 
+    // ── Todo socket events ───────────────────────────────────────────────
+    hub.on('socket:add_todo',    ({ socket, data, cb }) => handleAddTodo(socket, data, cb));
+    hub.on('socket:toggle_todo', ({ socket, data, cb }) => handleToggleTodo(socket, data, cb));
+    hub.on('socket:remove_todo', ({ socket, data, cb }) => handleRemoveTodo(socket, data, cb));
+
     // ── Register public service API ───────────────────────────────────────
     hub.registerService('tasks', {
         // Task CRUD

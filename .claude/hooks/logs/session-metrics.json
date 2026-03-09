@@ -1,8 +1,10 @@
 {
   "tools": {
     "Glob": 4,
-    "Read": 5
+    "Read": 7,
+    "Edit": 1,
+    "Bash": 18
   },
-  "posttooluse_count": 4,
-  "pretooluse_count": 5
+  "posttooluse_count": 14,
+  "pretooluse_count": 16
 }

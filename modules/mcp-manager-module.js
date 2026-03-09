@@ -26,9 +26,9 @@ const SERVER_PRESETS = {
     github: {
         name: 'github',
         description: 'GitHub MCP: repos, issues, PRs, file browsing',
-        command: 'uvx',
-        args: ['mcp-server-github'],
-        env: { GITHUB_TOKEN: '' },
+        command: 'npx',
+        args: ['-y', '@modelcontextprotocol/server-github'],
+        env: { GITHUB_PERSONAL_ACCESS_TOKEN: '' },
         required: false,
         enabled: false,
         builtin: true
@@ -114,6 +114,20 @@ class McpServerConnection {
             const cfg = hub?.getService('config');
             if (cfg?.apiKey) env['MINIMAX_API_KEY'] = cfg.apiKey;
             if (cfg?.baseUrl) env['MINIMAX_API_HOST'] = cfg.baseUrl.replace('/anthropic', '');
+        }
+
+        // For github preset, auto-detect token from gh CLI if not explicitly set
+        if (this.config.name === 'github' && !env['GITHUB_PERSONAL_ACCESS_TOKEN']) {
+            try {
+                const { execFileSync } = require('child_process');
+                const token = execFileSync('gh', ['auth', 'token'], { encoding: 'utf8', timeout: 5000 }).trim();
+                if (token && token.length > 10) {
+                    env['GITHUB_PERSONAL_ACCESS_TOKEN'] = token;
+                    hub?.log(`[MCP:github] Auto-detected token from gh CLI`, 'info');
+                }
+            } catch (_) {
+                hub?.log(`[MCP:github] No GITHUB_PERSONAL_ACCESS_TOKEN set and gh CLI auth not available`, 'warn');
+            }
         }
 
         hub?.log(`[MCP:${this.config.name}] Starting: ${this.config.command} ${(this.config.args || []).join(' ')} (timeout: ${MCP_TIMEOUT_MS / 1000}s)`, 'info');

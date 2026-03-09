@@ -346,10 +346,49 @@ async function handleUserMessage(text, socket) {
     setConsecutiveToolErrors(0);
     
     hub.addMessage('user', text);
-    
+
+    // Signal UI to show typing indicator / streaming placeholder
+    hub.broadcast('stream_start', {});
+
     try {
-        await runAICycle();
-        
+        const lastResponse = await runAICycle();
+
+        // Streaming already handled live thinking (neural) and text (streamUpdate).
+        // Now store in DB and finalize the UI message element.
+        if (lastResponse) {
+            const contentBlocks = Array.isArray(lastResponse.content) ? lastResponse.content : [];
+
+            // Extract text content
+            let responseText = typeof lastResponse.content === 'string'
+                ? lastResponse.content
+                : contentBlocks.filter(b => b.type === 'text').map(b => b.text).join('');
+
+            // Safety: unwrap JSON-wrapped responses
+            if (responseText && responseText.trimStart().startsWith('{')) {
+                try {
+                    const parsed = JSON.parse(responseText);
+                    if (parsed && parsed.content && typeof parsed.content === 'string') {
+                        responseText = parsed.content;
+                    }
+                } catch (_) { /* not JSON, use as-is */ }
+            }
+
+            // Store full content (with thinking blocks) in DB for reasoning chain
+            const conv = hub.getService('conversation');
+            if (conv && conv.addMessage) {
+                if (contentBlocks.length > 0) {
+                    conv.addMessage('assistant', lastResponse.content);
+                } else if (responseText) {
+                    conv.addMessage('assistant', responseText);
+                }
+            }
+
+            // Finalize the streaming UI element (message_add converts streaming → complete)
+            if (responseText) {
+                hub.broadcast('message_add', { role: 'assistant', content: responseText });
+            }
+        }
+
         finishMainProcessing('Ready', 'idle');
     } catch (error) {
         hub.log('[ORCHESTRATION] Error: ' + describeError(error), 'error');
@@ -380,7 +419,7 @@ async function runAICycle() {
         broadcastActivity('agent_thinking_start', { agent: 'orchestrator' });
         
         try {
-            lastResponse = await ai.sendMessage();
+            lastResponse = await ai.sendMessageStreamed();
         } catch (error) {
             broadcastActivity('agent_thinking_done', { agent: 'orchestrator' });
             
@@ -406,7 +445,15 @@ async function runAICycle() {
         // Check for tool calls
         if (lastResponse.tool_calls && lastResponse.tool_calls.length > 0) {
             state.status = 'tool_executing';
-            
+
+            // CRITICAL: Store assistant response (with thinking + tool_use blocks) in
+            // conversation BEFORE adding tool results. The Anthropic API requires the
+            // full reasoning chain: assistant[tool_use] → user[tool_result] → ...
+            const conv = hub.getService('conversation');
+            if (conv && conv.addMessage) {
+                conv.addMessage('assistant', lastResponse.content);
+            }
+
             const toolResults = await toolExecutor.executeToolsWithApproval(lastResponse.tool_calls);
             
             // Check-in every 10 cycles

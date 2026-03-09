@@ -52,6 +52,10 @@ module.exports = {
             tasks = currentConversation.tasks || [];
             roadmap = currentConversation.roadmap || [];
             milestones = currentConversation.milestones || [];
+            // Restore working directory from saved conversation
+            if (currentConversation.workingDir) {
+                WORKING_DIR = currentConversation.workingDir;
+            }
         }
         
         // Register service — must expose EVERY method hub.js calls on conv
@@ -182,6 +186,8 @@ function setWorkingDirectory(dir) {
     WORKING_DIR = dir;
     if (currentConversation) {
         currentConversation.workingDir = dir;
+        // Persist to DB so it survives server restarts
+        conversationStore.saveConversation(currentConversation);
     }
 }
 

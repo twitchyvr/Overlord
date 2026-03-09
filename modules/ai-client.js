@@ -64,6 +64,35 @@ function _effectiveModel(cfg) {
     return (cfg && cfg.model) || 'MiniMax-M2.5-highspeed';
 }
 
+// Clamp temperature to MiniMax's required range (0.0, 1.0]
+function _safeTemperature(t) {
+    const v = parseFloat(t) || 0.7;
+    if (v <= 0) return 0.01;
+    if (v > 1) return 1.0;
+    return v;
+}
+
+// Convert system prompt string to cacheable array format
+// Per MiniMax docs: cache_control on system block caches all tools + system content
+function _cacheableSystem(systemPrompt) {
+    if (!systemPrompt) return undefined;
+    return [
+        { type: 'text', text: systemPrompt, cache_control: { type: 'ephemeral' } }
+    ];
+}
+
+// Add cache_control to the last tool definition (caches all tools as a prefix)
+function _cacheableTools(toolDefs) {
+    if (!toolDefs || toolDefs.length === 0) return [];
+    const cached = toolDefs.map((t, i) => {
+        if (i === toolDefs.length - 1) {
+            return { ...t, cache_control: { type: 'ephemeral' } };
+        }
+        return t;
+    });
+    return cached;
+}
+
 // Make a non-streaming request
 function _makeRequest(messages, systemPrompt) {
     return new Promise((resolve, reject) => {
@@ -84,15 +113,27 @@ function _makeRequest(messages, systemPrompt) {
         };
         
         const tools = hub?.getService('tools');
-        const toolDefs = tools?.getDefinitions?.() || [];
-        
+        const rawToolDefs = tools?.getDefinitions?.() || [];
+        // Strip internal fields (e.g. category) that the API doesn't accept
+        const toolDefs = rawToolDefs.map(({ category, ...rest }) => rest);
+
         const req = https.request(options, (res) => {
             let body = '';
             res.on('data', (chunk) => { body += chunk; });
             res.on('end', () => {
                 if (res.statusCode === 200) {
-                    const parsed = safeJSONParse(body);
+                    // Repair corrupted Unicode from MiniMax before parsing
+                    let safeBody = body;
+                    if (guardrail && guardrail.repairUnicode) {
+                        safeBody = guardrail.repairUnicode(body);
+                    }
+                    const parsed = safeJSONParse(safeBody);
                     if (parsed.success) {
+                        // Log cache metrics if present
+                        const u = parsed.data?.usage;
+                        if (u && hub && (u.cache_read_input_tokens || u.cache_creation_input_tokens)) {
+                            hub.log(`[Cache] read=${u.cache_read_input_tokens || 0}, write=${u.cache_creation_input_tokens || 0}, uncached=${u.input_tokens || 0}`, 'info');
+                        }
                         resolve(parsed.data);
                     } else {
                         reject(new Error('Failed to parse response: ' + parsed.error));
@@ -105,16 +146,33 @@ function _makeRequest(messages, systemPrompt) {
         
         req.on('error', reject);
         
+        const cachedTools = _cacheableTools(toolDefs);
         const payload = {
             model: _effectiveModel(config),
             messages,
-            system: systemPrompt,
+            system: _cacheableSystem(systemPrompt),
             max_tokens: config.maxTokens,
-            temperature: config.temperature,
+            temperature: _safeTemperature(config.temperature),
             stream: false,
-            tools: toolDefs
+            ...(cachedTools.length > 0 ? { tools: cachedTools } : {}),
+            ...(config.thinkingEnabled ? {
+                thinking: {
+                    type: 'enabled',
+                    budget_tokens: Math.min(config.thinkingBudget || 4096, config.maxTokens - 1)
+                }
+            } : {})
         };
-        
+
+        // Debug: log payload summary
+        if (hub) {
+            hub.log(`[AI] _makeRequest: model=${payload.model}, msgs=${messages.length}, system=${Array.isArray(payload.system) ? payload.system[0].text.length : 0} chars, tools=${cachedTools.length}, cache=on`, 'info');
+            if (messages.length > 0) {
+                hub.log(`[AI] First msg: role=${messages[0].role}, content=${JSON.stringify(messages[0].content).substring(0, 120)}`, 'info');
+            } else {
+                hub.log('[AI] WARNING: messages array is EMPTY!', 'error');
+            }
+        }
+
         req.write(JSON.stringify(payload));
         req.end();
     });
@@ -182,16 +240,18 @@ async function _streamRequest(messages, systemPrompt, onEvent) {
         req.on('error', reject);
         
         const tools = hub?.getService('tools');
-        const toolDefs = tools?.getDefinitions?.() || [];
-        
+        const rawToolDefs = tools?.getDefinitions?.() || [];
+        const toolDefs = rawToolDefs.map(({ category, ...rest }) => rest);
+        const cachedTools = _cacheableTools(toolDefs);
+
         const payload = {
             model: _effectiveModel(config),
             messages,
-            system: systemPrompt,
+            system: _cacheableSystem(systemPrompt),
             max_tokens: config.maxTokens,
-            temperature: config.temperature,
+            temperature: _safeTemperature(config.temperature),
             stream: true,
-            tools: toolDefs,
+            ...(cachedTools.length > 0 ? { tools: cachedTools } : {}),
             ...(config.thinkingEnabled ? {
                 thinking: {
                     type: 'enabled',
@@ -222,6 +282,9 @@ module.exports = {
     sanitizeForJSON,
     safeJSONParse,
     _effectiveModel,
+    _safeTemperature,
+    _cacheableSystem,
+    _cacheableTools,
     _makeRequest,
     _streamRequest,
     getLastApiContext

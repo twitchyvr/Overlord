@@ -551,9 +551,20 @@ export class ChatView extends Component {
 
     _handleMessageAdd(msg) {
         if (!this._messagesEl) return;
-        const newContent = (typeof msg.content === 'string'
-            ? msg.content
-            : JSON.stringify(msg.content)).trim();
+        // Extract text from content — handle both string and array (content blocks) format
+        let newContent;
+        if (typeof msg.content === 'string') {
+            newContent = msg.content.trim();
+        } else if (Array.isArray(msg.content)) {
+            // Content blocks array — extract only text blocks, skip thinking
+            newContent = msg.content
+                .filter(b => b.type === 'text')
+                .map(b => b.text || '')
+                .join('')
+                .trim();
+        } else {
+            newContent = String(msg.content || '').trim();
+        }
         const last = this._messagesEl.lastElementChild;
 
         // Remove orphaned streaming div if incoming is not assistant

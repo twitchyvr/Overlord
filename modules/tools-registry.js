@@ -829,6 +829,7 @@ module.exports = {
     execute: executeToolCall,
     TOOL_DEFS,
     TOOL_ALIASES,
+    DYNAMIC_TOOL_DEFS,
     registerDynamicTool,
     getInitialContext
 };

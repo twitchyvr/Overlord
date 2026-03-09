@@ -3,10 +3,50 @@
 
 const os = require('os');
 const { execSync } = require('child_process');
-const { getAI } = require('./ai-client');
+const aiClient = require('./ai-client');
 
 let hub = null;
 let config = null;
+
+// Strip emoji from system prompt before sending to MiniMax
+// MiniMax models corrupt emoji in responses — preventing them from seeing emoji reduces corruption
+const EMOJI_TO_ASCII = {
+    '\u2705': '[OK]',       // ✅
+    '\u26A0\uFE0F': '[!]', // ⚠️
+    '\u26A0': '[!]',        // ⚠ (without variation selector)
+    '\u2728': '[*]',        // ✨
+    '\u2764': '[heart]',    // ❤
+    '\u274C': '[X]',        // ❌
+    '\u2B50': '[star]',     // ⭐
+    '\u2139\uFE0F': '[i]',  // ℹ️
+    '\u{1F4E6}': '[pkg]',   // 📦
+    '\u{1F9E0}': '[brain]', // 🧠
+    '\u{1F30D}': '[web]',   // 🌐 (changed from globe with Americas)
+    '\u{1F30E}': '[web]',   // 🌎
+    '\u{1F30F}': '[web]',   // 🌏
+    '\u{1F310}': '[web]',   // 🌐
+    '\u{1F4C1}': '[dir]',   // 📁
+    '\u{1F511}': '[key]',   // 🔑
+    '\u{1F50C}': '[plug]',  // 🔌
+    '\u{1F4BB}': '[pc]',    // 💻
+    '\u{1F6E1}\uFE0F': '[shield]', // 🛡️
+    '\u{1F6E1}': '[shield]', // 🛡
+    '\u{1F525}': '[fire]',  // 🔥
+    '\u{1F44B}': '[wave]',  // 👋
+    '\u{26A1}': '[zap]',    // ⚡
+};
+
+function stripEmojiForMiniMax(str) {
+    if (typeof str !== 'string') return str;
+    let result = str;
+    // Replace known emoji with ASCII equivalents
+    for (const [emoji, ascii] of Object.entries(EMOJI_TO_ASCII)) {
+        result = result.split(emoji).join(ascii);
+    }
+    // Strip any remaining emoji (broad match)
+    result = result.replace(/(?:\p{Emoji_Presentation}|\p{Emoji}\uFE0F)(?:\u200D(?:\p{Emoji_Presentation}|\p{Emoji}\uFE0F))*/gu, '');
+    return result;
+}
 
 // ── Cached git info (refreshed at most every 60s) ────────────────────
 let _gitCache = { log: '', changedFiles: '', fetchedAt: 0 };
@@ -74,33 +114,41 @@ function buildSystemPrompt(toolsModule) {
     const platformName = process.platform === 'darwin' ? 'macOS' : process.platform === 'win32' ? 'Windows' : 'Linux';
 
     // Get current context
-    const aiClient = getAI();
-    const ctx = aiClient?.getContext ? aiClient.getContext() : null;
+    const aiInstance = aiClient.getAI ? aiClient.getAI() : null;
+    const ctx = aiInstance?.getContext ? aiInstance.getContext() : null;
 
     // Get process state
     const processState = hub?.getProcessState ? hub.getProcessState() : { pid: process.pid, port: 3031 };
 
-    // Build context info
-    const contextInfo = ctx ? `
+    // Build context info (guard every nested property to avoid crashes)
+    let contextInfo = '';
+    if (ctx) {
+        const cu = ctx.contextUsage || {};
+        const cl = ctx.chatLength || {};
+        const cm = ctx.compaction || {};
+        const md = ctx.model || {};
+        const tl = ctx.tools || [];
+        contextInfo = `
 ## CURRENT CONTEXT (ALWAYS INCLUDE THIS INFO)
-- **Date/Time**: ${ctx.timestamp}
-- **Timezone**: ${ctx.timezone}
-- **Working Directory**: ${ctx.workingDirectory}
+- **Date/Time**: ${ctx.timestamp || 'unknown'}
+- **Timezone**: ${ctx.timezone || 'unknown'}
+- **Working Directory**: ${ctx.workingDirectory || 'unknown'}
 - **Platform**: ${platformName}
 - **OS Version**: ${os.version()} (${os.release()})
 - **Node.js**: ${process.version}
-- **Chat Length**: ${ctx.chatLength.messageCount} messages, started ${ctx.chatLength.durationFormatted} ago
-- **Last Request**: ${ctx.lastRequestDurationFormatted}
-- **Context Window**: ${ctx.contextUsage.estimatedTokens} / ${ctx.contextUsage.maxTokens} tokens (${ctx.contextUsage.usagePercent}% used)
-- **Context Raw**: ${ctx.contextUsage.rawUsagePercent.toFixed(1)}% (can exceed 100%)
-- **Compaction**: ${ctx.compaction.count} total compactions, last ${ctx.compaction.timeSinceLastCompactionFormatted}
-- **Context Status**: ${ctx.contextUsage.status} (normal/warning/critical)
-- **Model**: ${ctx.model.name} (${ctx.model.description}, max ${ctx.model.maxTokens} output, ${ctx.model.thinkingBudget} thinking)
-- **Tools Available**: ${ctx.tools.length} tools
+- **Chat Length**: ${cl.messageCount ?? 0} messages, started ${cl.durationFormatted || 'just now'} ago
+- **Last Request**: ${ctx.lastRequestDurationFormatted || 'n/a'}
+- **Context Window**: ${cu.estimatedTokens ?? 0} / ${cu.maxTokens ?? 0} tokens (${cu.usagePercent ?? 0}% used)
+- **Context Raw**: ${(cu.rawUsagePercent ?? 0).toFixed(1)}% (can exceed 100%)
+- **Compaction**: ${cm.count ?? 0} total compactions, last ${cm.timeSinceLastCompactionFormatted || 'n/a'}
+- **Context Status**: ${cu.status || 'unknown'} (normal/warning/critical)
+- **Model**: ${md.name || 'unknown'} (${md.description || ''}, max ${md.maxTokens ?? 0} output, ${md.thinkingBudget ?? 0} thinking)
+- **Tools Available**: ${tl.length} tools
 - **Server PID**: ${processState.pid}
 - **Server Port**: ${processState.port}
-${ctx.contextWarning ? '- **⚠️ WARNING**: Context is ' + ctx.contextUsage.usagePercent + '% full - ' + ctx.contextUsage.status : ''}
-` : '';
+${ctx.contextWarning ? '- **⚠️ WARNING**: Context is ' + (cu.usagePercent ?? 0) + '% full - ' + (cu.status || 'unknown') : ''}
+`;
+    }
 
     // Custom instructions
     const customInstructions = cfg?.customInstructions || '';
@@ -232,19 +280,33 @@ You may call one or more tools to assist with the user query.
     }
 
     // Combine all sections
-    const systemPrompt = `You are Overlord, an AI coding assistant powered by MiniMax M2.5.
+    const systemPrompt = `You are **Overlord**, the AI orchestrator and coding assistant powering this system. You are NOT a generic assistant — you are Overlord, the central intelligence coordinating a team of specialized agents.
+
+Your identity:
+- Name: **Overlord**
+- Role: AI orchestrator and senior coding assistant
+- Powered by: MiniMax M2.5
+- You speak as "Overlord", never as "assistant" or "AI"
+- You use professional markdown formatting in all responses
+- You respond with well-structured, rich markdown: headers, bullet lists, code blocks, bold/italic emphasis, and tables where appropriate
+
 ${contextInfo}${cookbookSection}${skillsSection}${memorySection}${instructionsSection}${agentsSection}${roomsSection}${gitSection}${toolsSection}
 
-## RESPONSE FORMAT
-When you need to use tools, respond with JSON in this format:
-{"role": "assistant", "content": "your text here", "tool_calls": [{"type": "tool_use", "id": "unique_id", "name": "tool_name", "input": {"param1": "value1"}}]}
+## RESPONSE GUIDELINES
+- Respond naturally in markdown. Do NOT wrap your response in JSON — the API handles message formatting.
+- Use tools when needed by making tool_use calls through the API's native tool calling mechanism.
+- Format code with proper syntax-highlighted fenced code blocks (\`\`\`language).
+- Use structured markdown (headers, lists, tables) to organize complex information.
+- Be concise but thorough. Think carefully before responding.
 
-When you have no more tools to call, respond with:
-{"role": "assistant", "content": "your final response here"}
+## EMOJI / SPECIAL CHARACTER RULES
+- When writing or editing code, NEVER corrupt emoji or Unicode characters.
+- If a source file contains emoji (e.g. UI labels, log messages), preserve them exactly as-is.
+- When generating new code, use ASCII-safe alternatives for decorative emoji in strings (e.g. use "[OK]" instead of a checkmark emoji, "[!]" instead of a warning emoji) UNLESS the user explicitly requests emoji.
+- This rule exists because MiniMax models can sometimes produce corrupted Unicode sequences. Prefer ASCII text in generated code to avoid this.`;
 
-Remember: Think carefully, use tools when needed, and provide accurate, helpful responses.`;
-
-    return systemPrompt;
+    // Strip emoji from system prompt — MiniMax corrupts emoji it sees in prompts
+    return stripEmojiForMiniMax(systemPrompt);
 }
 
 // Initialize module

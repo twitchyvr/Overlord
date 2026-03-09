@@ -138,6 +138,10 @@ export class RoomView extends Component {
             this._thinkingAgents.clear();
             this._updateThinkingBar();
         });
+        this.on('change', '.rv-pull-select', (e, el) => {
+            if (el.value) { this._pullIn(el.value); el.value = ''; }
+        });
+        this.on('click', '.rv-join-btn', () => this._joinRoom());
         this.on('keydown', '.rv-input', (e) => {
             if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); this._sendMessage(); }
         });
@@ -270,17 +274,11 @@ export class RoomView extends Component {
             for (const a of available.slice(0, 40)) {
                 sel.appendChild(h('option', { value: a.name }, a.name));
             }
-            sel.addEventListener('change', () => {
-                if (sel.value) { this._pullIn(sel.value); sel.value = ''; }
-            });
             bar.appendChild(sel);
         }
 
         if (!room.userPresent) {
-            bar.appendChild(h('button', {
-                class: 'rv-join-btn',
-                onClick: () => this._joinRoom()
-            }, '👤 Join as participant'));
+            bar.appendChild(h('button', { class: 'rv-join-btn' }, 'Join as participant'));
         }
 
         return bar;
@@ -335,7 +333,10 @@ export class RoomView extends Component {
     }
 
     _renderInput(room) {
-        const placeholder = `Message all ${(room.participants || []).length} agents...`;
+        const agents = (room.participants || []).filter(p => p !== 'user');
+        const placeholder = agents.length > 0
+            ? `Message all ${agents.length} agent${agents.length > 1 ? 's' : ''}...`
+            : 'Send a message...';
         return h('div', { class: 'rv-input-area' },
             h('textarea', { class: 'rv-input', placeholder, rows: '2' }),
             h('button', { class: 'rv-send-btn' }, 'Send')
@@ -461,8 +462,9 @@ export class RoomView extends Component {
         if (!this._socket || !this._currentRoom) return;
         this._socket.emit('pull_agent_into_room', { roomId: this._currentRoom.id, agentName, pulledBy: 'user' }, (result) => {
             if (result?.success && this._currentRoom) {
-                this._currentRoom.participants = result.participants;
-                this._currentRoom.isMeeting = result.isMeeting;
+                // Server returns { success, room, participants, isMeeting }
+                this._currentRoom.participants = result.participants || result.room?.participants || this._currentRoom.participants;
+                this._currentRoom.isMeeting = result.isMeeting ?? result.room?.isMeeting ?? this._currentRoom.isMeeting;
                 this.render();
             }
         });

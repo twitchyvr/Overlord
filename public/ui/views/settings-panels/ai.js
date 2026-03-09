@@ -184,36 +184,43 @@ export function renderAITab(config = {}, socket = null) {
         queueDrainWrap
     ));
 
-    // Extended Thinking Mode
-    const thinkingBudgetInput = h('input', {
-        type: 'number', class: 'settings-input-sm',
-        'data-field': 'thinkingBudget',
-        value: String(config.thinkingBudget || 2048), min: '512', max: '65536', step: '512'
-    });
-    thinkingBudgetInput.addEventListener('change', () => {
-        const v = parseInt(thinkingBudgetInput.value, 10);
-        if (!isNaN(v) && v >= 512 && socket) socket.emit('update_config', { thinkingBudget: v });
-    });
+    // Extended Thinking Mode — High / Med / Low / Off selector
+    const THINKING_LEVELS = [
+        { value: 'off',  label: 'Off',    budget: 0,     enabled: false },
+        { value: 'low',  label: 'Low',    budget: 2048,  enabled: true },
+        { value: 'med',  label: 'Medium', budget: 8192,  enabled: true },
+        { value: 'high', label: 'High',   budget: 32768, enabled: true }
+    ];
 
-    const thinkingWrap = buildConfigToggle('thinkingEnabled', 'Enable extended thinking', (v) => {
-        if (socket) socket.emit('update_config', { thinkingEnabled: v });
-        thinkingBudgetInput.disabled = !v;
-    });
-    if (config.thinkingEnabled) thinkingWrap.querySelector('input').checked = true;
-    if (!config.thinkingEnabled) thinkingBudgetInput.disabled = true;
+    // Determine current level from config
+    const currentLevel = !config.thinkingEnabled ? 'off'
+        : (config.thinkingBudget || 0) <= 2048 ? 'low'
+        : (config.thinkingBudget || 0) <= 8192 ? 'med'
+        : 'high';
 
-    const thinkingRow = h('div', { style: { display: 'flex', flexDirection: 'column', gap: '8px' } },
-        thinkingWrap,
-        h('div', { style: { display: 'flex', alignItems: 'center', gap: '8px' } },
-            h('label', { class: 'settings-num-label', style: { minWidth: '80px' } }, 'Token budget'),
-            thinkingBudgetInput,
-            h('span', { class: 'settings-num-hint' }, 'tokens (512–65536, step 512)')
-        )
+    const makeThinkingRadio = (level) => {
+        const rb = h('input', { type: 'radio', name: 'thinkingLevel', value: level.value });
+        if (currentLevel === level.value) rb.checked = true;
+        rb.addEventListener('change', () => {
+            if (rb.checked && socket) {
+                socket.emit('update_config', {
+                    thinkingEnabled: level.enabled,
+                    thinkingBudget: level.budget,
+                    thinkingLevel: level.value
+                });
+            }
+        });
+        const hint = level.enabled ? ` (${level.budget.toLocaleString()} tokens)` : '';
+        return h('label', { class: 'radio-wrap' }, rb, h('span', {}, level.label + hint));
+    };
+
+    const thinkingWrap = h('div', { class: 'radio-group' },
+        ...THINKING_LEVELS.map(makeThinkingRadio)
     );
 
-    panel.appendChild(buildSection('Extended Thinking Mode',
-        'Enables chain-of-thought reasoning. Requires MiniMax-M2.5 model.',
-        thinkingRow
+    panel.appendChild(buildSection('Extended Thinking (Interleaved Reasoning)',
+        'MiniMax M2.5 supports native interleaved thinking. Higher levels give deeper reasoning but use more tokens.',
+        thinkingWrap
     ));
 
     // Plan Mode Length

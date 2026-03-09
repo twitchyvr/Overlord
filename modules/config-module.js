@@ -20,7 +20,7 @@ const PERSISTENT_KEYS = [
     'referenceDocumentation', 'taskEnforcement',
     'noTruncate', 'alwaysSecurity', 'neverStripFeatures', 'strictCompletion',
     'autoModelSwitch', 'pmModel',
-    'queueDrainMode', 'thinkingEnabled', 'planLength',
+    'queueDrainMode', 'thinkingEnabled', 'thinkingLevel', 'planLength',
     'gitOpsEnabled', 'gitOpsTrigger', 'gitOpsCommitStyle', 'gitOpsPush', 'gitOpsMinChanges',
     'obsidianVaultPath',
     'ttsEnabled', 'ttsMode', 'ttsVoice', 'ttsSpeed',
@@ -47,16 +47,17 @@ function init(hub) {
     const isMac = platform === 'darwin';
     const isLinux = platform === 'linux';
 
-    // Thinking levels: 1=minimal, 2=low, 3=normal, 4=high, 5=maximum
+    // Thinking levels: off, low, med, high (aligned with UI selector)
     const thinkingLevelMap = {
-        '1': 512,
-        '2': 1024,
-        '3': 2048,
-        '4': 4096,
-        '5': 8192
+        'off': 0,
+        'low': 2048,
+        'med': 8192,
+        'high': 32768,
+        // Legacy numeric levels (backwards compat)
+        '1': 512, '2': 1024, '3': 2048, '4': 4096, '5': 8192
     };
-    const defaultThinkingLevel = process.env.THINKING_LEVEL || '3';
-    const defaultThinkingBudget = thinkingLevelMap[defaultThinkingLevel] || 2048;
+    const defaultThinkingLevel = process.env.THINKING_LEVEL || 'off';
+    const defaultThinkingBudget = thinkingLevelMap[defaultThinkingLevel] || 0;
 
     // MiniMax model specifications
     const modelSpecs = {
@@ -84,7 +85,7 @@ function init(hub) {
         modelSpec: modelSpec,
         maxTokens: parseInt(process.env.MAX_TOKENS || modelSpec.maxOutput.toString()),
         temperature: parseFloat(process.env.TEMPERATURE || '0.7'),
-        thinkingLevel: parseInt(defaultThinkingLevel),
+        thinkingLevel: defaultThinkingLevel,
         thinkingBudget: defaultThinkingBudget,
         baseDir: baseDir,
         // Custom instructions (up to 4000 chars) - passed with every prompt
@@ -159,13 +160,22 @@ function init(hub) {
         shell: isWindows ? 'cmd.exe' : (isMac ? '/bin/zsh' : '/bin/bash'),
         shellArgs: isWindows ? ['/c'] : ['-c'],
         setThinkingLevel: (level) => {
+            const strLevel = String(level);
+            if (['off', 'low', 'med', 'high'].includes(strLevel)) {
+                config.thinkingLevel = strLevel;
+                config.thinkingEnabled = strLevel !== 'off';
+                config.thinkingBudget = thinkingLevelMap[strLevel] || 0;
+                hub.log('Thinking level set to ' + strLevel + ' (' + config.thinkingBudget + ' tokens)', 'info');
+                return { level: strLevel, budget: config.thinkingBudget, enabled: config.thinkingEnabled };
+            }
+            // Legacy numeric levels (1-5)
             if (level >= 1 && level <= 5) {
                 config.thinkingLevel = level;
                 config.thinkingBudget = thinkingLevelMap[level] || 2048;
                 hub.log('Thinking level set to ' + level + ' (' + config.thinkingBudget + ' tokens)', 'info');
                 return { level, budget: config.thinkingBudget };
             }
-            return { error: 'Level must be 1-5' };
+            return { error: 'Level must be off/low/med/high or 1-5' };
         }
     };
 

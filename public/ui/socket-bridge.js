@@ -179,7 +179,8 @@ export function initSocketBridge(socket, store, engine) {
 
     socket.on('conversation_loaded', (data) => {
         store.batch(() => {
-            if (data.conversationId) store.set('conversations.current', data.conversationId);
+            const convId = data.conversationId || data.id;
+            if (convId) store.set('conversations.current', convId);
             if (data.mode) store.set('chat.mode', data.mode);
         });
         engine.dispatch('conversation_loaded', data);

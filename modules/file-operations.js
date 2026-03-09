@@ -37,7 +37,61 @@ function sanitizeFilename(filePath) {
 function sanitizeFileContent(content) {
     if (typeof content !== 'string') return content;
     // Remove null bytes
-    return content.replace(/\x00/g, '');
+    content = content.replace(/\x00/g, '');
+    // Repair any corrupted Unicode from MiniMax model output
+    try {
+        const guardrail = require('./guardrail-module');
+        if (guardrail && guardrail.repairUnicode) {
+            content = guardrail.repairUnicode(content);
+        }
+    } catch (_) {}
+    return content;
+}
+
+// Emoji regex: matches all emoji (presentation sequences, keycaps, flags, ZWJ sequences, components)
+const EMOJI_REGEX = /(?:\p{Emoji_Presentation}|\p{Emoji}\uFE0F)(?:\u200D(?:\p{Emoji_Presentation}|\p{Emoji}\uFE0F))*/gu;
+
+// Extract emoji map from a string — returns { position: emoji } for restoration
+function extractEmojiMap(str) {
+    if (typeof str !== 'string') return new Map();
+    const map = new Map();
+    let match;
+    const regex = new RegExp(EMOJI_REGEX.source, 'gu');
+    while ((match = regex.exec(str)) !== null) {
+        map.set(match.index, match[0]);
+    }
+    return map;
+}
+
+// Restore emoji that were corrupted during a patch operation
+// Compares original file content with new content and restores emoji that were mangled
+function restoreCorruptedEmoji(originalContent, newContent) {
+    if (!originalContent || !newContent) return newContent;
+
+    const originalEmojis = extractEmojiMap(originalContent);
+    if (originalEmojis.size === 0) return newContent; // No emoji to protect
+
+    // Check if any original emoji were lost/corrupted
+    let result = newContent;
+    for (const [, emoji] of originalEmojis) {
+        if (!result.includes(emoji)) {
+            // This emoji was corrupted — try to find and fix the corruption
+            // MiniMax typically replaces emoji with: lone surrogates, replacement chars, or mojibake
+            // Look for replacement character sequences near where the emoji should be
+            result = result.replace(/\uFFFD+/g, (match, offset) => {
+                // If there's an original emoji that could fit here, restore it
+                // This is a heuristic — check if any nearby original position had this emoji
+                for (const [origPos, origEmoji] of originalEmojis) {
+                    if (Math.abs(origPos - offset) < 20 && !result.includes(origEmoji)) {
+                        return origEmoji;
+                    }
+                }
+                return match;
+            });
+        }
+    }
+
+    return result;
 }
 
 // Read file contents
@@ -228,26 +282,37 @@ function listDir(p) {
 // Patch file (search and replace)
 function patchFile(p, search, replace) {
     const filePath = resolvePath(p);
-    
+
     try {
         if (!fs.existsSync(filePath)) {
             return `ERROR: File not found: ${filePath}`;
         }
-        
+
         const content = fs.readFileSync(filePath, 'utf-8');
-        
-        // Check if search string exists
-        if (!content.includes(search)) {
-            return `ERROR: Search string not found in file. Make sure the exact string exists (check for whitespace differences).`;
+
+        // Sanitize the replacement content (repair corrupted Unicode from MiniMax)
+        const sanitizedReplace = sanitizeFileContent(replace);
+
+        // Check if search string exists (try exact first, then with repaired Unicode)
+        let searchStr = search;
+        if (!content.includes(searchStr)) {
+            // Try sanitized version of search string
+            searchStr = sanitizeFileContent(search);
+            if (!content.includes(searchStr)) {
+                return `ERROR: Search string not found in file. Make sure the exact string exists (check for whitespace differences).`;
+            }
         }
-        
+
         // Perform replacement
-        const newContent = content.replace(search, replace);
-        
+        let newContent = content.replace(searchStr, sanitizedReplace);
+
+        // Emoji protection: restore any emoji from the original file that were corrupted
+        newContent = restoreCorruptedEmoji(content, newContent);
+
         fs.writeFileSync(filePath, newContent, 'utf-8');
-        
+
         HUB?.log(`[File] Patched ${filePath}`, 'info');
-        
+
         return `Patched: ${filePath}`;
     } catch (err) {
         return `ERROR: ${err.message}`;

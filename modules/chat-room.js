@@ -158,14 +158,29 @@ function pullAgentIntoRoom(roomId, agentName, pulledBy = 'user') {
     room.participants.push(agentName);
     room.pulledInBy = pulledBy;
     
+    // Check if this makes it a meeting (orchestrator + PM both present)
+    const isMeeting = room.participants.includes('orchestrator') && room.participants.includes('project-manager');
+    room.isMeeting = isMeeting;
+
     hub.log(`[ROOM] ${agentName} pulled into room ${roomId} by ${pulledBy}`, 'info');
-    
+
     // Add system message
     addRoomMessage(roomId, 'system', `${agentName} was pulled into the room by ${pulledBy}`, 'system');
-    
-    hub.broadcast('room_agent_joined', { roomId, agentName, pulledBy });
-    
-    return { success: true, room };
+
+    hub.broadcast('room_participant_joined', {
+        roomId,
+        agentName,
+        pulledBy,
+        participants: [...room.participants],
+        isMeeting: room.isMeeting
+    });
+
+    return {
+        success: true,
+        room,
+        participants: [...room.participants],
+        isMeeting: room.isMeeting
+    };
 }
 
 // User leaves a room

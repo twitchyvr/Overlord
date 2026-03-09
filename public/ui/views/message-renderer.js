@@ -174,7 +174,12 @@ export class ChatView extends Component {
         if (typeof content === 'string') return content;
         if (Array.isArray(content)) {
             return content
-                .filter(b => typeof b === 'string' || (b && b.text))
+                .filter(b => {
+                    if (typeof b === 'string') return true;
+                    // Skip thinking blocks — they go to thought bubbles, not chat
+                    if (b && b.type === 'thinking') return false;
+                    return b && (b.text || b.type === 'text');
+                })
                 .map(b => typeof b === 'string' ? b : b.text)
                 .join('\n\n');
         }
@@ -294,9 +299,7 @@ export class ChatView extends Component {
 
     _handleMessageAdd(msg) {
         if (!this._messagesEl) return;
-        const newContent = (typeof msg.content === 'string'
-            ? msg.content
-            : JSON.stringify(msg.content)).trim();
+        const newContent = this._parseMessageContent(msg.content).trim();
         const last = this._messagesEl.lastElementChild;
 
         if (msg.role !== 'assistant' && last &&

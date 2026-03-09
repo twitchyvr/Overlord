@@ -442,6 +442,13 @@ class Hub extends EventEmitter {
             const activeConvId = conv?.getId?.();
             if (activeConvId) {
                 this.joinConversationRoom(socket, activeConvId);
+                // Send conversation history so the UI loads past messages on refresh
+                const history = conv.getHistory ? conv.getHistory() : (conv.getMessages ? conv.getMessages() : []);
+                socket.emit('conversation_loaded', {
+                    id: activeConvId,
+                    messages: history,
+                    roadmap: conv.getRoadmap ? conv.getRoadmap() : []
+                });
             }
 
             // Forward client events to hub
@@ -713,9 +720,10 @@ class Hub extends EventEmitter {
                     if (data.strictCompletion !== undefined) config.strictCompletion = Boolean(data.strictCompletion);
                     // Queue drain mode
                     if (data.queueDrainMode !== undefined && ['consolidated', 'sequential'].includes(data.queueDrainMode)) config.queueDrainMode = data.queueDrainMode;
-                    // Thinking mode
+                    // Thinking mode (High/Med/Low/Off)
                     if (data.thinkingEnabled !== undefined) config.thinkingEnabled = Boolean(data.thinkingEnabled);
-                    if (data.thinkingBudget !== undefined) { const tb = parseInt(data.thinkingBudget, 10); if (!isNaN(tb) && tb >= 512) config.thinkingBudget = tb; }
+                    if (data.thinkingBudget !== undefined) { const tb = parseInt(data.thinkingBudget, 10); if (!isNaN(tb) && tb >= 0) config.thinkingBudget = tb; }
+                    if (data.thinkingLevel !== undefined && ['off','low','med','high'].includes(data.thinkingLevel)) config.thinkingLevel = data.thinkingLevel;
                     // Plan length
                     if (data.planLength !== undefined && ['short','regular','long','unlimited'].includes(data.planLength)) config.planLength = data.planLength;
                     // GitOps auto-commit settings
@@ -766,6 +774,7 @@ class Hub extends EventEmitter {
                         queueDrainMode: config.queueDrainMode || 'consolidated',
                         thinkingEnabled: config.thinkingEnabled === true,
                         thinkingBudget: config.thinkingBudget || 2048,
+                        thinkingLevel: config.thinkingLevel || 'off',
                         planLength: config.planLength || 'regular',
                         gitOpsEnabled: config.gitOpsEnabled !== false,
                         gitOpsTrigger: config.gitOpsTrigger || 'task',
@@ -820,6 +829,7 @@ class Hub extends EventEmitter {
                         queueDrainMode: config.queueDrainMode || 'consolidated',
                         thinkingEnabled: config.thinkingEnabled === true,
                         thinkingBudget: config.thinkingBudget || 2048,
+                        thinkingLevel: config.thinkingLevel || 'off',
                         planLength: config.planLength || 'regular',
                         gitOpsEnabled: config.gitOpsEnabled !== false,
                         gitOpsTrigger: config.gitOpsTrigger || 'task',
@@ -1012,12 +1022,13 @@ class Hub extends EventEmitter {
             });
 
             // Working directory management
-            // NOTE: conv.setWorkingDirectory() already calls hub.broadcast('working_dir_update')
-            // so we do NOT emit a second time here to avoid duplicate logs.
             socket.on('set_working_dir', (dir) => {
                 const conv = this.getService('conversation');
                 if (conv && conv.setWorkingDirectory) {
                     conv.setWorkingDirectory(dir);
+                    // Broadcast to all clients so UI updates
+                    this.broadcastAll('working_dir_update', dir);
+                    this.log(`[Hub] Working directory set to: ${dir}`, 'info');
                     // Also persist to active project data if one is loaded
                     const projects = this.getService('projects');
                     if (projects && projects.getActiveProjectId()) {
@@ -1330,8 +1341,31 @@ class Hub extends EventEmitter {
             // Get all available tools (categorized) for the Agent Manager UI
             socket.on('get_available_tools', (cb) => {
                 if (typeof cb !== 'function') return;
+                // Try tools service getCategorizedTools first
                 const svc = this.getService('tools');
-                cb(svc && svc.getCategorizedTools ? svc.getCategorizedTools() : {});
+                if (svc && svc.getCategorizedTools) {
+                    cb(svc.getCategorizedTools());
+                    return;
+                }
+                // Build categories from agent-manager's static TOOL_CATEGORIES as a base
+                const agentMgr = this.getService('agentManager');
+                const base = (agentMgr && agentMgr.TOOL_CATEGORIES)
+                    ? JSON.parse(JSON.stringify(agentMgr.TOOL_CATEGORIES))
+                    : {};
+                // Merge in tools from tools-registry (static TOOL_DEFS + dynamic registrations)
+                try {
+                    const toolsRegistry = require('./modules/tools-registry');
+                    const allDefs = [
+                        ...(toolsRegistry.TOOL_DEFS || []),
+                        ...(toolsRegistry.DYNAMIC_TOOL_DEFS || [])
+                    ];
+                    for (const def of allDefs) {
+                        const cat = def.category || 'other';
+                        if (!base[cat]) base[cat] = [];
+                        if (!base[cat].includes(def.name)) base[cat].push(def.name);
+                    }
+                } catch (_) { /* tools-registry not available */ }
+                cb(base);
             });
 
             // Set agent tool permissions (replaces tools list)
@@ -2226,8 +2260,12 @@ Rules:
         process.kill(process.pid, 'SIGKILL');
     }
 
-    // Add message to chat
+    // Add message to chat (stores in conversation AND broadcasts to UI)
     addMessage(role, content) {
+        const conv = this.getService('conversation');
+        if (conv && conv.addMessage) {
+            conv.addMessage(role, content);
+        }
         this.broadcast('message_add', { role, content });
     }
 

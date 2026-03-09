@@ -1,7 +1,7 @@
 // ==================== CHAT STREAM MODULE ====================
 // Chat streaming with delta parsing for SSE events
 
-const { safeJSONParse, _effectiveModel } = require('./ai-client');
+const { safeJSONParse, _effectiveModel, _safeTemperature, _cacheableSystem, _cacheableTools } = require('./ai-client');
 const https = require('https');
 const { URL } = require('url');
 
@@ -10,6 +10,63 @@ let config = null;
 
 // Last API context for debugging
 let _lastApiContext = null;
+
+// Convert stored message format to Anthropic API format.
+// Handles:
+//   role:'tool' → role:'user' with tool_result content block (grouped)
+//   role:'assistant' with tool_calls array → content blocks with tool_use
+//   role:'assistant' with content blocks → passed through as-is
+function toAnthropicMessages(messages) {
+    const out = [];
+    for (const msg of messages) {
+        if (!msg || !msg.role) continue;
+
+        if (msg.role === 'tool') {
+            // Merge consecutive tool results into one user message
+            const toolBlock = {
+                type: 'tool_result',
+                tool_use_id: msg.tool_call_id || msg.tool_use_id || 'unknown',
+                content: typeof msg.content === 'string' ? msg.content : JSON.stringify(msg.content)
+            };
+            const last = out[out.length - 1];
+            if (last && last.role === 'user' && Array.isArray(last.content) &&
+                last.content.length > 0 && last.content[0].type === 'tool_result') {
+                last.content.push(toolBlock);
+            } else {
+                out.push({ role: 'user', content: [toolBlock] });
+            }
+            continue;
+        }
+
+        if (msg.role === 'assistant' && msg.tool_calls && msg.tool_calls.length > 0) {
+            // Convert OpenAI-style tool_calls to Anthropic content blocks
+            const blocks = [];
+            if (msg.content && typeof msg.content === 'string' && msg.content.trim()) {
+                blocks.push({ type: 'text', text: msg.content });
+            } else if (Array.isArray(msg.content)) {
+                blocks.push(...msg.content);
+            }
+            for (const tc of msg.tool_calls) {
+                blocks.push({
+                    type: 'tool_use',
+                    id: tc.id,
+                    name: tc.name || tc.function?.name,
+                    input: tc.input || (typeof tc.function?.arguments === 'string'
+                        ? (() => { try { return JSON.parse(tc.function.arguments); } catch(_) { return {}; } })()
+                        : tc.function?.arguments || {})
+                });
+            }
+            out.push({ role: 'assistant', content: blocks });
+            continue;
+        }
+
+        // Default: pass through, ensure content is valid
+        if (msg.content !== undefined && msg.content !== null) {
+            out.push({ role: msg.role, content: msg.content });
+        }
+    }
+    return out;
+}
 
 // Chat stream with delta parsing
 async function chatStream(messages, onEvent, onDone, onError, systemOverride, configOverrides) {
@@ -55,9 +112,17 @@ async function chatStream(messages, onEvent, onDone, onError, systemOverride, co
                 buffer = buffer.slice(lineEnd + 1);
                 
                 if (line.startsWith('data: ')) {
-                    const jsonStr = line.slice(6);
+                    let jsonStr = line.slice(6);
                     if (jsonStr === '[DONE]') continue;
-                    
+
+                    // Repair corrupted Unicode from MiniMax before parsing
+                    try {
+                        const guardrail = require('./guardrail-module');
+                        if (guardrail && guardrail.repairUnicode) {
+                            jsonStr = guardrail.repairUnicode(jsonStr);
+                        }
+                    } catch (_) {}
+
                     const parsed = safeJSONParse(jsonStr);
                     if (parsed.success) {
                         onEvent(parsed.data);
@@ -77,32 +142,35 @@ async function chatStream(messages, onEvent, onDone, onError, systemOverride, co
         req.destroy(new Error(`API request timed out after ${_timeoutMs / 1000}s`));
     });
     
-    // Build system prompt from tools
+    // Build system prompt from tools (unless already provided via systemOverride)
     const tools = hub.getService('tools');
-    if (!tools) {
+    if (!tools && !systemOverride) {
         throw new Error('Tools service not available');
     }
-    const toolDefs = tools.getDefinitions();
+    const rawToolDefs = tools ? tools.getDefinitions() : [];
+    // Strip internal fields (e.g. category) that the API doesn't accept
+    const toolDefs = rawToolDefs.map(({ category, ...rest }) => rest);
     const messageBuilder = require('./message-builder');
-    const systemPrompt = messageBuilder.buildSystemPrompt(tools);
-    
+    const systemPrompt = systemOverride || messageBuilder.buildSystemPrompt(tools);
+
     hub.log(`Sending request with ${toolDefs.length} tools defined`, 'info');
-    
+
     // Merge config overrides
     const effectiveCfg = configOverrides ? { ...config, ...configOverrides } : config;
-    
+
     // Build request payload
     const toolParser = require('./tool-parser');
     const toolsSection = toolParser.extractToolDefinitions(toolDefs);
-    
+
+    const cachedTools = _cacheableTools(toolDefs);
     const requestPayload = {
         model: _effectiveModel(effectiveCfg),
-        messages: messages,
-        system: systemOverride || systemPrompt,
+        messages: toAnthropicMessages(messages),
+        system: _cacheableSystem(systemOverride || systemPrompt),
         max_tokens: effectiveCfg.maxTokens,
-        temperature: effectiveCfg.temperature,
+        temperature: _safeTemperature(effectiveCfg.temperature),
         stream: true,
-        tools: toolDefs,
+        ...(cachedTools.length > 0 ? { tools: cachedTools } : {}),
         ...(effectiveCfg.thinkingEnabled ? {
             thinking: {
                 type: 'enabled',
@@ -142,17 +210,33 @@ function parseDelta(event) {
     switch (event.type) {
         case 'message_start':
             delta.message = event.message;
+            // Log cache metrics from usage if present
+            if (event.message?.usage && hub) {
+                const u = event.message.usage;
+                if (u.cache_read_input_tokens || u.cache_creation_input_tokens) {
+                    hub.log(`[Cache] read=${u.cache_read_input_tokens || 0}, write=${u.cache_creation_input_tokens || 0}, uncached=${u.input_tokens || 0}`, 'info');
+                }
+            }
             break;
             
         case 'content_block_start':
             delta.contentBlock = event.content_block;
+            if (event.content_block && event.content_block.type === 'thinking') {
+                delta.isThinkingBlock = true;
+            }
             break;
-            
+
         case 'content_block_delta':
             delta.delta = event.delta;
             // Parse specific delta types
             if (event.delta && event.delta.type === 'text_delta') {
                 delta.text = event.delta.text;
+            } else if (event.delta && event.delta.type === 'thinking_delta') {
+                delta.thinking = event.delta.thinking;
+                // Broadcast thinking to UI via hub
+                if (hub && hub.neural && event.delta.thinking) {
+                    hub.neural(event.delta.thinking);
+                }
             } else if (event.delta && event.delta.type === 'input_json_delta') {
                 delta.json = event.delta.partial_json;
             }

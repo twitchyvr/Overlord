@@ -990,7 +990,7 @@ export class ChatView extends Component {
         parts.forEach(part => {
             if (part.t === 'text' && part.v) {
                 const structured = this._tryRenderThoughtJSON(part.v);
-                frag.appendChild(structured || h('pre', { class: 'tb-text-seg' }, part.v));
+                frag.appendChild(structured || this._renderThoughtPlainText(part.v));
             } else if (part.t === 'chip') {
                 try {
                     const chip = JSON.parse(part.j);
@@ -1000,7 +1000,7 @@ export class ChatView extends Component {
                         frag.appendChild(this._createToolChipEl(chip));
                     }
                 } catch (_) {
-                    frag.appendChild(h('pre', { class: 'tb-text-seg' }, part.j));
+                    frag.appendChild(this._renderThoughtPlainText(part.j));
                 }
             }
         });
@@ -1008,9 +1008,38 @@ export class ChatView extends Component {
         container.appendChild(frag);
     }
 
+    /**
+     * Render plain thought text into paragraphs with proper line breaks.
+     * \n\n → paragraph break (tight margin, no double spacing)
+     * \n   → <br> line break within a paragraph
+     */
+    _renderThoughtPlainText(text) {
+        const wrapper = document.createElement('div');
+        wrapper.className = 'tb-text-seg tb-plain';
+
+        const paragraphs = text.split(/\n{2,}/);
+        for (let i = 0; i < paragraphs.length; i++) {
+            const paraText = paragraphs[i];
+            if (!paraText.trim()) continue;
+
+            const p = document.createElement('p');
+            p.className = 'tb-para';
+
+            const lines = paraText.split('\n');
+            for (let j = 0; j < lines.length; j++) {
+                if (j > 0) p.appendChild(document.createElement('br'));
+                p.appendChild(document.createTextNode(lines[j]));
+            }
+
+            wrapper.appendChild(p);
+        }
+
+        return wrapper;
+    }
+
     // Detect structured thinking content (JSON or markdown) and render readably.
     // Handles complete JSON, incomplete/streaming JSON, and markdown text.
-    // Returns a DOM element or null (falls back to raw <pre>).
+    // Returns a DOM element or null (falls back to plain text paragraphs).
     _tryRenderThoughtJSON(text) {
         const trimmed = text.trim();
         const knownFields = ['agent', 'context', 'task'];

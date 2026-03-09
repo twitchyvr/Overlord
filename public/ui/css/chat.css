@@ -636,6 +636,11 @@
 .tb-structured .tc-lbl { margin-top: 6px; font-size: 9px; font-weight: 700; letter-spacing: 0.08em; color: rgba(168,85,247,0.7); text-transform: uppercase; }
 .tb-structured .tc-lbl:first-child { margin-top: 0; }
 
+/* Plain-text thought paragraphs (non-markdown, non-JSON fallback) */
+.tb-plain { white-space: normal; }
+.tb-para { margin: 0 0 4px; }
+.tb-para:last-child { margin-bottom: 0; }
+
 /* Markdown rendered inside thinking or delegate fields */
 .tb-markdown { white-space: normal; }
 .tb-markdown p { margin: 0 0 2px; }

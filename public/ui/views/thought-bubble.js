@@ -194,7 +194,7 @@ export function renderThoughtsContent(container, raw, createChip) {
     parts.forEach(part => {
         if (part.t === 'text' && part.v) {
             const structured = tryRenderThoughtJSON(part.v);
-            frag.appendChild(structured || h('pre', { class: 'tb-text-seg' }, part.v));
+            frag.appendChild(structured || _renderPlainText(part.v));
         } else if (part.t === 'chip') {
             try {
                 const chip = JSON.parse(part.j);
@@ -204,12 +204,35 @@ export function renderThoughtsContent(container, raw, createChip) {
                     frag.appendChild(createChip(chip));
                 }
             } catch (_) {
-                frag.appendChild(h('pre', { class: 'tb-text-seg' }, part.j));
+                frag.appendChild(_renderPlainText(part.j));
             }
         }
     });
 
     container.appendChild(frag);
+}
+
+/**
+ * Render plain text into paragraphs with proper line breaks.
+ * \n\n → paragraph break (tight 4px margin)
+ * \n   → <br> line break within a paragraph
+ */
+function _renderPlainText(text) {
+    const wrapper = document.createElement('div');
+    wrapper.className = 'tb-text-seg tb-plain';
+    const paragraphs = text.split(/\n{2,}/);
+    for (const paraText of paragraphs) {
+        if (!paraText.trim()) continue;
+        const p = document.createElement('p');
+        p.className = 'tb-para';
+        const lines = paraText.split('\n');
+        for (let j = 0; j < lines.length; j++) {
+            if (j > 0) p.appendChild(document.createElement('br'));
+            p.appendChild(document.createTextNode(lines[j]));
+        }
+        wrapper.appendChild(p);
+    }
+    return wrapper;
 }
 
 /**

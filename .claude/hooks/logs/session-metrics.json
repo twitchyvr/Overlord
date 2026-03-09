@@ -1,10 +1,16 @@
 {
   "tools": {
-    "Glob": 4,
-    "Read": 7,
-    "Edit": 1,
-    "Bash": 18
+    "Edit": 3,
+    "Grep": 19,
+    "Read": 60,
+    "Bash": 14,
+    "Agent": 2,
+    "Glob": 2
   },
-  "posttooluse_count": 14,
-  "pretooluse_count": 16
+  "posttooluse_count": 50,
+  "pretooluse_count": 47,
+  "subagentstart_count": 1,
+  "tool_failures": 1,
+  "compactions": 1,
+  "prompts_submitted": 3
 }

@@ -1,22 +1,12 @@
 {
-  "session_id": "9bab9b91-6c15-4910-a5cb-5c6b96fb5f8a",
-  "session_start": "2026-03-09T20:32:58.915895+00:00",
-  "pretooluse_count": 63,
-  "posttooluse_count": 63,
-  "tool_failures": 0,
-  "guardrail_blocks": 0,
-  "prompts_submitted": 3,
-  "notifications": 1,
-  "compactions": 0,
-  "sounds_played": 0,
   "tools": {
-    "Agent": 2,
-    "Glob": 14,
-    "Read": 44,
-    "Grep": 34,
-    "Edit": 22,
-    "Bash": 11
+    "Read": 24,
+    "Grep": 2,
+    "Agent": 1,
+    "Edit": 6,
+    "Bash": 3
   },
-  "subagentstart_count": 1,
+  "posttooluse_count": 17,
+  "pretooluse_count": 16,
   "subagentstop_count": 1
 }

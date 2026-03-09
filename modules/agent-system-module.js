@@ -82,6 +82,15 @@ const TOOL_TIER_REGISTRY = {
     'show_chart':           { tier: 1, category: 'display',    risk: 'none',     description: 'Display chart in UI' },
     'ui_action':            { tier: 1, category: 'display',    risk: 'none',     description: 'Trigger UI action' },
 
+    // Obsidian vault tools (obsidian-vault-module)
+    'vault_list_notes':     { tier: 1, category: 'read',      risk: 'none',     description: 'List vault notes' },
+    'vault_read_note':      { tier: 1, category: 'read',      risk: 'none',     description: 'Read vault note' },
+    'vault_search':         { tier: 1, category: 'read',      risk: 'none',     description: 'Search vault notes' },
+
+    // Media / external API tools (read-only)
+    'take_screenshot':      { tier: 1, category: 'read',      risk: 'none',     description: 'Screenshot web page' },
+    'minimax_list_files':   { tier: 1, category: 'read',      risk: 'none',     description: 'List MiniMax uploaded files' },
+
     // ── Tier 2 — Orchestrator-approve (writes, confidence-gated) ──
     'add_todo':             { tier: 2, category: 'task',      risk: 'low',      description: 'Add a todo/task item' },
     'toggle_todo':          { tier: 2, category: 'task',      risk: 'low',      description: 'Toggle todo completion' },
@@ -91,6 +100,10 @@ const TOOL_TIER_REGISTRY = {
     'deactivate_skill':     { tier: 2, category: 'config',    risk: 'low',      description: 'Deactivate a skill' },
     'socket_push':          { tier: 2, category: 'communicate', risk: 'low',    description: 'Push notification via socket' },
     'github':               { tier: 2, category: 'vcs',       risk: 'low',      description: 'GitHub CLI operations' },
+    'vault_write_note':     { tier: 2, category: 'write',     risk: 'low',      description: 'Create/update vault note' },
+    'speak':                { tier: 2, category: 'media',     risk: 'low',      description: 'Text-to-speech synthesis' },
+    'generate_image':       { tier: 2, category: 'media',     risk: 'low',      description: 'Generate image via API' },
+    'minimax_upload_file':  { tier: 2, category: 'write',     risk: 'low',      description: 'Upload file to MiniMax' },
     'write_file':           { tier: 2, category: 'write',     risk: 'medium',   description: 'Write/create file' },
     'patch_file':           { tier: 2, category: 'write',     risk: 'medium',   description: 'Patch file contents' },
     'append_file':          { tier: 2, category: 'write',     risk: 'medium',   description: 'Append to file' },
@@ -105,6 +118,7 @@ const TOOL_TIER_REGISTRY = {
 
     // ── Tier 3 — Human required (destructive, external, package changes) ──
     'delete_file':          { tier: 3, category: 'destructive', risk: 'high',   description: 'Delete file' },
+    'minimax_delete_file':  { tier: 3, category: 'destructive', risk: 'high',   description: 'Delete MiniMax uploaded file' },
     'git_commit':           { tier: 3, category: 'vcs',       risk: 'high',     description: 'Git commit' },
     'git_push':             { tier: 3, category: 'vcs',       risk: 'high',     description: 'Git push to remote' },
     'handoff_to_orchestrator': { tier: 2, category: 'workflow', risk: 'low',    description: 'PM handoff to orchestrator' },
@@ -318,6 +332,19 @@ function classifyApprovalTier(toolName, input) {
             };
 
         default:
+            // MCP tools (mcp_{server}_{tool}) — treat as T2 with decent confidence
+            // since MCP servers are user-configured and generally trusted
+            if (toolName.startsWith('mcp_')) {
+                const readHints = /read|list|get|search|query|fetch|find|view|show|describe/i;
+                const writeHints = /write|create|update|delete|send|post|put|patch|remove|drop/i;
+                if (readHints.test(toolName)) {
+                    return { tier: APPROVAL_TIERS.SELF_APPROVE, confidence: 0.85, reasoning: 'MCP read tool (auto-approved)', action };
+                }
+                if (writeHints.test(toolName)) {
+                    return { tier: APPROVAL_TIERS.ORCHESTRATOR, confidence: 0.80, reasoning: 'MCP write tool', action };
+                }
+                return { tier: APPROVAL_TIERS.ORCHESTRATOR, confidence: 0.75, reasoning: 'MCP tool (user-configured server)', action };
+            }
             return {
                 tier: APPROVAL_TIERS.ORCHESTRATOR,
                 confidence: 0.50,

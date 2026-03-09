@@ -67,6 +67,12 @@ module.exports = {
             getMessages: () => currentConversation?.messages || [],
             getHistory: () => currentConversation?.messages || [],
             addMessage: (role, content) => addMessage(role, content),
+            addToolResult: (toolId, content) => {
+                if (!currentConversation) return;
+                const msg = messageQueue.addToolResult(toolId, content);
+                if (msg) currentConversation.messages.push(msg);
+                return msg;
+            },
             replaceHistory: (msgs) => {
                 if (currentConversation) currentConversation.messages = msgs;
             },

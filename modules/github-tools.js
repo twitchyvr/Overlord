@@ -1,166 +1,222 @@
 // ==================== GITHUB TOOLS MODULE ====================
-// GitHub operations via gh CLI
+// GitHub operations via gh CLI + local git via spawn (no shell injection)
 
 const { spawn } = require('child_process');
 
 let HUB = null;
 let CONFIG = null;
 
-// Execute gh command
-function runGh(args) {
+// Run gh CLI with safe args array (no shell interpolation)
+function runGh(args, cwd) {
     return new Promise((resolve, reject) => {
         const proc = spawn('gh', args, {
             stdio: ['pipe', 'pipe', 'pipe'],
-            shell: true
+            shell: false,
+            cwd: cwd || process.cwd()
         });
 
         let stdout = '';
         let stderr = '';
-
-        proc.stdout.on('data', (data) => {
-            stdout += data.toString();
-        });
-
-        proc.stderr.on('data', (data) => {
-            stderr += data.toString();
-        });
-
-        proc.on('close', (code) => {
-            resolve({
-                success: code === 0,
-                stdout: stdout.trim(),
-                stderr: stderr.trim(),
-                code
-            });
-        });
-
-        proc.on('error', (err) => {
-            reject(err);
-        });
+        proc.stdout.on('data', d => { stdout += d.toString(); });
+        proc.stderr.on('data', d => { stderr += d.toString(); });
+        proc.on('close', code => resolve({ success: code === 0, stdout: stdout.trim(), stderr: stderr.trim(), code }));
+        proc.on('error', reject);
     });
 }
 
-// Handle GitHub operations
+// Run local git with safe args array
+function runGit(args, cwd) {
+    return new Promise((resolve, reject) => {
+        const proc = spawn('git', args, {
+            stdio: ['pipe', 'pipe', 'pipe'],
+            shell: false,
+            cwd: cwd || process.cwd()
+        });
+
+        let stdout = '';
+        let stderr = '';
+        proc.stdout.on('data', d => { stdout += d.toString(); });
+        proc.stderr.on('data', d => { stderr += d.toString(); });
+        proc.on('close', code => resolve({ success: code === 0, stdout: stdout.trim(), stderr: stderr.trim(), code }));
+        proc.on('error', reject);
+    });
+}
+
+function getWorkingDir() {
+    const conv = HUB?.getService('conversation');
+    return conv?.getWorkingDirectory?.() || process.cwd();
+}
+
+// Handle GitHub + git operations
 async function handleGithub(input) {
-    const { action, body, repo, state, title } = input;
-    const validActions = ['get_repo', 'list_issues', 'create_issue', 'close_issue', 'list_prs', 'create_pr'];
-    
-    if (!action) {
-        return { success: false, error: 'action is required' };
-    }
-    
+    const { action, body, repo, state, title, branch, base, number, labels, assignees, milestone } = input;
+
+    const validActions = [
+        'get_repo', 'get_status',
+        'list_issues', 'create_issue', 'close_issue',
+        'list_prs', 'create_pr', 'merge_pr',
+        'list_branches', 'create_branch', 'checkout_branch', 'delete_branch',
+        'push', 'pull'
+    ];
+
+    if (!action) return { success: false, error: 'action is required' };
     if (!validActions.includes(action)) {
         return { success: false, error: `Invalid action. Valid: ${validActions.join(', ')}` };
     }
-    
-    // Check if gh is available
-    try {
-        const check = await runGh(['--version']);
-        if (!check.success) {
-            return { success: false, error: 'gh CLI not installed or not authenticated' };
-        }
-    } catch (e) {
-        return { success: false, error: 'gh CLI not found. Install from https://cli.github.com/' };
-    }
-    
+
+    const cwd = getWorkingDir();
+
     try {
         switch (action) {
+
+            // ── Repo info ──────────────────────────────────────────────────
             case 'get_repo': {
-                if (!repo) {
-                    return { success: false, error: 'repo is required for get_repo' };
-                }
-                const result = await runGh(['repo', 'view', repo, '--json', 'name,description,url,visibility,defaultBranch,language']);
-                if (result.success) {
-                    return { success: true, data: JSON.parse(result.stdout) };
-                }
-                return { success: false, error: result.stderr || 'Failed to get repo' };
+                const args = ['repo', 'view', '--json',
+                    'name,description,url,visibility,defaultBranch,language,stargazerCount,forkCount'];
+                if (repo) args.splice(2, 0, repo);
+                const result = await runGh(args, cwd);
+                if (result.success) return { success: true, data: JSON.parse(result.stdout) };
+                return { success: false, error: result.stderr };
             }
-            
+
+            // ── Local git status ───────────────────────────────────────────
+            case 'get_status': {
+                const [statusRes, branchRes, logRes] = await Promise.all([
+                    runGit(['status', '--short'], cwd),
+                    runGit(['branch', '--show-current'], cwd),
+                    runGit(['log', '--oneline', '-5'], cwd)
+                ]);
+                return {
+                    success: true,
+                    branch: branchRes.stdout,
+                    changes: statusRes.stdout || '(clean)',
+                    recentCommits: logRes.stdout
+                };
+            }
+
+            // ── Issues ─────────────────────────────────────────────────────
             case 'list_issues': {
-                const args = ['issue', 'list'];
+                const args = ['issue', 'list', '--json',
+                    'number,title,state,labels,assignees,url,createdAt'];
                 if (repo) args.push('--repo', repo);
-                if (state) args.push('--state', state);
-                else args.push('--state', 'open');
-                
-                const result = await runGh(args);
-                if (result.success) {
-                    const issues = result.stdout.split('\n').filter(Boolean).map(line => {
-                        const parts = line.split('\t');
-                        return {
-                            number: parts[0],
-                            title: parts[1],
-                            state: parts[2]
-                        };
-                    });
-                    return { success: true, issues };
-                }
-                return { success: false, error: result.stderr || 'Failed to list issues' };
+                args.push('--state', state || 'open');
+                const result = await runGh(args, cwd);
+                if (result.success) return { success: true, issues: JSON.parse(result.stdout) };
+                return { success: false, error: result.stderr };
             }
-            
+
             case 'create_issue': {
-                if (!repo || !title) {
-                    return { success: false, error: 'repo and title are required for create_issue' };
-                }
-                const args = ['issue', 'create', '--repo', repo, '--title', title];
-                if (body) args.push('--body', body);
-                
-                const result = await runGh(args);
-                if (result.success) {
-                    return { success: true, url: result.stdout.trim() };
-                }
-                return { success: false, error: result.stderr || 'Failed to create issue' };
-            }
-            
-            case 'close_issue': {
-                if (!repo || !title) {
-                    return { success: false, error: 'repo and title are required for close_issue' };
-                }
-                // First find the issue number
-                const listResult = await runGh(['issue', 'list', '--repo', repo, '--state', 'all', '--limit', '100']);
-                if (!listResult.success) {
-                    return { success: false, error: 'Failed to find issue' };
-                }
-                
-                const issueLine = listResult.stdout.split('\n').find(line => line.includes(title));
-                if (!issueLine) {
-                    return { success: false, error: 'Issue not found' };
-                }
-                
-                const issueNum = issueLine.split('\t')[0];
-                const closeResult = await runGh(['issue', 'close', '--repo', repo, issueNum]);
-                
-                if (closeResult.success) {
-                    return { success: true, message: `Issue #${issueNum} closed` };
-                }
-                return { success: false, error: closeResult.stderr || 'Failed to close issue' };
-            }
-            
-            case 'list_prs': {
-                const args = ['pr', 'list'];
+                if (!title) return { success: false, error: 'title is required' };
+                const args = ['issue', 'create', '--title', title];
                 if (repo) args.push('--repo', repo);
-                if (state) args.push('--state', state);
-                else args.push('--state', 'open');
-                
-                const result = await runGh(args);
+                if (body) args.push('--body', body);
+                if (labels) args.push('--label', String(labels));
+                if (assignees) args.push('--assignee', String(assignees));
+                if (milestone) args.push('--milestone', String(milestone));
+                const result = await runGh(args, cwd);
                 if (result.success) {
-                    const prs = result.stdout.split('\n').filter(Boolean).map(line => {
-                        const parts = line.split('\t');
-                        return {
-                            number: parts[0],
-                            title: parts[1],
-                            state: parts[2]
-                        };
-                    });
-                    return { success: true, prs };
+                    HUB?.log(`[GitHub] Created issue: ${title}`, 'success');
+                    return { success: true, url: result.stdout };
                 }
-                return { success: false, error: result.stderr || 'Failed to list PRs' };
+                return { success: false, error: result.stderr };
             }
-            
+
+            case 'close_issue': {
+                if (!number) return { success: false, error: 'number is required' };
+                const args = ['issue', 'close', String(number)];
+                if (repo) args.push('--repo', repo);
+                const result = await runGh(args, cwd);
+                if (result.success) return { success: true, message: `Issue #${number} closed` };
+                return { success: false, error: result.stderr };
+            }
+
+            // ── Pull Requests ──────────────────────────────────────────────
+            case 'list_prs': {
+                const args = ['pr', 'list', '--json',
+                    'number,title,state,headRefName,baseRefName,url,createdAt'];
+                if (repo) args.push('--repo', repo);
+                args.push('--state', state || 'open');
+                const result = await runGh(args, cwd);
+                if (result.success) return { success: true, prs: JSON.parse(result.stdout) };
+                return { success: false, error: result.stderr };
+            }
+
             case 'create_pr': {
-                // This would typically require a branch and base
-                return { success: false, error: 'create_pr requires --base and --head flags. Use gh pr create directly.' };
+                if (!title) return { success: false, error: 'title is required' };
+                const args = ['pr', 'create', '--title', title];
+                if (repo) args.push('--repo', repo);
+                if (body) args.push('--body', body || '');
+                if (base) args.push('--base', base);
+                if (branch) args.push('--head', branch);
+                if (labels) args.push('--label', String(labels));
+                if (assignees) args.push('--assignee', String(assignees));
+                const result = await runGh(args, cwd);
+                if (result.success) {
+                    HUB?.log(`[GitHub] Created PR: ${title}`, 'success');
+                    return { success: true, url: result.stdout };
+                }
+                return { success: false, error: result.stderr };
             }
-            
+
+            case 'merge_pr': {
+                if (!number) return { success: false, error: 'number is required' };
+                const args = ['pr', 'merge', String(number), '--merge'];
+                if (repo) args.push('--repo', repo);
+                const result = await runGh(args, cwd);
+                if (result.success) return { success: true, message: `PR #${number} merged` };
+                return { success: false, error: result.stderr };
+            }
+
+            // ── Branches ───────────────────────────────────────────────────
+            case 'list_branches': {
+                const result = await runGit(['branch', '-a', '--format=%(refname:short)'], cwd);
+                return { success: true, branches: result.stdout.split('\n').filter(Boolean) };
+            }
+
+            case 'create_branch': {
+                if (!branch) return { success: false, error: 'branch is required' };
+                // Create from base if specified, else current HEAD
+                const args = base
+                    ? ['checkout', '-b', branch, base]
+                    : ['checkout', '-b', branch];
+                const result = await runGit(args, cwd);
+                if (result.success || result.stderr.includes('Switched to a new branch')) {
+                    HUB?.log(`[Git] Created branch: ${branch}`, 'success');
+                    return { success: true, branch };
+                }
+                return { success: false, error: result.stderr };
+            }
+
+            case 'checkout_branch': {
+                if (!branch) return { success: false, error: 'branch is required' };
+                const result = await runGit(['checkout', branch], cwd);
+                if (result.success) return { success: true, branch };
+                return { success: false, error: result.stderr };
+            }
+
+            case 'delete_branch': {
+                if (!branch) return { success: false, error: 'branch is required' };
+                const result = await runGit(['branch', '-d', branch], cwd);
+                if (result.success) return { success: true, message: `Branch ${branch} deleted` };
+                return { success: false, error: result.stderr };
+            }
+
+            // ── Push / Pull ────────────────────────────────────────────────
+            case 'push': {
+                const args = ['push'];
+                if (branch) args.push('origin', branch);
+                else args.push('--set-upstream', 'origin', 'HEAD');
+                const result = await runGit(args, cwd);
+                if (result.success) return { success: true, output: result.stdout || result.stderr };
+                return { success: false, error: result.stderr };
+            }
+
+            case 'pull': {
+                const result = await runGit(['pull'], cwd);
+                if (result.success) return { success: true, output: result.stdout };
+                return { success: false, error: result.stderr };
+            }
+
             default:
                 return { success: false, error: `Unknown action: ${action}` };
         }
@@ -175,8 +231,4 @@ function init(hub) {
     CONFIG = hub.getService('config');
 }
 
-module.exports = {
-    init,
-    handleGithub,
-    runGh
-};
+module.exports = { init, handleGithub, runGh, runGit };

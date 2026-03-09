@@ -413,15 +413,21 @@ const TOOL_DEFS = [
     {
         name: 'github',
         category: 'github',
-        description: 'Interact with GitHub using the gh CLI. Actions: get_repo, list_issues, create_issue, close_issue, list_prs, create_pr. Requires gh CLI to be installed and authenticated.',
+        description: 'Interact with GitHub (gh CLI) and local git. Actions: get_repo, get_status, list_issues, create_issue, close_issue, list_prs, create_pr, merge_pr, list_branches, create_branch, checkout_branch, delete_branch, push, pull.',
         input_schema: {
             type: 'object',
             properties: {
-                action: { type: 'string', description: 'GitHub action: get_repo, list_issues, create_issue, close_issue, list_prs, create_pr' },
-                body: { type: 'string', description: 'Body text for new issue or PR' },
-                repo: { type: 'string', description: 'Repository name or issue/PR number (for close_issue)' },
-                state: { type: 'string', description: 'Filter state: open, closed, all (for list operations)' },
-                title: { type: 'string', description: 'Title for new issue or PR' }
+                action: { type: 'string', description: 'Action: get_repo | get_status | list_issues | create_issue | close_issue | list_prs | create_pr | merge_pr | list_branches | create_branch | checkout_branch | delete_branch | push | pull' },
+                title: { type: 'string', description: 'Title for issue or PR' },
+                body: { type: 'string', description: 'Body/description for issue or PR (markdown supported)' },
+                repo: { type: 'string', description: 'GitHub repo (owner/repo format). Omit to use current repo.' },
+                branch: { type: 'string', description: 'Branch name for create_branch, checkout_branch, delete_branch, create_pr, push' },
+                base: { type: 'string', description: 'Base branch for create_pr or create_branch (defaults to main/master)' },
+                number: { type: 'number', description: 'Issue or PR number for close_issue or merge_pr' },
+                state: { type: 'string', description: 'Filter: open | closed | all (for list operations)' },
+                labels: { type: 'string', description: 'Comma-separated labels for create_issue or create_pr' },
+                assignees: { type: 'string', description: 'Comma-separated GitHub usernames to assign' },
+                milestone: { type: 'string', description: 'Milestone name or number for create_issue' }
             },
             required: ['action']
         }

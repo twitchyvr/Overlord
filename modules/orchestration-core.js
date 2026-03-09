@@ -455,15 +455,15 @@ async function runAICycle() {
             }
 
             const toolResults = await toolExecutor.executeToolsWithApproval(lastResponse.tool_calls);
-            
+
             // Check-in every 10 cycles
             if (cycleCount % 10 === 0) {
                 approvalFlow.checkIn(cycleCount);
             }
-            
-            // Check if we should continue
-            const continueLoop = toolResults.some(r => r.success);
-            if (!continueLoop) {
+
+            // Continue as long as tools ran (even failures — model needs to see the error)
+            // Only stop if tools array was empty or all were denied (no results at all)
+            if (!toolResults || toolResults.length === 0) {
                 break;
             }
             

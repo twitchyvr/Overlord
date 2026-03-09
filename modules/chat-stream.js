@@ -136,6 +136,16 @@ async function chatStream(messages, onEvent, onDone, onError, systemOverride, co
 
                     const parsed = safeJSONParse(jsonStr);
                     if (parsed.success) {
+                        // Debug: log non-text events so we can see MiniMax's tool_use format
+                        const t = parsed.data?.type;
+                        if (t && t !== 'content_block_delta') {
+                            const extra = t === 'content_block_start'
+                                ? ` block_type=${parsed.data.content_block?.type || '?'} name=${parsed.data.content_block?.name || ''}`
+                                : t === 'message_delta'
+                                    ? ` stop=${parsed.data.delta?.stop_reason || ''} has_tool_calls=${!!(parsed.data.delta?.tool_calls)}`
+                                    : '';
+                            hub?.log(`[SSE] ${t}${extra}`, 'info');
+                        }
                         onEvent(parsed.data);
                     }
                 }

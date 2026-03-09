@@ -59,6 +59,102 @@ module.exports = {
     }
 };
 
+// ── Text-based tool call fallback ─────────────────────────────────────────
+// MiniMax M2.5 sometimes emits tool calls as text instead of native tool_use
+// blocks. These helpers detect and convert them so the tool loop can fire.
+
+const _DIRECT_TOOLS = new Set([
+    'bash', 'read_file', 'read_file_lines', 'write_file', 'patch_file', 'append_file',
+    'list_dir', 'web_search', 'understand_image', 'fetch_webpage', 'save_webpage_to_vault',
+    'system_info', 'get_working_dir', 'set_working_dir', 'set_thinking_level',
+    'qa_run_tests', 'qa_check_lint', 'qa_check_types', 'qa_check_coverage', 'qa_audit_deps',
+    'github', 'record_note', 'recall_notes', 'session_note', 'list_skills', 'get_skill',
+    'activate_skill', 'deactivate_skill', 'ui_action', 'show_chart', 'ask_user',
+    'kv_set', 'kv_get', 'kv_list', 'kv_delete', 'socket_push', 'add_todo', 'toggle_todo',
+    'list_agents', 'delegate_to_agent'
+]);
+
+const _ACTION_MAP = {
+    'list-directory': 'list_dir', 'list_directory': 'list_dir',
+    'explore-directory': 'list_dir', 'ls': 'list_dir',
+    'read-file': 'read_file', 'cat': 'read_file', 'view-file': 'read_file',
+    'write-file': 'write_file', 'create-file': 'write_file',
+    'bash': 'bash', 'run-command': 'bash', 'execute': 'bash', 'shell': 'bash',
+    'search': 'web_search', 'web-search': 'web_search',
+    'list-agents': 'list_agents',
+};
+
+function _buildTextToolCall(rawName, args) {
+    const id = 'toolu_txt_' + Date.now().toString(36) + '_' + Math.random().toString(36).substr(2, 5);
+    const actionKey = (args.action || rawName || '').replace(/_/g, '-').toLowerCase();
+    const mappedTool = _ACTION_MAP[actionKey] || _ACTION_MAP[rawName.toLowerCase()] || rawName;
+
+    if (_DIRECT_TOOLS.has(mappedTool)) {
+        const input = {};
+        if (args.path !== undefined)    input.path    = args.path;
+        if (args.content !== undefined) input.content = args.content;
+        if (args.command !== undefined) input.command = args.command;
+        if (args.query !== undefined)   input.query   = args.query;
+        if (args.agent !== undefined)   input.agent   = args.agent;
+        if (args.task !== undefined)    input.task    = args.task;
+        if (mappedTool === 'bash' && !input.command)
+            input.command = [args.action, args.path].filter(Boolean).join(' ');
+        return { type: 'tool_use', id, name: mappedTool, input };
+    }
+
+    // Unknown name — wrap as agent delegation
+    const taskParts = [];
+    if (args.action) taskParts.push(args.action.replace(/-/g, ' '));
+    if (args.path)   taskParts.push(args.path);
+    if (args.task)   taskParts.push(args.task);
+    const task = taskParts.join(' ') || `perform: ${rawName} ${JSON.stringify(args)}`;
+    return { type: 'tool_use', id, name: 'delegate_to_agent', input: { agent: rawName, task } };
+}
+
+function _parseBraceCall(inner) {
+    const nameMatch = inner.match(/\btool\s*(?:=>|:)\s*["']([^"']+)["']/i)
+                   || inner.match(/^["']?([\w-]+)["']?/);
+    if (!nameMatch) return null;
+    const rawName = nameMatch[1].trim();
+
+    const args = {};
+    const argsMatch = inner.match(/\bargs\s*(?:=>|:)\s*\{([^}]*(?:\{[^}]*\}[^}]*)*)\}/i);
+    if (argsMatch) {
+        const flagRe = /--?([\w-]+)\s+["']([^"']*)["']|--?([\w-]+)\s+([^\s,}]+)/g;
+        let m;
+        while ((m = flagRe.exec(argsMatch[1])) !== null) {
+            const k = (m[1] || m[3] || '').replace(/-/g, '_');
+            const v = m[2] !== undefined ? m[2] : (m[4] || '');
+            if (k) args[k] = v;
+        }
+    }
+    return _buildTextToolCall(rawName, args);
+}
+
+function _parseTextToolCalls(text) {
+    if (!text) return { calls: [], cleanText: text };
+    const calls = [];
+    let cleanText = text;
+
+    // Format 1: [TOOL_CALL] ... [/TOOL_CALL]
+    cleanText = cleanText.replace(/\[TOOL_CALL\]([\s\S]*?)\[\/TOOL_CALL\]/gi, (_, inner) => {
+        const tc = _parseBraceCall(inner.trim());
+        if (tc) calls.push(tc);
+        return '';
+    });
+
+    // Format 2: minimax:tool_call name args (only if nothing found above)
+    if (calls.length === 0) {
+        cleanText = cleanText.replace(/\bminimax:tool_call\s+([\w:/-]+)(?:\s+([^\n]*))?/gi, (_, name, args) => {
+            const tc = _buildTextToolCall(name.trim(), args ? { path: args.trim() } : {});
+            if (tc) calls.push(tc);
+            return '';
+        });
+    }
+
+    return { calls, cleanText: cleanText.replace(/\n{3,}/g, '\n\n').trim() };
+}
+
 // AIClient class (reconstructed from original)
 class AIClientClass {
     constructor(cfg) {
@@ -273,6 +369,20 @@ class AIClientClass {
                         if (delta.usage) {
                             responseUsage = { ...responseUsage, ...delta.usage };
                         }
+                        // Some MiniMax variants send tool_calls inside message_delta
+                        if (delta.delta?.tool_calls && Array.isArray(delta.delta.tool_calls)) {
+                            for (const tc of delta.delta.tool_calls) {
+                                const name = tc.function?.name || tc.name;
+                                let input = {};
+                                try { input = JSON.parse(tc.function?.arguments || '{}'); } catch (_) {}
+                                toolUseBlocks.push({
+                                    type: 'tool_use',
+                                    id: tc.id || ('toolu_md_' + Date.now().toString(36)),
+                                    name,
+                                    input
+                                });
+                            }
+                        }
                         break;
                 }
             };
@@ -287,6 +397,24 @@ class AIClientClass {
                     hub?.neuralDone({
                         chars: thinkingBlocks.reduce((n, b) => n + (b.thinking || '').length, 0)
                     });
+                }
+
+                // Fallback: if MiniMax emitted text-based tool calls instead of native
+                // tool_use blocks, parse them now and treat them as real tool calls.
+                if (toolUseBlocks.length === 0 && textContent) {
+                    const parsed = _parseTextToolCalls(textContent);
+                    if (parsed.calls.length > 0) {
+                        hub?.log(`[AI] Text tool-call fallback: parsed ${parsed.calls.length} call(s) from response text`, 'warn');
+                        toolUseBlocks.push(...parsed.calls);
+                        // Strip the [TOOL_CALL] noise from the displayed text
+                        textContent = parsed.cleanText;
+                        // Rebuild content blocks: keep thinking, replace text, add tool_use entries
+                        contentBlocks = contentBlocks.filter(b => b.type === 'thinking');
+                        if (textContent) contentBlocks.push({ type: 'text', text: textContent });
+                        for (const tc of toolUseBlocks) contentBlocks.push({ ...tc });
+                        // Stream the cleaned text to UI
+                        hub?.streamUpdate(textContent);
+                    }
                 }
 
                 // Build response matching non-streaming format

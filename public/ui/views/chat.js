@@ -32,6 +32,13 @@ export class ChatView extends Component {
         this._attachedImages = [];
         this._scrollThreshold = 150;
         this._lastDelegateToolId = null; // dedup delegation toasts
+
+        // ── Prompt history (Ctrl+Up/Down) ────────────────────────────
+        this._promptHistory = [];       // [{text, images:[{path,name,size,type,localThumb}]}]
+        this._historyIndex = -1;        // -1 = not navigating
+        this._historyDraft = null;      // stash current unsent input while browsing
+        this._HISTORY_MAX = 10;
+        this._loadPromptHistory();
     }
 
     // ══════════════════════════════════════════════════════════════
@@ -187,16 +194,30 @@ export class ChatView extends Component {
     _setupInputListeners() {
         if (!this._inputEl) return;
 
-        // Ctrl+Enter to send
         this._inputEl.addEventListener('keydown', (e) => {
+            // Ctrl+Enter to send
             if (e.key === 'Enter' && e.ctrlKey) {
                 e.preventDefault();
                 this.send();
+                return;
             }
             // Alt+Enter for hot inject
             if (e.key === 'Enter' && e.altKey) {
                 e.preventDefault();
                 this.hotInjectSend();
+                return;
+            }
+            // Ctrl+ArrowUp — previous prompt
+            if (e.key === 'ArrowUp' && e.ctrlKey) {
+                e.preventDefault();
+                this._navigateHistory(1);
+                return;
+            }
+            // Ctrl+ArrowDown — next prompt (toward present)
+            if (e.key === 'ArrowDown' && e.ctrlKey) {
+                e.preventDefault();
+                this._navigateHistory(-1);
+                return;
             }
         });
     }
@@ -265,8 +286,8 @@ export class ChatView extends Component {
 
     send() {
         if (!this._inputEl) return;
-        let text = this._inputEl.value.trim();
-        if (!text) return;
+        const rawText = this._inputEl.value.trim();
+        if (!rawText) return;
 
         // Block send while plan bar is visible
         const planBar = document.getElementById('plan-approval-bar');
@@ -278,7 +299,11 @@ export class ChatView extends Component {
             return;
         }
 
-        // Include attached images
+        // ── Save to prompt history BEFORE clearing ───────────────────
+        this._pushHistory(rawText, this._attachedImages);
+
+        // Include attached images in outgoing text
+        let text = rawText;
         if (this._attachedImages.length > 0) {
             const imgInfo = this._attachedImages.map(img =>
                 'Image: ' + img.path +
@@ -290,9 +315,14 @@ export class ChatView extends Component {
         this._inputEl.value = '';
         const imagesToSend = [...this._attachedImages];
         this._attachedImages = [];
+        this._clearInputImagePills();
         imagesToSend.forEach(img => {
             if (img.localThumb) URL.revokeObjectURL(img.localThumb);
         });
+
+        // Reset history navigation
+        this._historyIndex = -1;
+        this._historyDraft = null;
 
         if (this._socket) {
             this._socket.emit('user_input', text, imagesToSend);
@@ -303,6 +333,9 @@ export class ChatView extends Component {
         if (!this._inputEl) return;
         const text = this._inputEl.value.trim();
         if (!text) return;
+        this._pushHistory(text, []);
+        this._historyIndex = -1;
+        this._historyDraft = null;
         this._inputEl.value = '';
         if (this._socket) {
             this._socket.emit('hot_inject', text, (ack) => {
@@ -318,6 +351,160 @@ export class ChatView extends Component {
                     });
                 }
             });
+        }
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    //  PROMPT HISTORY (Ctrl+Up / Ctrl+Down)
+    // ══════════════════════════════════════════════════════════════
+
+    _loadPromptHistory() {
+        try {
+            const raw = localStorage.getItem('overlord_prompt_history');
+            if (raw) this._promptHistory = JSON.parse(raw).slice(0, this._HISTORY_MAX);
+        } catch (_) { /* corrupt — start fresh */ }
+    }
+
+    _savePromptHistory() {
+        try {
+            localStorage.setItem('overlord_prompt_history',
+                JSON.stringify(this._promptHistory.slice(0, this._HISTORY_MAX)));
+        } catch (_) { /* quota — silently fail */ }
+    }
+
+    /** Push a sent prompt into history (most-recent = index 0). */
+    _pushHistory(text, images) {
+        // Snapshot images for recall — keep metadata but create durable thumbs
+        const imgSnap = (images || []).map(img => ({
+            path: img.path,
+            name: img.name,
+            size: img.size,
+            type: img.type,
+            serverPath: img.path
+        }));
+
+        // Don't duplicate if identical to most recent entry
+        if (this._promptHistory.length > 0 &&
+            this._promptHistory[0].text === text &&
+            this._promptHistory[0].images.length === imgSnap.length) {
+            return;
+        }
+
+        this._promptHistory.unshift({ text, images: imgSnap, ts: Date.now() });
+        if (this._promptHistory.length > this._HISTORY_MAX) {
+            this._promptHistory.length = this._HISTORY_MAX;
+        }
+        this._savePromptHistory();
+    }
+
+    /** Navigate prompt history. direction=1 → older, direction=-1 → newer. */
+    _navigateHistory(direction) {
+        if (this._promptHistory.length === 0) return;
+
+        // Stash current draft when entering history mode
+        if (this._historyIndex === -1 && direction === 1) {
+            this._historyDraft = {
+                text: this._inputEl ? this._inputEl.value : '',
+                images: [...this._attachedImages]
+            };
+        }
+
+        const newIndex = this._historyIndex + direction;
+
+        // Going past newest → restore draft
+        if (newIndex < 0) {
+            this._historyIndex = -1;
+            this._restoreHistoryEntry(this._historyDraft || { text: '', images: [] });
+            this._historyDraft = null;
+            return;
+        }
+
+        // Clamp to oldest entry
+        if (newIndex >= this._promptHistory.length) return;
+
+        this._historyIndex = newIndex;
+        this._restoreHistoryEntry(this._promptHistory[newIndex]);
+    }
+
+    /** Restore a history entry into the input + image pills area. */
+    _restoreHistoryEntry(entry) {
+        if (!entry) return;
+
+        // Restore text
+        if (this._inputEl) {
+            this._inputEl.value = entry.text || '';
+            this._inputEl.style.height = 'auto';
+            this._inputEl.style.height =
+                Math.min(this._inputEl.scrollHeight, 200) + 'px';
+            this._inputEl.focus();
+        }
+
+        // Clear current image pills and attachedImages
+        this._clearInputImagePills();
+        this._attachedImages = [];
+
+        // Restore image attachments as preview pills
+        if (entry.images && entry.images.length > 0) {
+            for (const img of entry.images) {
+                this._createHistoryImagePill(img);
+            }
+        }
+    }
+
+    /** Build a preview pill for a history image and add to the input area. */
+    _createHistoryImagePill(img) {
+        const container = document.getElementById('input-images');
+        if (!container) return;
+
+        const pill = document.createElement('div');
+        pill.className = 'input-image-pill history-image-pill';
+        pill.style.cssText = 'display:inline-flex;align-items:center;gap:5px;padding:3px 8px 3px 4px;' +
+            'background:rgba(0,212,255,0.08);border:1px solid rgba(0,212,255,0.3);border-radius:6px;' +
+            'margin:2px;font-size:10px;color:var(--text-secondary);cursor:pointer;vertical-align:middle;';
+        pill.title = 'Click to remove';
+
+        const thumbImg = document.createElement('img');
+        thumbImg.src = img.serverPath || img.path || '';
+        thumbImg.style.cssText = 'width:20px;height:20px;object-fit:cover;border-radius:3px;flex-shrink:0;';
+        thumbImg.onerror = () => { thumbImg.style.display = 'none'; };
+
+        const nameSpan = document.createElement('span');
+        const displayName = img.name || 'image';
+        nameSpan.textContent = displayName.length > 20
+            ? displayName.substring(0, 18) + '\u2026' : displayName;
+
+        const statusSpan = document.createElement('span');
+        statusSpan.style.cssText = 'font-size:9px;color:var(--text-muted);';
+        statusSpan.textContent = '\u21BB';
+
+        pill.appendChild(thumbImg);
+        pill.appendChild(nameSpan);
+        pill.appendChild(statusSpan);
+        container.appendChild(pill);
+
+        // Track in _attachedImages so send() includes it
+        const imgEntry = {
+            path: img.path || img.serverPath,
+            name: img.name,
+            size: img.size,
+            type: img.type,
+            localThumb: img.serverPath || img.path
+        };
+        this._attachedImages.push(imgEntry);
+
+        // Click to remove
+        pill.addEventListener('click', () => {
+            this._attachedImages = this._attachedImages.filter(i => i !== imgEntry);
+            pill.remove();
+        });
+    }
+
+    /** Remove all image pills from the input area using safe DOM methods. */
+    _clearInputImagePills() {
+        const container = document.getElementById('input-images');
+        if (!container) return;
+        while (container.firstChild) {
+            container.removeChild(container.firstChild);
         }
     }
 

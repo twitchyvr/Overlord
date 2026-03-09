@@ -11,9 +11,14 @@ const {
     MAX_ROOM_AGENTS
 } = require('./orchestration-state');
 
-const {
-    setOrchestratorState
-} = require('./orchestration-core');
+// Lazy-require to break circular dependency (orchestration-core → chat-room → orchestration-core)
+let _setOrchestratorState = null;
+function setOrchestratorState(updates) {
+    if (!_setOrchestratorState) {
+        try { _setOrchestratorState = require('./orchestration-core').setOrchestratorState; } catch (e) {}
+    }
+    if (_setOrchestratorState) _setOrchestratorState(updates);
+}
 
 // Create a chat room between agents
 function createChatRoom(fromAgent, toAgent, opts = {}) {

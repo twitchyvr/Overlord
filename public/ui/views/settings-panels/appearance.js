@@ -6,9 +6,9 @@
    Dependencies: engine.js, button.js
    ═══════════════════════════════════════════════════════════════════ */
 
-import { h } from '../engine.js';
-import { Button } from '../components/button.js';
-import { OverlordUI } from '../engine.js';
+import { h } from '../../engine.js';
+import { Button } from '../../components/button.js';
+import { OverlordUI } from '../../engine.js';
 
 /**
  * Render the Appearance/Display settings tab

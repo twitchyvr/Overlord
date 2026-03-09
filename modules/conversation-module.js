@@ -54,17 +54,73 @@ module.exports = {
             milestones = currentConversation.milestones || [];
         }
         
-        // Register service
+        // Register service — must expose EVERY method hub.js calls on conv
         HUB.registerService('conversation', {
-            getMessages: () => currentConversation.messages || [],
-            getTasks: () => tasks,
-            getRoadmap: () => roadmap,
-            getMilestones: () => milestones,
+            // Identity
+            getId: () => currentConversation?.id,
+
+            // Messages / History
+            getMessages: () => currentConversation?.messages || [],
+            getHistory: () => currentConversation?.messages || [],
             addMessage: (role, content) => addMessage(role, content),
+            replaceHistory: (msgs) => {
+                if (currentConversation) currentConversation.messages = msgs;
+            },
+            clearHistory: () => clearHistoryForNewChat(),
+
+            // Conversations
+            listConversations: () => conversationStore.listConversations(),
+            loadConversation: (id) => {
+                const loaded = conversationStore.loadConversationById(id);
+                if (loaded) {
+                    currentConversation = loaded;
+                    tasks = loaded.tasks || [];
+                    roadmap = loaded.roadmap || [];
+                    milestones = loaded.milestones || [];
+                    return { success: true, conversation: loaded };
+                }
+                return { success: false, error: 'Not found' };
+            },
+
+            // Persistence
+            save: () => saveConversation(),
+            saveConversation: () => saveConversation(),
+            new: () => archiveAndStartNew(),
+            archiveCurrentAndNew: () => archiveAndStartNew(),
+
+            // Working directory
             setWorkingDirectory: (dir) => setWorkingDirectory(dir),
             getWorkingDirectory: () => getWorkingDirectory(),
-            saveConversation: () => saveConversation(),
-            getContextUsage: () => contextTracker.getContextUsage(currentConversation)
+
+            // Context
+            getContextUsage: () => contextTracker.getContextUsage(currentConversation),
+
+            // Tasks
+            getTasks: () => tasks,
+            addTask: (t) => addTask(t),
+            toggleTask: (id) => toggleTask(id),
+            deleteTask: (id, cascade) => deleteTask(id, cascade),
+            updateTask: (id, updates) => updateTask(id, updates),
+            getTaskTree: () => getTaskTree(),
+
+            // Roadmap
+            getRoadmap: () => roadmap,
+            addRoadmapItem: (text, type) => addRoadmapItem(text, type),
+
+            // Milestones
+            getMilestones: () => milestones,
+            addMilestone: (data) => addMilestone(data),
+            updateMilestone: (id, fields) => updateMilestone(id, fields),
+            deleteMilestone: (id) => deleteMilestone(id),
+            launchMilestone: (id) => {
+                const ms = milestones.find(m => m.id === id);
+                if (ms) {
+                    ms.status = 'active';
+                    ms.launchedAt = Date.now();
+                    saveConversation();
+                }
+                return ms;
+            }
         });
         
         HUB.log('✅ Conversation module initialized', 'info');
@@ -256,6 +312,13 @@ function getTaskTree() {
 
 function getRoadmap() {
     return roadmap;
+}
+
+function addRoadmapItem(text, type) {
+    const item = { id: 'ri_' + Date.now(), text, type: type || 'item', createdAt: Date.now() };
+    roadmap.push(item);
+    saveConversation();
+    return item;
 }
 
 // Milestone functions

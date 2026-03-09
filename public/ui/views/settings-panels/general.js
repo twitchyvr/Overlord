@@ -6,8 +6,8 @@
    Dependencies: engine.js, button.js
    ═══════════════════════════════════════════════════════════════════ */
 
-import { h } from '../engine.js';
-import { Button } from '../components/button.js';
+import { h } from '../../engine.js';
+import { Button } from '../../components/button.js';
 
 /**
  * Render the General settings tab
@@ -216,4 +216,4 @@ function buildToggle(name, label, onChange) {
 }
 
 // Make OverlordUI available
-import { OverlordUI } from '../engine.js';
+import { OverlordUI } from '../../engine.js';

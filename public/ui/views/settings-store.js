@@ -230,4 +230,5 @@ export function createSettingsStore(socket, options) {
 }
 
 // Export constants
-export { MODEL_OPTIONS, TTS_VOICES } from './settings-panels/ai.js';
+export { MODEL_OPTIONS } from './settings-panels/general.js';
+export { TTS_VOICES } from './settings-panels/ai.js';

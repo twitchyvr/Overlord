@@ -6,8 +6,8 @@
    Dependencies: engine.js, button.js
    ═══════════════════════════════════════════════════════════════════ */
 
-import { h } from '../engine.js';
-import { Button } from '../components/button.js';
+import { h } from '../../engine.js';
+import { Button } from '../../components/button.js';
 import { MODEL_OPTIONS } from './general.js';
 
 // TTS Voice options
@@ -444,4 +444,4 @@ function buildConfigToggle(field, label, onChange) {
     );
 }
 
-import { OverlordUI } from '../engine.js';
+import { OverlordUI } from '../../engine.js';

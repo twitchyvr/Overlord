@@ -873,12 +873,27 @@ function init(hub) {
     //   ai-module.js   (context: "Tools Available: N tools")
     //   tool-executor.js (tools.execute(tool))
     hub.registerService('tools', {
-        getDefinitions: () => TOOL_DEFS.concat(DYNAMIC_TOOL_DEFS),
+        getDefinitions: () => {
+            // Merge static + dynamic, dedup by name (dynamic wins on collision)
+            const seen = new Set();
+            const out = [];
+            // Dynamic first so they take priority
+            for (const d of DYNAMIC_TOOL_DEFS) {
+                if (!seen.has(d.name)) { seen.add(d.name); out.push(d); }
+            }
+            for (const d of TOOL_DEFS) {
+                if (!seen.has(d.name)) { seen.add(d.name); out.push(d); }
+            }
+            return out;
+        },
         execute: executeToolCall,
         registerTool: (def, handler) => {
             if (handler) {
                 DYNAMIC_TOOL_HANDLERS.set(def.name, handler);
-                DYNAMIC_TOOL_DEFS.push(def);
+                // Prevent duplicate entries in dynamic defs
+                const idx = DYNAMIC_TOOL_DEFS.findIndex(d => d.name === def.name);
+                if (idx >= 0) DYNAMIC_TOOL_DEFS[idx] = def;
+                else DYNAMIC_TOOL_DEFS.push(def);
             }
         }
     });

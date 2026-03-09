@@ -269,7 +269,7 @@ class AIClientClass {
         if (!messages) {
             const conv = hub?.getService('conversation');
             const raw = conv?.getMessages ? conv.getMessages() : [];
-            hub?.log(`[AI streamed] Auto-fetched ${raw.length} messages`, 'info');
+            hub?.log(`[AI streamed] Auto-fetched ${raw.length} messages: ${raw.map(m => m.role + (m.tool_calls ? `[${m.tool_calls.length}tc]` : '') + (m.tool_call_id ? `[tid:${m.tool_call_id}]` : '')).join(', ')}`, 'info');
             messages = raw;
         }
 

@@ -74,15 +74,24 @@ function toAnthropicMessages(messages) {
         if (msg.role === 'assistant' && msg.tool_calls && msg.tool_calls.length > 0) {
             // Convert OpenAI-style tool_calls to Anthropic content blocks
             const blocks = [];
+            const seenToolIds = new Set();
             if (msg.content && typeof msg.content === 'string' && msg.content.trim()) {
                 blocks.push({ type: 'text', text: msg.content });
             } else if (Array.isArray(msg.content)) {
-                blocks.push(...msg.content);
+                // Push content blocks, tracking any tool_use IDs already present
+                for (const b of msg.content) {
+                    blocks.push(b);
+                    if (b.type === 'tool_use' && b.id) seenToolIds.add(b.id);
+                }
             }
+            // Add tool_use blocks from tool_calls, skipping any already in content
             for (const tc of msg.tool_calls) {
+                const id = tc.id;
+                if (seenToolIds.has(id)) continue; // avoid duplicate tool_use IDs
+                seenToolIds.add(id);
                 blocks.push({
                     type: 'tool_use',
-                    id: tc.id,
+                    id,
                     name: tc.name || tc.function?.name,
                     input: tc.input || (typeof tc.function?.arguments === 'string'
                         ? (() => { try { return JSON.parse(tc.function.arguments); } catch(_) { return {}; } })()

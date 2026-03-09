@@ -130,10 +130,20 @@ class McpServerConnection {
             }
         }
 
-        hub?.log(`[MCP:${this.config.name}] Starting: ${this.config.command} ${(this.config.args || []).join(' ')} (timeout: ${MCP_TIMEOUT_MS / 1000}s)`, 'info');
+        // Resolve command to full path if possible — avoids PATH issues in spawned envs
+        let command = this.config.command;
+        if (command === 'npx' || command === 'node' || command === 'uvx') {
+            try {
+                const { execFileSync } = require('child_process');
+                const resolved = execFileSync('which', [command], { encoding: 'utf8', timeout: 3000 }).trim();
+                if (resolved) command = resolved;
+            } catch (_) { /* fall through to plain name */ }
+        }
+
+        hub?.log(`[MCP:${this.config.name}] Starting: ${command} ${(this.config.args || []).join(' ')} (timeout: ${MCP_TIMEOUT_MS / 1000}s)`, 'info');
 
         try {
-            this.proc = spawn(this.config.command, this.config.args || [], {
+            this.proc = spawn(command, this.config.args || [], {
                 env,
                 stdio: ['pipe', 'pipe', 'pipe'],
                 shell: process.platform === 'win32'  // Windows needs shell:true for .cmd wrappers (npx.cmd, uvx.cmd)

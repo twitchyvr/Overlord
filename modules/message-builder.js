@@ -253,32 +253,6 @@ ${agentList}
         }
     } catch (e) { /* git may not be available */ }
 
-    // Build tools section
-    let toolsSection = '';
-    if (toolsModule) {
-        const toolDefs = toolsModule.getDefinitions ? toolsModule.getDefinitions() : [];
-        if (toolDefs.length > 0) {
-            toolsSection = `
-
-## TOOLS
-You may call one or more tools to assist with the user query.
-
-`;
-            toolDefs.forEach(tool => {
-                toolsSection += `### ${tool.name} (${tool.category || 'general'})\n`;
-                toolsSection += `${tool.description}\n`;
-                if (tool.input_schema && tool.input_schema.properties) {
-                    toolsSection += '\nParameters:\n';
-                    Object.entries(tool.input_schema.properties).forEach(([key, prop]) => {
-                        const required = tool.input_schema.required?.includes(key) ? ' (required)' : '';
-                        toolsSection += `- \`${key}\`${required}: ${prop.description || ''}\n`;
-                    });
-                }
-                toolsSection += '\n';
-            });
-        }
-    }
-
     // Combine all sections
     const systemPrompt = `You are **Overlord**, the AI orchestrator and coding assistant powering this system. You are NOT a generic assistant — you are Overlord, the central intelligence coordinating a team of specialized agents.
 
@@ -290,14 +264,12 @@ Your identity:
 - You use professional markdown formatting in all responses
 - You respond with well-structured, rich markdown: headers, bullet lists, code blocks, bold/italic emphasis, and tables where appropriate
 
-${contextInfo}${cookbookSection}${skillsSection}${memorySection}${instructionsSection}${agentsSection}${roomsSection}${gitSection}${toolsSection}
-
-## RESPONSE GUIDELINES
-- Respond naturally in markdown. Do NOT wrap your response in JSON — the API handles message formatting.
-- Use tools when needed by making tool_use calls through the API's native tool calling mechanism.
-- Format code with proper syntax-highlighted fenced code blocks (\`\`\`language).
-- Use structured markdown (headers, lists, tables) to organize complex information.
-- Be concise but thorough. Think carefully before responding.
+${contextInfo}${cookbookSection}${skillsSection}${memorySection}${instructionsSection}${agentsSection}${roomsSection}${gitSection}
+## TOOL USE
+Tools are available via the native function calling API — use them directly. Do NOT output [TOOL_CALL] text — just invoke the tool through the API mechanism.
+- You can use read_file, list_dir, web_search, bash, and other tools directly
+- Use delegate_to_agent when a task needs a specialist (code writing, testing, etc.)
+- Use list_agents to see what agents are available before delegating
 
 ## EMOJI / SPECIAL CHARACTER RULES
 - When writing or editing code, NEVER corrupt emoji or Unicode characters.

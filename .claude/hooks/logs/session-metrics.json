@@ -1,21 +1,17 @@
 {
   "session_id": "9bab9b91-6c15-4910-a5cb-5c6b96fb5f8a",
-  "session_start": "2026-03-09T06:53:43.446031+00:00",
-  "pretooluse_count": 103,
-  "posttooluse_count": 99,
-  "tool_failures": 0,
+  "session_start": "2026-03-09T07:12:21.011188+00:00",
+  "pretooluse_count": 81,
+  "posttooluse_count": 78,
+  "tool_failures": 2,
   "guardrail_blocks": 0,
-  "prompts_submitted": 7,
+  "prompts_submitted": 0,
   "notifications": 0,
   "compactions": 0,
   "sounds_played": 0,
   "tools": {
-    "Bash": 87,
-    "Grep": 10,
-    "Read": 48,
-    "Edit": 40,
-    "Write": 4,
-    "ToolSearch": 2,
-    "WebFetch": 11
+    "Bash": 97,
+    "Read": 54,
+    "Edit": 8
   }
 }

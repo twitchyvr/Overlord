@@ -570,6 +570,30 @@ const TOOL_DEFS = [
             },
             required: ['task_id', 'todo_id']
         }
+    },
+
+    // Agent Tools
+    {
+        name: 'list_agents',
+        category: 'agents',
+        description: 'List all available agents with their roles, capabilities, and current status. Use before delegating to pick the right agent for the task.',
+        input_schema: {
+            type: 'object',
+            properties: {}
+        }
+    },
+    {
+        name: 'delegate_to_agent',
+        category: 'agents',
+        description: 'Assign a task to a specialized agent and wait for the result. The agent will execute the task autonomously using its own tools and return the output. Use list_agents first to pick the right agent.',
+        input_schema: {
+            type: 'object',
+            properties: {
+                agent: { type: 'string', description: 'Agent name (e.g. "code-implementer", "testing-engineer", "project-manager")' },
+                task: { type: 'string', description: 'Detailed description of what the agent should do' }
+            },
+            required: ['agent', 'task']
+        }
     }
 ];
 
@@ -758,6 +782,45 @@ async function executeToolCall(tool, inputOverride) {
                 const tasks = HUB.getService('tasks');
                 if (!tasks || !tasks.toggleTodo) { result = { error: 'Tasks service unavailable' }; break; }
                 result = tasks.toggleTodo(input.task_id, input.todo_id);
+                break;
+            }
+
+            // Agent Tools
+            case 'list_agents': {
+                const agentMgr = HUB.getService('agentManager');
+                if (!agentMgr || !agentMgr.listAgents) {
+                    result = { error: 'Agent manager not available' };
+                    break;
+                }
+                const agents = agentMgr.listAgents();
+                const formatted = agents.map(a => ({
+                    name: a.name,
+                    role: a.role,
+                    description: a.description || '',
+                    capabilities: a.capabilities || [],
+                    status: a.status || 'idle'
+                }));
+                result = { agents: formatted, count: formatted.length };
+                break;
+            }
+
+            case 'delegate_to_agent': {
+                if (!input.agent || !input.task) {
+                    result = { error: 'agent and task are required' };
+                    break;
+                }
+                HUB.log(`[delegate_to_agent] Delegating to ${input.agent}: ${input.task.substring(0, 100)}`, 'info');
+                const agentSession = require('./agent-session');
+                if (!agentSession || !agentSession.dispatchAgentAndAwait) {
+                    result = { error: 'Agent session module not available' };
+                    break;
+                }
+                try {
+                    const delegateResult = await agentSession.dispatchAgentAndAwait(input.agent, input.task, input.scope || {});
+                    result = delegateResult;
+                } catch (delegateErr) {
+                    result = { error: delegateErr.message };
+                }
                 break;
             }
 

@@ -32,11 +32,33 @@ function toAnthropicMessages(messages) {
     for (const msg of messages) {
         if (!msg || !msg.role) continue;
 
+        // ── Synthetic tool IDs (from text-fallback parser) ─────────────
+        // MiniMax rejects tool_result blocks whose IDs it didn't generate.
+        // Convert synthetic pairs to plain user text so the API accepts them.
+        const _isSynthId = (id) => id && id.startsWith('toolu_txt_');
+
         if (msg.role === 'tool') {
-            // Merge consecutive tool results into one user message
+            const toolId = msg.tool_call_id || msg.tool_use_id || 'unknown';
+
+            if (_isSynthId(toolId)) {
+                // Inject as plain-text user message instead of tool_result
+                const resultText = '[Tool Result]\n' +
+                    (typeof msg.content === 'string' ? msg.content : JSON.stringify(msg.content));
+                const last = out[out.length - 1];
+                if (last && last.role === 'user' && typeof last.content === 'string') {
+                    last.content += '\n\n' + resultText;
+                } else if (last && last.role === 'user' && Array.isArray(last.content)) {
+                    last.content.push({ type: 'text', text: resultText });
+                } else {
+                    out.push({ role: 'user', content: resultText });
+                }
+                continue;
+            }
+
+            // Normal (native) tool results
             const toolBlock = {
                 type: 'tool_result',
-                tool_use_id: msg.tool_call_id || msg.tool_use_id || 'unknown',
+                tool_use_id: toolId,
                 content: typeof msg.content === 'string' ? msg.content : JSON.stringify(msg.content)
             };
             const last = out[out.length - 1];
@@ -72,6 +94,19 @@ function toAnthropicMessages(messages) {
         }
 
         // Default: pass through, ensure content is valid
+        // Strip synthetic tool_use blocks from assistant content arrays
+        if (msg.role === 'assistant' && Array.isArray(msg.content)) {
+            const cleaned = msg.content.filter(b =>
+                !(b.type === 'tool_use' && _isSynthId(b.id))
+            );
+            // Ensure we don't send an empty content array
+            if (cleaned.length === 0) {
+                cleaned.push({ type: 'text', text: '(tool executed)' });
+            }
+            out.push({ role: msg.role, content: cleaned });
+            continue;
+        }
+
         if (msg.content !== undefined && msg.content !== null) {
             out.push({ role: msg.role, content: msg.content });
         }

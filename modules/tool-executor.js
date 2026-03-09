@@ -235,7 +235,7 @@ async function executeToolsWithApproval(toolCalls) {
         if (isToolBlocked(tool.name)) {
             const suggestedAgent = getSuggestedAgent(tool.name);
             hub.log(`⛔ [ORCHESTRATOR] Blocked ${tool.name} — must delegate to ${suggestedAgent}`, 'warning');
-            
+
             if (conv && conv.addToolResult) {
                 conv.addToolResult(tool.id,
                     `⛔ ORCHESTRATOR ROLE VIOLATION: You called \`${tool.name}\` directly.\n` +
@@ -244,7 +244,8 @@ async function executeToolsWithApproval(toolCalls) {
                     `Run list_agents() first if you need to see who is available.`
                 );
             }
-            
+
+            results.push({ toolId: tool.id, success: false, denied: true, reason: `Blocked: must delegate to ${suggestedAgent}` });
             setOrchestratorState({ tool: null });
             continue;
         }
@@ -267,7 +268,8 @@ async function executeToolsWithApproval(toolCalls) {
                         `Use delegate_to_agent to assign this work to a capable agent.`
                     );
                 }
-                
+
+                results.push({ toolId: tool.id, success: false, denied: true, reason: `Role restriction: ${orchRole}` });
                 setOrchestratorState({ tool: null });
                 continue;
             }
@@ -328,8 +330,11 @@ async function executeToolsWithApproval(toolCalls) {
                 if (conv && conv.addToolResult) {
                     conv.addToolResult(tool.id, `[DENIED] ${tool.name}`);
                 }
-                hub.addMessage('assistant', `❌ \`${tool.name}\` denied. Skipping.`);
+                // UI-only — don't pollute conversation history with bare assistant messages
+                // (would break assistant→user alternation required by Anthropic API)
+                hub.broadcast('message_add', { role: 'assistant', content: `❌ \`${tool.name}\` denied. Skipping.` });
                 setOrchestratorState({ tool: null });
+                results.push({ toolId: tool.id, success: false, denied: true, reason: 'User denied' });
                 continue;
             }
             
@@ -401,9 +406,10 @@ async function executeToolsWithApproval(toolCalls) {
                 const errorResult = await handleToolError(tool, result.error, conv);
                 results.push({ toolId: tool.id, success: false, error: result.errorMessage });
             }
-        } else if (approvalResult.escalate && approvalResult.tier >= 3) {
-            // T3-T4: Need user approval
-            hub.log(`⚠️ [${tool.name}] Tier ${recommendation.tier} — awaiting user approval`, 'warning');
+        } else if (approvalResult.escalate) {
+            // T2+ escalation: Need user approval (T2 low-confidence, T3, T4)
+            const escTier = recommendation ? recommendation.tier : '?';
+            hub.log(`⚠️ [${tool.name}] Tier ${escTier} — awaiting user approval`, 'warning');
             
             const t3Payload = {
                 toolName: tool.name,
@@ -426,10 +432,11 @@ async function executeToolsWithApproval(toolCalls) {
             
             if (!tierApproved) {
                 if (conv && conv.addToolResult) {
-                    conv.addToolResult(tool.id, `[DENIED] ${tool.name} (Tier ${recommendation.tier})`);
+                    conv.addToolResult(tool.id, `[DENIED] ${tool.name} (Tier ${escTier})`);
                 }
-                hub.addMessage('assistant', `❌ \`${tool.name}\` denied. Skipping.`);
+                hub.broadcast('message_add', { role: 'assistant', content: `❌ \`${tool.name}\` denied. Skipping.` });
                 setOrchestratorState({ tool: null });
+                results.push({ toolId: tool.id, success: false, denied: true, reason: `Tier ${escTier} denied` });
                 continue;
             }
             
@@ -450,12 +457,13 @@ async function executeToolsWithApproval(toolCalls) {
                 results.push({ toolId: tool.id, success: false, error: result.errorMessage });
             }
         } else {
-            // Denied
+            // Denied (auto-deny by approval system)
             if (conv && conv.addToolResult) {
                 conv.addToolResult(tool.id, `[DENIED] ${tool.name}: ${approvalResult.reason}`);
             }
-            
-            hub.addMessage('assistant', `❌ \`${tool.name}\` denied: ${approvalResult.reason}`);
+
+            // UI-only notification — don't add bare assistant message to conversation history
+            hub.broadcast('message_add', { role: 'assistant', content: `❌ \`${tool.name}\` denied: ${approvalResult.reason}` });
             results.push({ toolId: tool.id, success: false, denied: true, reason: approvalResult.reason });
         }
         

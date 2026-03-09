@@ -74,13 +74,18 @@ function sanitizeHistory(h) {
         if (m.content === undefined || m.content === null) return false;
         return true;
     }).map(m => {
-        // Ensure required fields
-        return {
+        // Ensure required fields — preserve tool_calls for assistant messages
+        // (needed by toAnthropicMessages to reconstruct tool_use content blocks)
+        const sanitized = {
             role: m.role,
             content: m.content,
             ts: m.ts || Date.now(),
             tool_call_id: m.tool_call_id || null
         };
+        if (m.tool_calls && m.tool_calls.length > 0) {
+            sanitized.tool_calls = m.tool_calls;
+        }
+        return sanitized;
     });
 }
 

@@ -373,9 +373,12 @@ async function handleUserMessage(text, socket) {
                 } catch (_) { /* not JSON, use as-is */ }
             }
 
-            // Store full content (with thinking blocks) in DB for reasoning chain
+            // Store full content (with thinking blocks) in DB for reasoning chain.
+            // SKIP if lastResponse had tool_calls — those were already stored inside
+            // runAICycle before tool execution to maintain the tool_use→tool_result chain.
+            const hasToolCalls = lastResponse.tool_calls && lastResponse.tool_calls.length > 0;
             const conv = hub.getService('conversation');
-            if (conv && conv.addMessage) {
+            if (conv && conv.addMessage && !hasToolCalls) {
                 if (contentBlocks.length > 0) {
                     conv.addMessage('assistant', lastResponse.content);
                 } else if (responseText) {
@@ -392,9 +395,9 @@ async function handleUserMessage(text, socket) {
         finishMainProcessing('Ready', 'idle');
     } catch (error) {
         hub.log('[ORCHESTRATION] Error: ' + describeError(error), 'error');
-        
+
         hub.addMessage('assistant', `Error: ${describeError(error)}`);
-        
+
         finishMainProcessing('Error', 'error');
     }
 }

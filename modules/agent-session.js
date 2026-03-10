@@ -312,8 +312,15 @@ async function runAgentCycle(session, userMessage) {
     // Build system prompt
     const systemPrompt = buildAgentSystemPrompt(session);
 
-    // Add user message to conversation context
-    hub.addMessage('user', userMessage);
+    // Add agent task to conversation context (role:'user' for API compatibility)
+    // but broadcast with source metadata so the UI shows it's from the agent, not the human
+    const conv = hub.getService('conversation');
+    if (conv && conv.addMessage) conv.addMessage('user', userMessage);
+    hub.broadcast('message_add', {
+        role: 'user',
+        content: userMessage,
+        source: session.agentName || 'orchestrator'
+    });
 
     while (cycleCount < maxCycles) {
         setCycleDepth(cycleCount);

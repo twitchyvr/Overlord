@@ -543,18 +543,20 @@ export class ChatView extends Component {
 
     _addMessage(role, content, opts = {}) {
         if (!this._messagesEl) return;
-        const { images, isPlan, hotInjected } = opts;
+        const { images, isPlan, hotInjected, source } = opts;
         const text = this._cleanPlanJSON(this._parseMessageContent(content));
 
         const msgIndex = this._msgCounter++;
         const isUser = role === 'user';
+        const isAgentSource = isUser && source && source !== 'user';
         const roleLabel = isUser
-            ? (hotInjected ? 'HOT INJECT' : 'USER')
+            ? (hotInjected ? 'HOT INJECT' : (isAgentSource ? source.toUpperCase() : 'USER'))
             : role === 'assistant' ? 'Overlord' : role;
 
         // Build message container
         const div = h('div', {
             class: 'message ' + role +
+                   (isAgentSource ? ' agent-sourced' : '') +
                    (hotInjected ? ' hot-injected' : '') +
                    ((isPlan || this._looksLikePlan(text)) ? ' plan-message' : ''),
             'data-raw': text,
@@ -805,7 +807,8 @@ export class ChatView extends Component {
         // Add fresh message
         this._addMessage(msg.role, msg.content, {
             isPlan: msg.isPlan,
-            hotInjected: msg.hot_injected
+            hotInjected: msg.hot_injected,
+            source: msg.source
         });
     }
 

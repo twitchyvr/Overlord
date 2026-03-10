@@ -5046,3 +5046,40 @@ ommand": "# Syntax check ALL frontend JS files\ncd /c/Users/mattr/GitRepos/Overl
 {"timestamp": "2026-03-10T03:44:19.307296+00:00", "hook_event_name": "PreToolUse", "tool_name": "Bash", "session_id": "9bab9b91-6c15-4910-a5cb-5c6b96fb5f8a", "command": "node -c modules/chat-stream.js && echo \"OK\""}
 {"timestamp": "2026-03-10T03:44:19.440498+00:00", "hook_event_name": "PostToolUse", "tool_name": "Bash", "session_id": "9bab9b91-6c15-4910-a5cb-5c6b96fb5f8a"}
 {"timestamp": "2026-03-10T03:44:28.185421+00:00", "hook_event_name": "PreToolUse", "tool_name": "Bash", "session_id": "9bab9b91-6c15-4910-a5cb-5c6b96fb5f8a", "command": "git add modules/chat-stream.js .claude/hooks/logs/.last_sound_ts .claude/hooks/logs/hooks-log.jsonl .claude/hooks/logs/session-metrics.json && git commit -m \"$(cat <<'EOF'\nfix(api): sanitize message history before sending to API\n\ntoAnthropicMessages() now runs a post-processing pass that:\n\n1. Merges consecutive same-role messages — prevents alternation errors\n   from bare assistant messages that were injected into history by the\n   old tool-denial code (or any other source of corruption)\n\n2. Con"}
+{"timestamp": "2026-03-10T03:44:28.351612+00:00", "hook_event_name": "PostToolUse", "tool_name": "Bash", "session_id": "9bab9b91-6c15-4910-a5cb-5c6b96fb5f8a"}
+{"timestamp": "2026-03-10T03:44:37.320773+00:00", "hook_event_name": "Stop", "tool_name": null, "session_id": "9bab9b91-6c15-4910-a5cb-5c6b96fb5f8a"}
+{"timestamp": "2026-03-10T03:48:08.335000+00:00", "hook_event_name": "UserPromptSubmit", "tool_name": null, "session_id": "9bab9b91-6c15-4910-a5cb-5c6b96fb5f8a"}
+{"timestamp": "2026-03-10T03:48:27.536390+00:00", "hook_event_name": "PreToolUse", "tool_name": "Grep", "session_id": "9bab9b91-6c15-4910-a5cb-5c6b96fb5f8a"}
+{"timestamp": "2026-03-10T03:48:27.567687+00:00", "hook_event_name": "PostToolUse", "tool_name": "Grep", "session_id": "9bab9b91-6c15-4910-a5cb-5c6b96fb5f8a"}
+{"timestamp": "2026-03-10T03:48:31.964318+00:00", "hook_event_name": "PreToolUse", "tool_name": "Read", "session_id": "9bab9b91-6c15-4910-a5cb-5c6b96fb5f8a", "file_path": "/Users/mattrogers/GitRepos/Overlord/modules/agent-session.js"}
+{"timestamp": "2026-03-10T03:48:32.001673+00:00", "hook_event_name": "PostToolUse", "tool_name": "Read", "session_id": "9bab9b91-6c15-4910-a5cb-5c6b96fb5f8a"}
+{"timestamp": "2026-03-10T03:48:56.954761+00:00", "hook_event_name": "PreToolUse", "tool_name": "Grep", "session_id": "9bab9b91-6c15-4910-a5cb-5c6b96fb5f8a"}
+{"timestamp": "2026-03-10T03:48:56.984922+00:00", "hook_event_name": "PostToolUse", "tool_name": "Grep", "session_id": "9bab9b91-6c15-4910-a5cb-5c6b96fb5f8a"}
+{"timestamp": "2026-03-10T03:49:01.847045+00:00", "hook_event_name": "PreToolUse", "tool_name": "Grep", "session_id": "9bab9b91-6c15-4910-a5cb-5c6b96fb5f8a"}
+{"timestamp": "2026-03-10T03:49:01.877037+00:00", "hook_event_name": "PostToolUse", "tool_name": "Grep", "session_id": "9bab9b91-6c15-4910-a5cb-5c6b96fb5f8a"}
+{"timestamp": "2026-03-10T03:49:05.926127+00:00", "hook_event_name": "PreToolUse", "tool_name": "Read", "session_id": "9bab9b91-6c15-4910-a5cb-5c6b96fb5f8a", "file_path": "/Users/mattrogers/GitRepos/Overlord/modules/agent-session.js"}
+{"timestamp": "2026-03-10T03:49:05.961422+00:00", "hook_event_name": "PostToolUse", "tool_name": "Read", "session_id": "9bab9b91-6c15-4910-a5cb-5c6b96fb5f8a"}
+{"timestamp": "2026-03-10T03:49:32.209178+00:00", "hook_event_name": "PreToolUse", "tool_name": "Edit", "session_id": "9bab9b91-6c15-4910-a5cb-5c6b96fb5f8a", "file_path": "/Users/mattrogers/GitRepos/Overlord/modules/agent-session.js"}
+{"timestamp": "2026-03-10T03:49:32.290813+00:00", "hook_event_name": "PostToolUse", "tool_name": "Edit", "session_id": "9bab9b91-6c15-4910-a5cb-5c6b96fb5f8a"}
+{"timestamp": "2026-03-10T03:49:37.704815+00:00", "hook_event_name": "PreToolUse", "tool_name": "Grep", "session_id": "9bab9b91-6c15-4910-a5cb-5c6b96fb5f8a"}
+{"timestamp": "2026-03-10T03:49:37.739115+00:00", "hook_event_name": "PostToolUse", "tool_name": "Grep", "session_id": "9bab9b91-6c15-4910-a5cb-5c6b96fb5f8a"}
+{"timestamp": "2026-03-10T03:49:42.365656+00:00", "hook_event_name": "PreToolUse", "tool_name": "Grep", "session_id": "9bab9b91-6c15-4910-a5cb-5c6b96fb5f8a"}
+{"timestamp": "2026-03-10T03:49:42.403434+00:00", "hook_event_name": "PostToolUse", "tool_name": "Grep", "session_id": "9bab9b91-6c15-4910-a5cb-5c6b96fb5f8a"}
+{"timestamp": "2026-03-10T03:49:46.756832+00:00", "hook_event_name": "PreToolUse", "tool_name": "Read", "session_id": "9bab9b91-6c15-4910-a5cb-5c6b96fb5f8a", "file_path": "/Users/mattrogers/GitRepos/Overlord/public/ui/views/chat.js"}
+{"timestamp": "2026-03-10T03:49:46.793744+00:00", "hook_event_name": "PostToolUse", "tool_name": "Read", "session_id": "9bab9b91-6c15-4910-a5cb-5c6b96fb5f8a"}
+{"timestamp": "2026-03-10T03:49:52.690854+00:00", "hook_event_name": "PreToolUse", "tool_name": "Grep", "session_id": "9bab9b91-6c15-4910-a5cb-5c6b96fb5f8a"}
+{"timestamp": "2026-03-10T03:49:52.743951+00:00", "hook_event_name": "PostToolUse", "tool_name": "Grep", "session_id": "9bab9b91-6c15-4910-a5cb-5c6b96fb5f8a"}
+{"timestamp": "2026-03-10T03:49:59.293307+00:00", "hook_event_name": "PreToolUse", "tool_name": "Edit", "session_id": "9bab9b91-6c15-4910-a5cb-5c6b96fb5f8a", "file_path": "/Users/mattrogers/GitRepos/Overlord/public/ui/views/chat.js"}
+{"timestamp": "2026-03-10T03:49:59.357215+00:00", "hook_event_name": "PostToolUse", "tool_name": "Edit", "session_id": "9bab9b91-6c15-4910-a5cb-5c6b96fb5f8a"}
+{"timestamp": "2026-03-10T03:50:06.529494+00:00", "hook_event_name": "PreToolUse", "tool_name": "Edit", "session_id": "9bab9b91-6c15-4910-a5cb-5c6b96fb5f8a", "file_path": "/Users/mattrogers/GitRepos/Overlord/public/ui/views/chat.js"}
+{"timestamp": "2026-03-10T03:50:06.591571+00:00", "hook_event_name": "PostToolUse", "tool_name": "Edit", "session_id": "9bab9b91-6c15-4910-a5cb-5c6b96fb5f8a"}
+{"timestamp": "2026-03-10T03:50:13.271420+00:00", "hook_event_name": "PreToolUse", "tool_name": "Edit", "session_id": "9bab9b91-6c15-4910-a5cb-5c6b96fb5f8a", "file_path": "/Users/mattrogers/GitRepos/Overlord/public/ui/views/chat.js"}
+{"timestamp": "2026-03-10T03:50:13.336093+00:00", "hook_event_name": "PostToolUse", "tool_name": "Edit", "session_id": "9bab9b91-6c15-4910-a5cb-5c6b96fb5f8a"}
+{"timestamp": "2026-03-10T03:50:18.179927+00:00", "hook_event_name": "PreToolUse", "tool_name": "Grep", "session_id": "9bab9b91-6c15-4910-a5cb-5c6b96fb5f8a"}
+{"timestamp": "2026-03-10T03:50:18.241029+00:00", "hook_event_name": "PostToolUse", "tool_name": "Grep", "session_id": "9bab9b91-6c15-4910-a5cb-5c6b96fb5f8a"}
+{"timestamp": "2026-03-10T03:50:31.138607+00:00", "hook_event_name": "PreToolUse", "tool_name": "Read", "session_id": "9bab9b91-6c15-4910-a5cb-5c6b96fb5f8a", "file_path": "/Users/mattrogers/GitRepos/Overlord/public/ui/css/chat.css"}
+{"timestamp": "2026-03-10T03:50:31.203469+00:00", "hook_event_name": "PostToolUse", "tool_name": "Read", "session_id": "9bab9b91-6c15-4910-a5cb-5c6b96fb5f8a"}
+{"timestamp": "2026-03-10T03:50:39.869403+00:00", "hook_event_name": "PreToolUse", "tool_name": "Edit", "session_id": "9bab9b91-6c15-4910-a5cb-5c6b96fb5f8a", "file_path": "/Users/mattrogers/GitRepos/Overlord/public/ui/css/chat.css"}
+{"timestamp": "2026-03-10T03:50:39.952485+00:00", "hook_event_name": "PostToolUse", "tool_name": "Edit", "session_id": "9bab9b91-6c15-4910-a5cb-5c6b96fb5f8a"}
+{"timestamp": "2026-03-10T03:50:44.698229+00:00", "hook_event_name": "PreToolUse", "tool_name": "Bash", "session_id": "9bab9b91-6c15-4910-a5cb-5c6b96fb5f8a", "command": "node -c modules/agent-session.js && echo \"OK\""}
+{"timestamp": "2026-03-10T03:50:44.829066+00:00", "hook_event_name": "PostToolUse", "tool_name": "Bash", "session_id": "9bab9b91-6c15-4910-a5cb-5c6b96fb5f8a"}

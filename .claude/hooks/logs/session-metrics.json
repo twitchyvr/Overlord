@@ -1,12 +1,14 @@
 {
   "tools": {
-    "Read": 24,
+    "Read": 26,
     "Grep": 2,
     "Agent": 1,
-    "Edit": 6,
-    "Bash": 3
+    "Edit": 8,
+    "Bash": 7
   },
-  "posttooluse_count": 17,
-  "pretooluse_count": 16,
-  "subagentstop_count": 1
+  "posttooluse_count": 21,
+  "pretooluse_count": 20,
+  "subagentstop_count": 1,
+  "notifications": 1,
+  "prompts_submitted": 1
 }

@@ -120,7 +120,68 @@ function toAnthropicMessages(messages) {
             out.push({ role: msg.role, content: msg.content });
         }
     }
-    return out;
+
+    // ── Post-processing: repair broken history ──────────────────────────
+    // 1. Merge consecutive same-role messages (prevents alternation errors)
+    // 2. Ensure every tool_result has a matching tool_use in the preceding assistant
+    return _sanitizeAlternation(out);
+}
+
+/**
+ * Repair message alternation and orphaned tool_results.
+ * The Anthropic API requires strict user/assistant alternation and every
+ * tool_result must follow a tool_use in the immediately preceding assistant msg.
+ */
+function _sanitizeAlternation(messages) {
+    if (messages.length === 0) return messages;
+
+    // Pass 1: merge consecutive same-role messages
+    const merged = [messages[0]];
+    for (let i = 1; i < messages.length; i++) {
+        const prev = merged[merged.length - 1];
+        const cur = messages[i];
+        if (prev.role === cur.role) {
+            // Merge into prev
+            prev.content = _mergeContent(prev.content, cur.content);
+        } else {
+            merged.push(cur);
+        }
+    }
+
+    // Pass 2: ensure tool_results have matching tool_use in preceding assistant
+    for (let i = 1; i < merged.length; i++) {
+        const msg = merged[i];
+        if (msg.role !== 'user' || !Array.isArray(msg.content)) continue;
+
+        const toolResults = msg.content.filter(b => b.type === 'tool_result');
+        if (toolResults.length === 0) continue;
+
+        // Collect tool_use IDs from the preceding assistant message
+        const prev = merged[i - 1];
+        const assistantToolIds = new Set();
+        if (prev && prev.role === 'assistant' && Array.isArray(prev.content)) {
+            for (const b of prev.content) {
+                if (b.type === 'tool_use' && b.id) assistantToolIds.add(b.id);
+            }
+        }
+
+        // Convert orphaned tool_results to plain text
+        msg.content = msg.content.map(b => {
+            if (b.type === 'tool_result' && !assistantToolIds.has(b.tool_use_id)) {
+                return { type: 'text', text: `[Previous tool result: ${b.content || '(empty)'}]` };
+            }
+            return b;
+        });
+    }
+
+    return merged;
+}
+
+/** Merge two content values (string or array) into one */
+function _mergeContent(a, b) {
+    const aBlocks = typeof a === 'string' ? [{ type: 'text', text: a }] : (Array.isArray(a) ? a : []);
+    const bBlocks = typeof b === 'string' ? [{ type: 'text', text: b }] : (Array.isArray(b) ? b : []);
+    return [...aBlocks, ...bBlocks];
 }
 
 // Chat stream with delta parsing

@@ -131,6 +131,65 @@ const DANGEROUS_PATTERNS = [
     /patch\s+-p0.*\/etc\//i,
 ];
 
+// Common emoji that MiniMax tends to corrupt — map broken sequences to correct codepoints
+const EMOJI_REPAIR_MAP = {
+    // Common corrupted patterns: MiniMax sometimes outputs lone surrogates or
+    // mojibake sequences. These are the most frequently corrupted emoji in code.
+    '\uFFFD': '',         // Replacement character — drop it
+};
+
+// Repair corrupted Unicode from MiniMax model output
+function repairUnicode(str) {
+    if (typeof str !== 'string') return str;
+
+    let result = str;
+
+    // 1. Remove lone surrogates (the #1 corruption pattern from MiniMax)
+    // A lone high surrogate (D800-DBFF) not followed by a low surrogate (DC00-DFFF), or vice versa
+    result = result.replace(/[\uD800-\uDBFF](?![\uDC00-\uDFFF])/g, '');
+    result = result.replace(/(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/g, '');
+
+    // 2. Remove Unicode replacement characters (indicates prior corruption)
+    result = result.replace(/\uFFFD/g, '');
+
+    // 3. Fix double-encoded UTF-8 (mojibake) — common with Chinese-origin models
+    // Pattern: C3 followed by another high byte, typical of double-encoded UTF-8
+    try {
+        // Detect mojibake: sequences like \u00C3\u00A9 that should be \u00E9
+        const mojibakePattern = /[\u00C0-\u00C3][\u0080-\u00BF]/g;
+        if (mojibakePattern.test(result)) {
+            // Try to decode as if it were double-encoded UTF-8
+            const bytes = [];
+            let hasMojibake = false;
+            for (let i = 0; i < result.length; i++) {
+                const code = result.charCodeAt(i);
+                if (code >= 0xC0 && code <= 0xC3 && i + 1 < result.length) {
+                    const next = result.charCodeAt(i + 1);
+                    if (next >= 0x80 && next <= 0xBF) {
+                        // This looks like a double-encoded sequence
+                        bytes.push(((code & 0x03) << 6) | (next & 0x3F));
+                        i++; // skip next char
+                        hasMojibake = true;
+                        continue;
+                    }
+                }
+                bytes.push(code);
+            }
+            if (hasMojibake) {
+                const decoded = String.fromCharCode(...bytes);
+                // Only use decoded version if it produces valid text
+                if (!decoded.includes('\uFFFD')) {
+                    result = decoded;
+                }
+            }
+        }
+    } catch (_) {
+        // If decoding fails, keep original
+    }
+
+    return result;
+}
+
 // ==================== CORE FUNCTIONS ====================
 
 // Primary sanitization function - use for ALL output
@@ -138,7 +197,10 @@ function sanitizeForOutput(str) {
     if (typeof str !== 'string') return str;
     
     let sanitized = str;
-    
+
+    // Step 0: Repair corrupted Unicode from MiniMax model output
+    sanitized = repairUnicode(sanitized);
+
     // Step 1: Decode HTML entities FIRST (before other processing)
     for (const [entity, char] of Object.entries(HTML_ENTITIES)) {
         sanitized = sanitized.split(entity).join(char);
@@ -346,6 +408,7 @@ function init(hub) {
         safeReadFile,
         validatePatch,
         safePatch,
+        repairUnicode,
         // Expose constants for other modules
         CHAR_MAP,
         HTML_ENTITIES,
@@ -359,7 +422,7 @@ function init(hub) {
 }
 
 // Export for direct use
-module.exports = { 
+module.exports = {
     init,
     sanitizeForOutput,
     sanitizeForSearch,
@@ -369,5 +432,6 @@ module.exports = {
     safeWriteFile,
     safeReadFile,
     validatePatch,
-    safePatch
+    safePatch,
+    repairUnicode
 };

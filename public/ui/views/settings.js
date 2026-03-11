@@ -17,6 +17,16 @@ import { Modal } from '../components/modal.js';
 import { Tabs } from '../components/tabs.js';
 import { Button } from '../components/button.js';
 
+// Re-export from modular files for backward compatibility
+export { buildSettingsContainer, buildSection, buildToggle, buildConfigToggle, applyConfigToForm } from './settings-main.js';
+export { SettingsStore, DEFAULT_CONFIG, createSettingsStore } from './settings-store.js';
+export { renderGeneralTab } from './settings-panels/general.js';
+export { renderAITab } from './settings-panels/ai.js';
+export { renderToolsTab } from './settings-panels/tools.js';
+export { renderDisplayTab, renderAppearancePanel } from './settings-panels/appearance.js';
+export { renderSecurityTab } from './settings-panels/security.js';
+export { renderAgentsTab } from './settings-panels/agents.js';
+
 const MODAL_ID = 'settings-modal';
 
 const MODEL_OPTIONS = [
@@ -979,22 +989,36 @@ export class SettingsView extends Component {
         lines.push(`Model: ${ctx.model}`);
         lines.push(`Max Tokens: ${ctx.maxTokens}`);
         lines.push(`Temperature: ${ctx.temperature}`);
-        lines.push(`Tools: ${ctx.toolsCount} definitions`);
+        if (ctx.platform) lines.push(`Platform: ${ctx.platform} | Node: ${ctx.nodeVersion || '?'}`);
         if (ctx.thinkingEnabled) {
             lines.push(`Thinking: enabled (budget: ${ctx.thinkingBudget})`);
         }
         lines.push('');
-        lines.push(`=== SYSTEM PROMPT (${(ctx.system || '').length} chars) ===`);
-        lines.push((ctx.system || '').substring(0, 2000));
-        if ((ctx.system || '').length > 2000) lines.push('... [truncated]');
+
+        // Tools — full list
+        lines.push(`=== TOOLS (${ctx.toolsCount} definitions) ===`);
+        if (ctx.toolNames && ctx.toolNames.length) {
+            lines.push(ctx.toolNames.join(', '));
+        }
         lines.push('');
+
+        // System prompt — show FULL content, not truncated
+        const sysLen = ctx.systemLength || (ctx.system || '').length;
+        lines.push(`=== SYSTEM PROMPT (${sysLen} chars) ===`);
+        lines.push(ctx.system || '[empty]');
+        lines.push('');
+
+        // Messages — with content type labels
         lines.push(`=== MESSAGES (${ctx.messagesCount} total) ===`);
         if (ctx.messages) {
             for (let i = 0; i < ctx.messages.length; i++) {
                 const m = ctx.messages[i];
-                lines.push(`[${i}] ${m.role.toUpperCase()} (${m.contentLength} chars)`);
+                const typeTag = m.contentType && m.contentType !== 'text' ? ` [${m.contentType}]` : '';
+                lines.push(`[${i}] ${m.role.toUpperCase()}${typeTag} (${m.contentLength} chars)`);
                 if (m.contentPreview) {
                     lines.push(`    ${m.contentPreview}`);
+                } else {
+                    lines.push(`    [empty]`);
                 }
             }
         }

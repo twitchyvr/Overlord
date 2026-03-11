@@ -2242,7 +2242,7 @@
         OverlordUI.subscribe('conversation_loaded', (data) => {
             if (data.id) _joinConvRoom(data.id);
             const conv = allConversations.find(c => c.id === data.id);
-            if (_convTitle) _convTitle.textContent = conv ? conv.title.substring(0, 30) : 'Chat';
+            if (_convTitle) _convTitle.textContent = conv && conv.title ? conv.title.substring(0, 30) : 'Chat';
         });
         OverlordUI.subscribe('conversation_new', (d) => {
             if (_convTitle) _convTitle.textContent = 'New Chat';

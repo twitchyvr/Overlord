@@ -80,6 +80,20 @@ export class TasksPanel extends PanelComponent {
             if (taskId) this._toggleTaskComplete(taskId);
         });
 
+        // Todo checkbox toggle
+        this.on('click', '.todo-checkbox', (e, el) => {
+            const taskId = el.dataset.taskId;
+            const todoId = el.dataset.todoId;
+            if (taskId && todoId) this._toggleTodo(taskId, todoId);
+        });
+
+        // Todo delete
+        this.on('click', '.todo-delete', (e, el) => {
+            const taskId = el.dataset.taskId;
+            const todoId = el.dataset.todoId;
+            if (taskId && todoId) this._removeTodo(taskId, todoId);
+        });
+
         this.on('click', '.task-action-btn', (e, el) => {
             const action = el.dataset.action;
             const taskId = el.dataset.taskId;
@@ -302,6 +316,50 @@ export class TasksPanel extends PanelComponent {
             }, task.description));
         }
 
+        // Todos (atomic checklist items)
+        if (task.todos && task.todos.length > 0) {
+            const todosContainer = h('div', {
+                class: 'task-todos',
+                style: 'padding:4px 12px 4px 42px;'
+            });
+            const doneCount = task.todos.filter(td => td.done).length;
+            const totalCount = task.todos.length;
+            // Progress summary
+            todosContainer.appendChild(h('div', {
+                style: 'font-size:9px;color:var(--text-muted);margin-bottom:3px;'
+            }, `Checklist: ${doneCount}/${totalCount}`));
+
+            task.todos.forEach(td => {
+                const todoRow = h('div', {
+                    class: 'todo-item',
+                    style: 'display:flex;align-items:center;gap:6px;padding:2px 0;font-size:11px;'
+                });
+                const cb = h('input', {
+                    type: 'checkbox',
+                    class: 'todo-checkbox',
+                    'data-task-id': task.id,
+                    'data-todo-id': td.id,
+                    style: 'width:13px;height:13px;cursor:pointer;'
+                });
+                if (td.done) cb.checked = true;
+                todoRow.appendChild(cb);
+                todoRow.appendChild(h('span', {
+                    style: td.done
+                        ? 'flex:1;text-decoration:line-through;color:var(--text-muted);'
+                        : 'flex:1;color:var(--text-primary);'
+                }, td.text));
+                todoRow.appendChild(h('button', {
+                    class: 'todo-delete',
+                    'data-task-id': task.id,
+                    'data-todo-id': td.id,
+                    style: 'background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:10px;padding:0 2px;',
+                    title: 'Remove todo'
+                }, '✕'));
+                todosContainer.appendChild(todoRow);
+            });
+            item.appendChild(todosContainer);
+        }
+
         // Dependency info
         if (task.dependsOn?.length) {
             const depNames = task.dependsOn.map(id => {
@@ -450,5 +508,21 @@ export class TasksPanel extends PanelComponent {
 
     _openTaskDetail(taskId) {
         OverlordUI.dispatch('open_task_detail', { taskId });
+    }
+
+    // ── Todo Operations ─────────────────────────────────────────
+
+    _toggleTodo(taskId, todoId) {
+        const socket = this.opts?.socket;
+        if (socket) {
+            socket.emit('toggle_todo', { taskId, todoId });
+        }
+    }
+
+    _removeTodo(taskId, todoId) {
+        const socket = this.opts?.socket;
+        if (socket) {
+            socket.emit('remove_todo', { taskId, todoId });
+        }
     }
 }

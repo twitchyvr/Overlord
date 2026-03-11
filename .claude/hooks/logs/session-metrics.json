@@ -1,0 +1,10 @@
+{
+  "tools": {
+    "Agent": 1,
+    "Bash": 23
+  },
+  "notifications": 1,
+  "prompts_submitted": 1,
+  "pretooluse_count": 12,
+  "posttooluse_count": 11
+}

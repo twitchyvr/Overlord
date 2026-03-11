@@ -1,0 +1,8 @@
+{
+  "outputStyle": "default",
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:platform.minimax.io)"
+    ]
+  }
+}

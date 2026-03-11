@@ -1,0 +1,1780 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Overlord v2 Architecture Report — Rev 3</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* ═══════════════════ DESIGN TOKENS ═══════════════════ */
+:root {
+  --bg-0: #060810;
+  --bg-1: #0c0e18;
+  --bg-2: #131624;
+  --bg-3: #1a1d30;
+  --bg-card: #101320;
+  --bg-card-hover: #181c2e;
+  --border: rgba(80,90,160,0.15);
+  --border-glow: rgba(56,189,248,0.35);
+  --text-0: #e4e8f0;
+  --text-1: #a8b0c8;
+  --text-2: #606880;
+  --accent-cyan: #38bdf8;
+  --accent-green: #4ade80;
+  --accent-yellow: #facc15;
+  --accent-red: #f87171;
+  --accent-purple: #a855f7;
+  --accent-magenta: #e879f9;
+  --accent-orange: #fb923c;
+  --electric: #00d4ff;
+  --plasma: #a855f7;
+  --neon: #00ff88;
+  --glass: rgba(12,14,24,0.85);
+  --glass-border: rgba(80,90,160,0.12);
+  --radius: 10px;
+  --radius-sm: 6px;
+  --radius-xs: 3px;
+  --shadow: 0 4px 32px rgba(0,0,0,0.5);
+  --shadow-glow: 0 0 30px rgba(56,189,248,0.06);
+  --font: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-display: 'DM Serif Display', Georgia, serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+  --transition: 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+  --grid-color: rgba(56,189,248,0.03);
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body {
+  font-family: var(--font);
+  background: var(--bg-0);
+  color: var(--text-0);
+  line-height: 1.65;
+  min-height: 100vh;
+  overflow-x: hidden;
+  background-image:
+    linear-gradient(var(--grid-color) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-color) 1px, transparent 1px);
+  background-size: 40px 40px;
+}
+::-webkit-scrollbar { width: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--accent-cyan); }
+.container { max-width: 1340px; margin: 0 auto; padding: 0 24px; }
+
+/* ═══════════════════ HERO ═══════════════════ */
+.hero {
+  position: relative;
+  padding: 72px 0 56px;
+  text-align: center;
+  overflow: hidden;
+}
+.hero::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse 700px 350px at 50% 0%, rgba(56,189,248,0.07) 0%, transparent 70%),
+    radial-gradient(ellipse 500px 250px at 25% 100%, rgba(168,85,247,0.05) 0%, transparent 70%),
+    radial-gradient(ellipse 500px 250px at 75% 100%, rgba(0,255,136,0.03) 0%, transparent 70%);
+  pointer-events: none;
+}
+.hero-badge {
+  display: inline-block;
+  padding: 5px 14px;
+  background: rgba(56,189,248,0.08);
+  border: 1px solid rgba(56,189,248,0.2);
+  border-radius: 16px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--accent-cyan);
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  margin-bottom: 18px;
+  font-family: var(--font-mono);
+}
+.hero h1 {
+  font-family: var(--font-display);
+  font-size: clamp(2rem, 5vw, 3.2rem);
+  font-weight: 400;
+  background: linear-gradient(135deg, var(--accent-cyan) 0%, #fff 40%, var(--accent-purple) 70%, var(--neon) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-bottom: 14px;
+  letter-spacing: -0.5px;
+}
+.hero p {
+  font-size: 16px;
+  color: var(--text-1);
+  max-width: 680px;
+  margin: 0 auto 28px;
+}
+.hero-stats { display: flex; gap: 28px; justify-content: center; flex-wrap: wrap; }
+.hero-stat { text-align: center; }
+.hero-stat .num { font-size: 28px; font-weight: 700; font-family: var(--font-mono); }
+.hero-stat .num.cyan { color: var(--accent-cyan); }
+.hero-stat .num.green { color: var(--accent-green); }
+.hero-stat .num.purple { color: var(--accent-purple); }
+.hero-stat .num.orange { color: var(--accent-orange); }
+.hero-stat .num.red { color: var(--accent-red); }
+.hero-stat .num.yellow { color: var(--accent-yellow); }
+.hero-stat .label { font-size: 10px; color: var(--text-2); text-transform: uppercase; letter-spacing: 1.2px; margin-top: 3px; font-weight: 600; }
+
+/* ═══════════════════ NAV ═══════════════════ */
+.nav {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: rgba(6,8,16,0.88);
+  backdrop-filter: blur(16px);
+  border-bottom: 1px solid var(--border);
+  padding: 0 24px;
+}
+.nav-inner { max-width: 1340px; margin: 0 auto; display: flex; gap: 2px; overflow-x: auto; scrollbar-width: none; padding: 6px 0; }
+.nav-inner::-webkit-scrollbar { display: none; }
+.nav-link {
+  padding: 6px 12px;
+  color: var(--text-2);
+  text-decoration: none;
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: var(--radius-xs);
+  white-space: nowrap;
+  transition: var(--transition);
+  letter-spacing: 0.3px;
+}
+.nav-link:hover { color: var(--text-0); background: var(--bg-2); }
+.nav-link.active { color: var(--accent-cyan); background: rgba(56,189,248,0.08); }
+
+/* ═══════════════════ SECTION ═══════════════════ */
+.section { padding: 52px 0; border-bottom: 1px solid var(--border); }
+.section:last-of-type { border-bottom: none; }
+.section-label { font-size: 10px; text-transform: uppercase; letter-spacing: 2.5px; color: var(--accent-cyan); margin-bottom: 6px; font-weight: 600; font-family: var(--font-mono); }
+.section h2 { font-family: var(--font-display); font-size: 26px; font-weight: 400; margin-bottom: 6px; letter-spacing: -0.3px; }
+.section .subtitle { color: var(--text-1); font-size: 15px; margin-bottom: 28px; max-width: 680px; }
+
+/* ═══════════════════ CARDS ═══════════════════ */
+.card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 22px;
+  transition: var(--transition);
+}
+.card:hover { border-color: var(--border-glow); box-shadow: var(--shadow-glow); background: var(--bg-card-hover); }
+.card-grid { display: grid; gap: 14px; }
+.card-grid.cols-2 { grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); }
+.card-grid.cols-3 { grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); }
+.card-grid.cols-4 { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+.card h3 { font-size: 15px; font-weight: 600; margin-bottom: 6px; display: flex; align-items: center; gap: 8px; }
+.card p { color: var(--text-1); font-size: 13px; }
+.tag { display: inline-block; padding: 1px 8px; border-radius: 10px; font-size: 10px; font-weight: 600; letter-spacing: 0.3px; }
+.tag.cyan { background: rgba(56,189,248,0.12); color: var(--accent-cyan); }
+.tag.green { background: rgba(74,222,128,0.12); color: var(--accent-green); }
+.tag.purple { background: rgba(168,85,247,0.12); color: var(--accent-purple); }
+.tag.red { background: rgba(248,113,113,0.12); color: var(--accent-red); }
+.tag.yellow { background: rgba(250,204,21,0.12); color: var(--accent-yellow); }
+.tag.orange { background: rgba(251,146,60,0.12); color: var(--accent-orange); }
+
+/* ═══════════════════ COMPARISON ═══════════════════ */
+.comparison { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+@media (max-width: 768px) { .comparison { grid-template-columns: 1fr; } }
+.comp-side { border-radius: var(--radius); padding: 22px; border: 1px solid var(--border); }
+.comp-side.old { background: linear-gradient(135deg, rgba(248,113,113,0.04) 0%, var(--bg-card) 100%); border-color: rgba(248,113,113,0.15); }
+.comp-side.new { background: linear-gradient(135deg, rgba(74,222,128,0.04) 0%, var(--bg-card) 100%); border-color: rgba(74,222,128,0.15); }
+.comp-side h4 { font-size: 13px; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 14px; display: flex; align-items: center; gap: 8px; }
+.comp-side.old h4 { color: var(--accent-red); }
+.comp-side.new h4 { color: var(--accent-green); }
+.comp-side ul { list-style: none; display: flex; flex-direction: column; gap: 6px; }
+.comp-side li { font-size: 13px; color: var(--text-1); padding-left: 18px; position: relative; }
+.comp-side.old li::before { content: '\2717'; position: absolute; left: 0; color: var(--accent-red); font-size: 11px; }
+.comp-side.new li::before { content: '\2713'; position: absolute; left: 0; color: var(--accent-green); font-size: 11px; }
+
+/* ═══════════════════ DIAGRAM ═══════════════════ */
+.diagram-container { background: var(--bg-1); border: 1px solid var(--border); border-radius: var(--radius); padding: 28px; overflow-x: auto; margin: 20px 0; }
+.diagram { font-family: var(--font-mono); font-size: 12px; line-height: 1.6; color: var(--text-1); white-space: pre; min-width: fit-content; }
+.diagram .hl-cyan { color: var(--accent-cyan); }
+.diagram .hl-green { color: var(--accent-green); }
+.diagram .hl-purple { color: var(--accent-purple); }
+.diagram .hl-yellow { color: var(--accent-yellow); }
+.diagram .hl-red { color: var(--accent-red); }
+.diagram .hl-orange { color: var(--accent-orange); }
+.diagram .hl-magenta { color: var(--accent-magenta); }
+.diagram .dim { color: var(--text-2); }
+
+/* ═══════════════════ TABS ═══════════════════ */
+.tabs { display: flex; gap: 3px; padding: 3px; background: var(--bg-2); border-radius: var(--radius-sm); margin-bottom: 20px; overflow-x: auto; scrollbar-width: none; }
+.tabs::-webkit-scrollbar { display: none; }
+.tab-btn { padding: 7px 16px; background: transparent; border: none; color: var(--text-2); font-size: 12px; font-weight: 600; border-radius: 4px; cursor: pointer; transition: var(--transition); white-space: nowrap; font-family: var(--font); }
+.tab-btn:hover { color: var(--text-0); }
+.tab-btn.active { background: var(--bg-card); color: var(--accent-cyan); box-shadow: 0 2px 8px rgba(0,0,0,0.3); }
+.tab-content { display: none; }
+.tab-content.active { display: block; }
+
+/* ═══════════════════ TABLE ═══════════════════ */
+.data-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.data-table th { text-align: left; padding: 10px 14px; background: var(--bg-2); color: var(--text-2); font-size: 10px; text-transform: uppercase; letter-spacing: 1px; border-bottom: 1px solid var(--border); font-weight: 600; }
+.data-table td { padding: 10px 14px; border-bottom: 1px solid var(--border); color: var(--text-1); }
+.data-table tr:hover td { background: rgba(56,189,248,0.02); }
+.data-table .arrow { color: var(--accent-cyan); font-weight: 600; text-align: center; }
+.data-table code { font-family: var(--font-mono); font-size: 11px; background: var(--bg-2); padding: 1px 5px; border-radius: 3px; color: var(--accent-cyan); }
+
+/* ═══════════════════ ACCORDION ═══════════════════ */
+.accordion { display: flex; flex-direction: column; gap: 6px; }
+.acc-item { border: 1px solid var(--border); border-radius: var(--radius-sm); overflow: hidden; }
+.acc-header { display: flex; align-items: center; gap: 10px; padding: 14px 18px; background: var(--bg-card); cursor: pointer; user-select: none; transition: var(--transition); }
+.acc-header:hover { background: var(--bg-card-hover); }
+.acc-chevron { font-size: 10px; color: var(--text-2); transition: transform 0.2s; flex-shrink: 0; }
+.acc-item.open .acc-chevron { transform: rotate(90deg); }
+.acc-header h4 { font-size: 14px; font-weight: 600; flex: 1; }
+.acc-body { padding: 0 18px; max-height: 0; overflow: hidden; transition: max-height 0.35s ease, padding 0.35s ease; background: var(--bg-1); }
+.acc-item.open .acc-body { max-height: 5000px; padding: 18px; }
+.acc-body p, .acc-body li { font-size: 13px; color: var(--text-1); }
+.acc-body ul { padding-left: 18px; margin: 6px 0; }
+.acc-body li { margin-bottom: 5px; }
+.acc-body code { font-family: var(--font-mono); font-size: 11px; background: var(--bg-2); padding: 1px 5px; border-radius: 3px; color: var(--accent-cyan); }
+
+/* ═══════════════════ CODE BLOCK ═══════════════════ */
+.code-block { background: var(--bg-1); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 18px; font-family: var(--font-mono); font-size: 12px; line-height: 1.7; color: var(--text-1); overflow-x: auto; margin: 14px 0; }
+.code-block .comment { color: var(--text-2); }
+.code-block .keyword { color: var(--accent-purple); }
+.code-block .string { color: var(--accent-green); }
+.code-block .type { color: var(--accent-cyan); }
+.code-block .fn { color: var(--accent-yellow); }
+
+/* ═══════════════════ PROGRESS BAR ═══════════════════ */
+.progress-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+.progress-label { font-size: 12px; color: var(--text-1); min-width: 160px; font-weight: 500; }
+.progress-bar { flex: 1; height: 6px; background: var(--bg-2); border-radius: 3px; overflow: hidden; }
+.progress-fill { height: 100%; border-radius: 3px; transition: width 1s ease; }
+.progress-fill.cyan { background: var(--accent-cyan); }
+.progress-fill.green { background: var(--accent-green); }
+.progress-fill.purple { background: var(--accent-purple); }
+.progress-fill.red { background: var(--accent-red); }
+.progress-fill.yellow { background: var(--accent-yellow); }
+.progress-pct { font-size: 11px; font-family: var(--font-mono); color: var(--text-2); min-width: 36px; text-align: right; font-weight: 500; }
+
+/* ═══════════════════ BUILDING VIZ ═══════════════════ */
+.building { display: grid; grid-template-columns: 1fr; gap: 10px; max-width: 900px; margin: 20px auto; }
+.floor { border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; transition: var(--transition); cursor: pointer; }
+.floor:hover { border-color: var(--border-glow); transform: translateY(-1px); box-shadow: var(--shadow-glow); }
+.floor-header { padding: 10px 18px; display: flex; align-items: center; gap: 10px; font-weight: 600; font-size: 13px; }
+.floor-rooms { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 8px; padding: 0 18px; max-height: 0; overflow: hidden; transition: max-height 0.4s ease, padding 0.4s ease; }
+.floor.open .floor-rooms { max-height: 800px; padding: 10px 18px 14px; }
+.room-card { padding: 10px 14px; background: var(--bg-2); border-radius: var(--radius-sm); border: 1px solid var(--border); }
+.room-card h5 { font-size: 12px; margin-bottom: 3px; }
+.room-card p { font-size: 10px; color: var(--text-2); line-height: 1.5; }
+.floor-chevron { margin-left: auto; font-size: 10px; color: var(--text-2); transition: transform 0.2s; }
+.floor.open .floor-chevron { transform: rotate(90deg); }
+.floor-badge { font-size: 9px; padding: 2px 7px; border-radius: 8px; font-weight: 600; letter-spacing: 0.5px; }
+.floor.f-strat { background: rgba(232,121,249,0.04); }
+.floor.f-strat .floor-header { color: var(--accent-magenta); }
+.floor.f-exec { background: rgba(56,189,248,0.04); }
+.floor.f-exec .floor-header { color: var(--accent-cyan); }
+.floor.f-collab { background: rgba(168,85,247,0.04); }
+.floor.f-collab .floor-header { color: var(--accent-purple); }
+.floor.f-ops { background: rgba(74,222,128,0.04); }
+.floor.f-ops .floor-header { color: var(--accent-green); }
+.floor.f-gov { background: rgba(250,204,21,0.04); }
+.floor.f-gov .floor-header { color: var(--accent-yellow); }
+.floor.f-integ { background: rgba(248,113,113,0.04); }
+.floor.f-integ .floor-header { color: var(--accent-red); }
+.floor.f-lobby { background: rgba(251,146,60,0.04); }
+.floor.f-lobby .floor-header { color: var(--accent-orange); }
+
+/* ═══════════════════ TIMELINE ═══════════════════ */
+.timeline { position: relative; padding-left: 28px; }
+.timeline::before { content: ''; position: absolute; left: 9px; top: 0; bottom: 0; width: 2px; background: var(--border); }
+.tl-item { position: relative; margin-bottom: 28px; }
+.tl-dot { position: absolute; left: -28px; top: 3px; width: 10px; height: 10px; border-radius: 50%; border: 2px solid; }
+.tl-dot.cyan { border-color: var(--accent-cyan); background: rgba(56,189,248,0.2); }
+.tl-dot.green { border-color: var(--accent-green); background: rgba(74,222,128,0.2); }
+.tl-dot.purple { border-color: var(--accent-purple); background: rgba(168,85,247,0.2); }
+.tl-dot.yellow { border-color: var(--accent-yellow); background: rgba(250,204,21,0.2); }
+.tl-dot.magenta { border-color: var(--accent-magenta); background: rgba(232,121,249,0.2); }
+.tl-dot.orange { border-color: var(--accent-orange); background: rgba(251,146,60,0.2); }
+.tl-dot.red { border-color: var(--accent-red); background: rgba(248,113,113,0.2); }
+.tl-phase { font-size: 10px; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 3px; font-weight: 600; font-family: var(--font-mono); }
+.tl-item h4 { font-size: 15px; margin-bottom: 5px; }
+.tl-item p { font-size: 13px; color: var(--text-1); }
+.tl-deliverables { margin-top: 8px; padding: 10px 14px; background: var(--bg-2); border-radius: var(--radius-sm); font-size: 12px; }
+.tl-deliverables li { color: var(--text-1); margin-bottom: 3px; }
+
+/* ═══════════════════ CALLOUT ═══════════════════ */
+.callout { border-radius: var(--radius); padding: 20px 24px; margin: 20px 0; font-size: 14px; }
+.callout.cyan { background: rgba(56,189,248,0.04); border: 1px solid rgba(56,189,248,0.15); border-left: 3px solid var(--accent-cyan); }
+.callout.green { background: rgba(74,222,128,0.04); border: 1px solid rgba(74,222,128,0.15); border-left: 3px solid var(--accent-green); }
+.callout.purple { background: rgba(168,85,247,0.04); border: 1px solid rgba(168,85,247,0.15); border-left: 3px solid var(--accent-purple); }
+.callout.yellow { background: rgba(250,204,21,0.04); border: 1px solid rgba(250,204,21,0.15); border-left: 3px solid var(--accent-yellow); }
+.callout.orange { background: rgba(251,146,60,0.04); border: 1px solid rgba(251,146,60,0.15); border-left: 3px solid var(--accent-orange); }
+.callout.magenta { background: rgba(232,121,249,0.04); border: 1px solid rgba(232,121,249,0.15); border-left: 3px solid var(--accent-magenta); }
+.callout.red { background: rgba(248,113,113,0.04); border: 1px solid rgba(248,113,113,0.15); border-left: 3px solid var(--accent-red); }
+.callout strong { color: var(--text-0); }
+
+/* ═══════════════════ SEARCH ═══════════════════ */
+.search-bar { width: 100%; max-width: 480px; padding: 8px 14px; background: var(--bg-2); border: 1px solid var(--border); border-radius: var(--radius-sm); color: var(--text-0); font-size: 13px; font-family: var(--font); outline: none; transition: var(--transition); }
+.search-bar:focus { border-color: var(--accent-cyan); }
+.search-bar::placeholder { color: var(--text-2); }
+
+/* ═══════════════════ STAT GRID ═══════════════════ */
+.stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin: 20px 0; }
+.stat-box { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; text-align: center; }
+.stat-box .stat-num { font-size: 24px; font-weight: 700; font-family: var(--font-mono); }
+.stat-box .stat-label { font-size: 10px; color: var(--text-2); text-transform: uppercase; letter-spacing: 1px; margin-top: 2px; font-weight: 600; }
+
+/* ═══════════════════ MINI TABLE ═══════════════════ */
+.mini-table { width: 100%; font-size: 12px; border-collapse: collapse; }
+.mini-table th { text-align: left; padding: 6px 10px; background: var(--bg-2); color: var(--text-2); font-size: 9px; text-transform: uppercase; letter-spacing: 1px; border-bottom: 1px solid var(--border); }
+.mini-table td { padding: 6px 10px; border-bottom: 1px solid rgba(80,90,160,0.08); color: var(--text-1); }
+.mini-table tr:hover td { background: rgba(56,189,248,0.02); }
+
+.footer { padding: 36px 0; text-align: center; color: var(--text-2); font-size: 12px; }
+
+@keyframes fadeInUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+.animate { animation: fadeInUp 0.5s ease forwards; opacity: 0; }
+.animate-delay-1 { animation-delay: 0.1s; }
+.animate-delay-2 { animation-delay: 0.2s; }
+.animate-delay-3 { animation-delay: 0.3s; }
+
+@media (max-width: 768px) {
+  .hero { padding: 36px 0 24px; }
+  .hero h1 { font-size: 1.6rem; }
+  .section { padding: 32px 0; }
+  .comparison { grid-template-columns: 1fr; }
+  .container { padding: 0 14px; }
+  .stat-grid { grid-template-columns: repeat(2, 1fr); }
+}
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════ HERO ═══════════════════ -->
+<div class="hero">
+  <div class="container">
+    <div class="hero-badge">Architecture Report &mdash; Rev 3</div>
+    <h1>Overlord v2: The Rebuild</h1>
+    <p>Comprehensive analysis of v1 codebase, lessons learned, and the complete specification for v2's Building / Room / Table framework &mdash; a scriptable, scalable agentic platform.</p>
+    <div class="hero-stats">
+      <div class="hero-stat animate"><div class="num cyan">48</div><div class="label">v1 Backend Modules</div></div>
+      <div class="hero-stat animate animate-delay-1"><div class="num green">45+</div><div class="label">v1 Frontend Files</div></div>
+      <div class="hero-stat animate animate-delay-1"><div class="num red">137</div><div class="label">Socket Handlers</div></div>
+      <div class="hero-stat animate animate-delay-2"><div class="num purple">42</div><div class="label">Tool Definitions</div></div>
+      <div class="hero-stat animate animate-delay-2"><div class="num yellow">23</div><div class="label">Hub Services</div></div>
+      <div class="hero-stat animate animate-delay-3"><div class="num orange">7</div><div class="label">v2 Floors</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════ NAV ═══════════════════ -->
+<nav class="nav" id="nav">
+  <div class="nav-inner">
+    <a href="#v1-audit" class="nav-link">v1 Audit</a>
+    <a href="#philosophy" class="nav-link">Philosophy</a>
+    <a href="#terminology" class="nav-link">Terminology</a>
+    <a href="#building" class="nav-link">Building</a>
+    <a href="#room-contracts" class="nav-link">Room Contracts</a>
+    <a href="#phase-zero" class="nav-link">Phase Zero</a>
+    <a href="#phases" class="nav-link">Phases</a>
+    <a href="#exit-docs" class="nav-link">Exit Docs</a>
+    <a href="#scope-change" class="nav-link">Scope</a>
+    <a href="#architecture" class="nav-link">Architecture</a>
+    <a href="#data-model" class="nav-link">Data Model</a>
+    <a href="#agents" class="nav-link">Agents</a>
+    <a href="#tools-migration" class="nav-link">Tools</a>
+    <a href="#plugins" class="nav-link">Plugins</a>
+    <a href="#io" class="nav-link">I/O</a>
+    <a href="#commands" class="nav-link">Commands</a>
+    <a href="#providers" class="nav-link">Providers</a>
+    <a href="#migration" class="nav-link">Migration</a>
+    <a href="#timeline" class="nav-link">Timeline</a>
+    <a href="#lessons" class="nav-link">Lessons</a>
+  </div>
+</nav>
+
+<!-- ═══════════════════ V1 AUDIT ═══════════════════ -->
+<section class="section" id="v1-audit">
+  <div class="container">
+    <div class="section-label">Codebase Analysis</div>
+    <h2>v1 Deep Audit</h2>
+    <p class="subtitle">Exact inventory of the current Overlord codebase. Every module, service, handler, and tool counted.</p>
+
+    <div class="stat-grid">
+      <div class="stat-box"><div class="stat-num" style="color:var(--accent-cyan)">48</div><div class="stat-label">Backend Modules</div></div>
+      <div class="stat-box"><div class="stat-num" style="color:var(--accent-green)">45+</div><div class="stat-label">Frontend JS Files</div></div>
+      <div class="stat-box"><div class="stat-num" style="color:var(--accent-red)">137</div><div class="stat-label">Socket Handlers</div></div>
+      <div class="stat-box"><div class="stat-num" style="color:var(--accent-purple)">42</div><div class="stat-label">Tool Definitions</div></div>
+      <div class="stat-box"><div class="stat-num" style="color:var(--accent-yellow)">23</div><div class="stat-label">Hub Services</div></div>
+      <div class="stat-box"><div class="stat-num" style="color:var(--accent-orange)">28</div><div class="stat-label">Init-Order Modules</div></div>
+      <div class="stat-box"><div class="stat-num" style="color:var(--accent-magenta)">5</div><div class="stat-label">CSS Files</div></div>
+      <div class="stat-box"><div class="stat-num" style="color:var(--accent-cyan)">83</div><div class="stat-label">Socket Bridge Events</div></div>
+    </div>
+
+    <div class="tabs" id="v1-tabs">
+      <button class="tab-btn active" data-tab="v1-backend">Backend Modules</button>
+      <button class="tab-btn" data-tab="v1-frontend">Frontend</button>
+      <button class="tab-btn" data-tab="v1-services">Services</button>
+      <button class="tab-btn" data-tab="v1-handlers">Socket Handlers</button>
+      <button class="tab-btn" data-tab="v1-tools">Tool Defs</button>
+      <button class="tab-btn" data-tab="v1-init">Init Order</button>
+    </div>
+
+    <!-- BACKEND MODULES TAB -->
+    <div class="tab-content active" id="v1-backend">
+      <input class="search-bar" placeholder="Filter modules..." oninput="filterTable(this, 'backend-table')" style="margin-bottom:14px">
+      <table class="data-table" id="backend-table">
+        <thead><tr><th>Layer</th><th>Module</th><th>Purpose</th><th>v2 Fate</th></tr></thead>
+        <tbody>
+          <tr><td><span class="tag cyan">Core</span></td><td><code>hub.js</code></td><td>Central event bus, service registry, Socket.IO bridge, rate limiting</td><td><span class="tag yellow">Rewrite</span></td></tr>
+          <tr><td><span class="tag cyan">Core</span></td><td><code>server.js</code></td><td>Express server, auth, module loader, graceful shutdown</td><td><span class="tag yellow">Rewrite</span></td></tr>
+          <tr><td><span class="tag cyan">Core</span></td><td><code>orchestration-core.js</code></td><td>Main AI loop, state machine, tool dispatch, streaming</td><td><span class="tag yellow">Rewrite</span></td></tr>
+          <tr><td><span class="tag cyan">Core</span></td><td><code>orchestration-state.js</code></td><td>Shared state: 61 getters/setters, runtime limits, approval tracking</td><td><span class="tag yellow">Rewrite</span></td></tr>
+          <tr><td><span class="tag cyan">Core</span></td><td><code>orchestration-module.js</code></td><td>Orchestration event wiring, hub integration</td><td><span class="tag yellow">Rewrite</span></td></tr>
+          <tr><td><span class="tag cyan">Core</span></td><td><code>agent-session.js</code></td><td>Agent lifecycle, delegation (max depth 5), session runner</td><td><span class="tag yellow">Rewrite</span></td></tr>
+          <tr><td><span class="tag cyan">Core</span></td><td><code>agent-system-module.js</code></td><td>Agent definitions, 4-tier approval system</td><td><span class="tag yellow">Rewrite</span></td></tr>
+          <tr><td><span class="tag cyan">Core</span></td><td><code>agent-manager-module.js</code></td><td>Agent CRUD, dispatch, group management</td><td><span class="tag yellow">Rewrite</span></td></tr>
+          <tr><td><span class="tag cyan">Core</span></td><td><code>chat-room.js</code></td><td>Multi-agent chat rooms, meeting notes</td><td><span class="tag yellow">Rewrite</span></td></tr>
+          <tr><td><span class="tag purple">AI</span></td><td><code>ai-client.js</code></td><td>HTTP client, token caching, Unicode repair, temperature clamping</td><td><span class="tag yellow">Rewrite</span></td></tr>
+          <tr><td><span class="tag purple">AI</span></td><td><code>ai-module.js</code></td><td>Anthropic format adapter, streaming responses</td><td><span class="tag yellow">Rewrite</span></td></tr>
+          <tr><td><span class="tag purple">AI</span></td><td><code>chat-stream.js</code></td><td>SSE parsing, message format conversion, session stats</td><td><span class="tag yellow">Rewrite</span></td></tr>
+          <tr><td><span class="tag purple">AI</span></td><td><code>message-builder.js</code></td><td>System prompt construction, emoji stripping, git context</td><td><span class="tag yellow">Rewrite</span></td></tr>
+          <tr><td><span class="tag green">Tools</span></td><td><code>tools-registry.js</code></td><td>42 TOOL_DEFS, execution router, 24 aliases</td><td><span class="tag green">Keep</span></td></tr>
+          <tr><td><span class="tag green">Tools</span></td><td><code>tools-v5.js</code></td><td>Backward compat re-exports</td><td><span class="tag red">Drop</span></td></tr>
+          <tr><td><span class="tag green">Tools</span></td><td><code>tool-executor.js</code></td><td>Tool execution with approval flow (T1-T4)</td><td><span class="tag yellow">Rewrite</span></td></tr>
+          <tr><td><span class="tag green">Tools</span></td><td><code>tool-parser.js</code></td><td>Parse tool calls from AI responses, text fallback</td><td><span class="tag yellow">Rewrite</span></td></tr>
+          <tr><td><span class="tag green">Tools</span></td><td><code>shell-executor.js</code></td><td>Bash, PowerShell, cmd execution</td><td><span class="tag green">Keep</span></td></tr>
+          <tr><td><span class="tag green">Tools</span></td><td><code>file-operations.js</code></td><td>Read, write, patch, list directory</td><td><span class="tag green">Keep</span></td></tr>
+          <tr><td><span class="tag green">Tools</span></td><td><code>web-fetch.js</code></td><td>Web search, image analysis, URL fetch</td><td><span class="tag green">Keep</span></td></tr>
+          <tr><td><span class="tag green">Tools</span></td><td><code>system-tools.js</code></td><td>System info, UI actions, KV store</td><td><span class="tag green">Keep</span></td></tr>
+          <tr><td><span class="tag green">Tools</span></td><td><code>qa-tools.js</code></td><td>Test, lint, type-check, audit, coverage</td><td><span class="tag green">Keep</span></td></tr>
+          <tr><td><span class="tag green">Tools</span></td><td><code>github-tools.js</code></td><td>GitHub CLI, git operations</td><td><span class="tag green">Keep</span></td></tr>
+          <tr><td><span class="tag orange">Conv</span></td><td><code>conversation-module.js</code></td><td>Backward compat wrapper, 30+ methods</td><td><span class="tag yellow">Rewrite</span></td></tr>
+          <tr><td><span class="tag orange">Conv</span></td><td><code>conversation-store.js</code></td><td>SQLite conversation persistence</td><td><span class="tag yellow">Rewrite</span></td></tr>
+          <tr><td><span class="tag orange">Conv</span></td><td><code>context-tracker-module.js</code></td><td>Context management, compaction</td><td><span class="tag yellow">Rewrite</span></td></tr>
+          <tr><td><span class="tag orange">Conv</span></td><td><code>context-tracker.js</code></td><td>Token counting, budget tracking</td><td><span class="tag green">Keep</span></td></tr>
+          <tr><td><span class="tag orange">Conv</span></td><td><code>message-queue.js</code></td><td>Message buffers when AI is busy</td><td><span class="tag yellow">Rewrite</span></td></tr>
+          <tr><td><span class="tag red">Approval</span></td><td><code>approval-flow.js</code></td><td>T1-T4 tier classification, escalation, timeout</td><td><span class="tag red">Drop</span></td></tr>
+          <tr><td><span class="tag yellow">Config</span></td><td><code>config-module.js</code></td><td>Load .env, API keys, 40+ config fields</td><td><span class="tag green">Keep</span></td></tr>
+          <tr><td><span class="tag yellow">Config</span></td><td><code>database-module.js</code></td><td>SQLite connection (better-sqlite3)</td><td><span class="tag green">Keep</span></td></tr>
+          <tr><td><span class="tag yellow">Config</span></td><td><code>mcp-module.js</code></td><td>MCP subprocess bridge (JSON RPC)</td><td><span class="tag green">Keep</span></td></tr>
+          <tr><td><span class="tag yellow">Config</span></td><td><code>mcp-manager-module.js</code></td><td>MCP lifecycle management</td><td><span class="tag green">Keep</span></td></tr>
+          <tr><td><span class="tag yellow">Config</span></td><td><code>token-manager-module.js</code></td><td>Token counting, budget tracking</td><td><span class="tag green">Keep</span></td></tr>
+          <tr><td><span class="tag yellow">Config</span></td><td><code>guardrail-module.js</code></td><td>Unicode sanitization, safety checks</td><td><span class="tag yellow">Rewrite</span></td></tr>
+          <tr><td><span class="tag yellow">Config</span></td><td><code>character-normalization.js</code></td><td>Character encoding fixes</td><td><span class="tag green">Keep</span></td></tr>
+          <tr><td><span class="tag purple">Feature</span></td><td><code>skills-module.js</code></td><td>Skill registration, activation</td><td><span class="tag purple">New</span></td></tr>
+          <tr><td><span class="tag purple">Feature</span></td><td><code>notes-module.js</code></td><td>Session notes persistence</td><td><span class="tag green">Keep</span></td></tr>
+          <tr><td><span class="tag purple">Feature</span></td><td><code>tasks-engine.js</code></td><td>Task/todo management, tree structure</td><td><span class="tag yellow">Rewrite</span></td></tr>
+          <tr><td><span class="tag purple">Feature</span></td><td><code>project-module.js</code></td><td>Project tracking, linking</td><td><span class="tag yellow">Rewrite</span></td></tr>
+          <tr><td><span class="tag purple">Feature</span></td><td><code>obsidian-vault-module.js</code></td><td>Obsidian vault integration</td><td><span class="tag green">Keep</span></td></tr>
+          <tr><td><span class="tag purple">Feature</span></td><td><code>markdown-module.js</code></td><td>Markdown parsing</td><td><span class="tag green">Keep</span></td></tr>
+          <tr><td><span class="tag purple">Feature</span></td><td><code>summarization-module.js</code></td><td>Context summarization</td><td><span class="tag green">Keep</span></td></tr>
+          <tr><td><span class="tag orange">Media</span></td><td><code>minimax-image-module.js</code></td><td>Image generation</td><td><span class="tag green">Keep</span></td></tr>
+          <tr><td><span class="tag orange">Media</span></td><td><code>minimax-tts-module.js</code></td><td>Text-to-speech synthesis</td><td><span class="tag green">Keep</span></td></tr>
+          <tr><td><span class="tag orange">Media</span></td><td><code>minimax-files-module.js</code></td><td>File upload/download</td><td><span class="tag green">Keep</span></td></tr>
+          <tr><td><span class="tag orange">Media</span></td><td><code>screenshot-module.js</code></td><td>Screenshot capture</td><td><span class="tag green">Keep</span></td></tr>
+          <tr><td><span class="tag red">Dev</span></td><td><code>test-server-module.js</code></td><td>Test harness</td><td><span class="tag yellow">Rewrite</span></td></tr>
+          <tr><td><span class="tag red">Dev</span></td><td><code>git-module.js</code></td><td>Git operations (commit, PR, issues)</td><td><span class="tag green">Keep</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- FRONTEND TAB -->
+    <div class="tab-content" id="v1-frontend">
+      <div class="card-grid cols-2" style="margin-bottom:20px">
+        <div class="card" style="border-top: 2px solid var(--accent-cyan)">
+          <h3>Core System (4 files)</h3>
+          <table class="mini-table">
+            <tr><td><code>engine.js</code></td><td>OverlordUI singleton, Component base class, h(), event bus</td></tr>
+            <tr><td><code>state.js</code></td><td>Reactive Store, localStorage persistence, batch updates</td></tr>
+            <tr><td><code>socket-bridge.js</code></td><td>83 Socket.IO events mapped to store + dispatch</td></tr>
+            <tr><td><code>router.js</code></td><td>Mobile/tablet/desktop layout switching</td></tr>
+          </table>
+        </div>
+        <div class="card" style="border-top: 2px solid var(--accent-green)">
+          <h3>Components (9 files)</h3>
+          <table class="mini-table">
+            <tr><td><code>modal.js</code></td><td>4 positions: center, bottom-sheet, drawer, fullscreen</td></tr>
+            <tr><td><code>panel.js</code></td><td>Collapse, resize, popout, maximize (715 lines)</td></tr>
+            <tr><td><code>button.js</code></td><td>5 variants, loading states, icon support</td></tr>
+            <tr><td><code>tabs.js</code></td><td>3 styles: pills, underline, segmented</td></tr>
+            <tr><td><code>dropdown.js</code></td><td>Search, body-level positioning</td></tr>
+            <tr><td colspan="2"><code>card.js</code>, <code>table.js</code>, <code>toast.js</code>, <code>drill-item.js</code></td></tr>
+          </table>
+        </div>
+      </div>
+      <div class="card" style="border-top: 2px solid var(--accent-purple); margin-bottom:20px">
+        <h3>Panels (12 files &mdash; right sidebar)</h3>
+        <table class="mini-table">
+          <thead><tr><th>File</th><th>Size</th><th>Purpose</th></tr></thead>
+          <tr><td><code>orchestration.js</code></td><td style="color:var(--accent-red)">34KB</td><td>Orchestrator dashboard (largest)</td></tr>
+          <tr><td><code>team.js</code></td><td style="color:var(--accent-red)">30KB</td><td>Team/agent management</td></tr>
+          <tr><td><code>tasks.js</code></td><td style="color:var(--accent-yellow)">20KB</td><td>Task tree + Kanban view</td></tr>
+          <tr><td><code>team-panel.js</code></td><td>16KB</td><td>Team layout variant</td></tr>
+          <tr><td><code>meeting-notes.js</code></td><td>13KB</td><td>Meeting notes renderer</td></tr>
+          <tr><td><code>project.js</code></td><td>13KB</td><td>Project/roadmap panel</td></tr>
+          <tr><td><code>activity.js</code></td><td>8.9KB</td><td>Agent activity feed</td></tr>
+          <tr><td><code>agent-list.js</code></td><td>8.9KB</td><td>Agent list + status</td></tr>
+          <tr><td><code>log.js</code></td><td>8.5KB</td><td>Event log panel</td></tr>
+          <tr><td><code>meeting-controls.js</code></td><td>7.4KB</td><td>Meeting room controls</td></tr>
+          <tr><td><code>room-list.js</code></td><td>6.6KB</td><td>Agent room navigator</td></tr>
+          <tr><td><code>tools.js</code></td><td>3.4KB</td><td>Tools inspector</td></tr>
+        </table>
+      </div>
+      <div class="card" style="border-top: 2px solid var(--accent-orange)">
+        <h3>Views (15+ files &mdash; modals and full-page views)</h3>
+        <p>chat.js, settings.js (6 sub-panels: general, ai, tools, appearance, security, agents), agent-manager.js, agent-chat.js, agent-form.js, agent-permissions.js, agent-detail-view.js, agent-card.js, kanban.js, room-view.js, markdown-handler.js, message-renderer.js, tool-chip-renderer.js, thought-bubble.js, structured-thought.js</p>
+      </div>
+    </div>
+
+    <!-- SERVICES TAB -->
+    <div class="tab-content" id="v1-services">
+      <table class="data-table">
+        <thead><tr><th>Service Name</th><th>Module</th><th>Key Methods</th></tr></thead>
+        <tbody>
+          <tr><td><code>config</code></td><td>config-module</td><td>get(), set(), 40+ config fields</td></tr>
+          <tr><td><code>tools</code></td><td>tools-registry</td><td>execute(), getDefinitions(), registerTool()</td></tr>
+          <tr><td><code>orchestration</code></td><td>orchestration-core</td><td>isProcessing(), getState(), getDashboard()</td></tr>
+          <tr><td><code>conversation</code></td><td>conversation-module</td><td>addMessage(), getMessages(), getTasks(), getMilestones()</td></tr>
+          <tr><td><code>ai</code></td><td>ai-module</td><td>sendMessage(), sendMessageStreamed(), abort()</td></tr>
+          <tr><td><code>agentSystem</code></td><td>agent-system-module</td><td>getApprovalTier(), classifyTool()</td></tr>
+          <tr><td><code>agentManager</code></td><td>agent-manager-module</td><td>addAgent(), removeAgent(), dispatch()</td></tr>
+          <tr><td><code>agents</code></td><td>agent-system-module</td><td>Alias for agentSystem</td></tr>
+          <tr><td><code>database</code></td><td>database-module</td><td>SQLite CRUD via better-sqlite3</td></tr>
+          <tr><td><code>tasks</code></td><td>tasks-engine</td><td>addTask(), toggleTask(), getTaskTree()</td></tr>
+          <tr><td><code>projects</code></td><td>project-module</td><td>CRUD, linking, switching</td></tr>
+          <tr><td><code>notes</code></td><td>notes-module</td><td>Session notes persistence</td></tr>
+          <tr><td><code>skills</code></td><td>skills-module</td><td>Skill registry + activation</td></tr>
+          <tr><td><code>mcp</code></td><td>mcp-module</td><td>MCP subprocess bridge (JSON RPC)</td></tr>
+          <tr><td><code>mcpManager</code></td><td>mcp-manager-module</td><td>MCP lifecycle management</td></tr>
+          <tr><td><code>contextTracker</code></td><td>context-tracker-module</td><td>Token counting, compaction</td></tr>
+          <tr><td><code>summarizer</code></td><td>summarization-module</td><td>Context summarization</td></tr>
+          <tr><td><code>guardrail</code></td><td>guardrail-module</td><td>Unicode sanitization</td></tr>
+          <tr><td><code>markdown</code></td><td>markdown-module</td><td>Markdown to HTML</td></tr>
+          <tr><td><code>git</code></td><td>git-module</td><td>commit(), createPR(), listIssues()</td></tr>
+          <tr><td><code>imageGen</code></td><td>minimax-image-module</td><td>Image generation</td></tr>
+          <tr><td><code>tts</code></td><td>minimax-tts-module</td><td>Text-to-speech</td></tr>
+          <tr><td><code>minimaxFiles</code></td><td>minimax-files-module</td><td>File upload/download</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- SOCKET HANDLERS TAB -->
+    <div class="tab-content" id="v1-handlers">
+      <p style="margin-bottom:14px; color:var(--text-1); font-size:13px">137 socket.on() handlers across 20 categories in hub.js</p>
+      <div class="card-grid cols-3">
+        <div class="card"><h3 style="color:var(--accent-cyan)">Conversation (7)</h3><p>list_conversations, load_conversation, fork_conversation, delete_message, archive_and_new, clear_history, new_conversation</p></div>
+        <div class="card"><h3 style="color:var(--accent-green)">Queue (9)</h3><p>get_message_queue, remove_queued, edit_queued, reorder_queue, clear_queue, force_dequeue, force_dequeue_all, message_resubmit, queue_settings</p></div>
+        <div class="card"><h3 style="color:var(--accent-yellow)">Hot Inject (3)</h3><p>hot_inject, get_hot_inject_queue, clear_hot_inject_queue</p></div>
+        <div class="card"><h3 style="color:var(--accent-purple)">Agent Control (11)</h3><p>add_agent, remove_agent, list_agents, get_agent, update_agent, pause_agent, resume_agent, kill_agent, set_agent_tools, get_available_tools, ai_fill_agent</p></div>
+        <div class="card"><h3 style="color:var(--accent-red)">Approval (4)</h3><p>approval_response, approve_checkpoint, approve_recommendation, reject_recommendation</p></div>
+        <div class="card"><h3 style="color:var(--accent-orange)">Plan Mode (3)</h3><p>approve_plan, cancel_plan, revise_plan, switch_plan_variant</p></div>
+        <div class="card"><h3 style="color:var(--accent-cyan)">Chat Rooms (7)</h3><p>create_chat_room, list/get/end_chat_room, send_room_message, pull_agent_into_room, user_join/leave_room</p></div>
+        <div class="card"><h3 style="color:var(--accent-green)">Tasks (10)</h3><p>task_added, task_toggled, task_deleted, task_updated, add_child_task, reparent_task, get_task_tree, get_task_children, assign_task_to_milestone, focus_task</p></div>
+        <div class="card"><h3 style="color:var(--accent-yellow)">Milestones (5)</h3><p>list_milestones, add_milestone, update_milestone, delete_milestone, launch_milestone</p></div>
+        <div class="card"><h3 style="color:var(--accent-purple)">Projects (8)</h3><p>list_projects, get/create/update/delete_project, switch_project, link/unlink_projects</p></div>
+        <div class="card"><h3 style="color:var(--accent-red)">Orchestration (7)</h3><p>get_orch_dashboard, set_strategy, set_overlay, set_max_cycles, set_max_agents, set_auto_qa, clear_tool_history</p></div>
+        <div class="card"><h3 style="color:var(--accent-orange)">System (8+)</h3><p>get_system_prompt, get_last_context, get_context_info, get_process_state, get_all_agent_states, get_team, config, MCP, vault, web push, voice, presence</p></div>
+      </div>
+    </div>
+
+    <!-- TOOLS TAB -->
+    <div class="tab-content" id="v1-tools">
+      <p style="margin-bottom:14px; color:var(--text-1); font-size:13px">42 tool definitions + 24 aliases in tools-registry.js</p>
+      <div class="card-grid cols-2">
+        <div class="card">
+          <h3>Tool Categories</h3>
+          <table class="mini-table">
+            <thead><tr><th>Category</th><th>#</th><th>Tools</th></tr></thead>
+            <tr><td><span class="tag cyan">Shell</span></td><td>3</td><td>bash, powershell, cmd</td></tr>
+            <tr><td><span class="tag green">Files</span></td><td>6</td><td>read_file, read_file_lines, write_file, patch_file, append_file, list_dir</td></tr>
+            <tr><td><span class="tag purple">AI</span></td><td>4</td><td>web_search, understand_image, fetch_webpage, save_webpage_to_vault</td></tr>
+            <tr><td><span class="tag orange">System</span></td><td>4</td><td>system_info, get/set_working_dir, set_thinking_level</td></tr>
+            <tr><td><span class="tag yellow">QA</span></td><td>5</td><td>qa_run_tests, qa_check_lint/types/coverage, qa_audit_deps</td></tr>
+            <tr><td><span class="tag red">Memory</span></td><td>5</td><td>record_note, recall_notes, session_note + 2 more</td></tr>
+            <tr><td><span class="tag cyan">Skills</span></td><td>4</td><td>list_skills, get_skill, activate/deactivate_skill</td></tr>
+            <tr><td><span class="tag green">GitHub</span></td><td>1</td><td>github (multi-action)</td></tr>
+            <tr><td><span class="tag purple">UI</span></td><td>3</td><td>ui_action, show_chart, ask_user</td></tr>
+            <tr><td><span class="tag orange">KV</span></td><td>4</td><td>kv_set, kv_get, kv_list, kv_delete</td></tr>
+            <tr><td><span class="tag yellow">Todos</span></td><td>2</td><td>add_todo, toggle_todo</td></tr>
+            <tr><td><span class="tag red">Agents</span></td><td>2</td><td>list_agents, delegate_to_agent</td></tr>
+          </table>
+        </div>
+        <div class="card">
+          <h3>Approval Tiers (v1)</h3>
+          <table class="mini-table">
+            <thead><tr><th>Tier</th><th>Type</th><th>Approval</th></tr></thead>
+            <tr><td><span class="tag green">T1</span></td><td>Safe (read-only)</td><td>Auto-approve (confidence &ge; 0.95)</td></tr>
+            <tr><td><span class="tag cyan">T2</span></td><td>Standard (file/shell)</td><td>Auto if confidence &ge; 0.75, else ask</td></tr>
+            <tr><td><span class="tag yellow">T3</span></td><td>Sensitive (GH, AI)</td><td>Always ask user</td></tr>
+            <tr><td><span class="tag red">T4</span></td><td>Critical (system)</td><td>Always ask + notification</td></tr>
+          </table>
+          <div class="callout red" style="margin-top:14px;padding:12px 16px;font-size:12px">
+            <strong>v2 eliminates tiers entirely.</strong> Room-scoped tools replace the approval system: if a tool isn't in the room's allowed list, it doesn't exist. Binary access, no confidence scores.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- INIT ORDER TAB -->
+    <div class="tab-content" id="v1-init">
+      <p style="margin-bottom:14px; color:var(--text-1); font-size:13px">28 modules loaded sequentially in server.js. Order matters &mdash; later modules depend on earlier ones.</p>
+      <div class="code-block">
+<span class="comment">// server.js module loading order (strict sequence)</span>
+ <span class="fn">1.</span> <span class="type">config-module</span>         <span class="comment">// Must be first: .env, API keys</span>
+ <span class="fn">2.</span> <span class="type">markdown-module</span>       <span class="comment">// Markdown to HTML</span>
+ <span class="fn">3.</span> <span class="type">guardrail-module</span>      <span class="comment">// Unicode sanitization</span>
+ <span class="fn">4.</span> <span class="type">character-normalization</span> <span class="comment">// Encoding fixes</span>
+ <span class="fn">5.</span> <span class="type">token-manager-module</span>  <span class="comment">// Token counting</span>
+ <span class="fn">6.</span> <span class="type">context-tracker-module</span> <span class="comment">// Context management</span>
+ <span class="fn">7.</span> <span class="type">mcp-module</span>            <span class="comment">// MCP subprocess</span>
+ <span class="fn">8.</span> <span class="type">mcp-manager-module</span>    <span class="comment">// MCP lifecycle</span>
+ <span class="fn">9.</span> <span class="type">database-module</span>       <span class="comment">// SQLite init</span>
+<span class="fn">10.</span> <span class="type">notes-module</span>          <span class="comment">// Session notes</span>
+<span class="fn">11.</span> <span class="type">skills-module</span>         <span class="comment">// Skill registry</span>
+<span class="fn">12.</span> <span class="type">tools-v5</span>              <span class="comment">// 42 tool definitions</span>
+<span class="fn">13.</span> <span class="type">agent-system-module</span>   <span class="comment">// Agent framework</span>
+<span class="fn">14.</span> <span class="type">agent-manager-module</span>  <span class="comment">// Agent CRUD</span>
+<span class="fn">15.</span> <span class="type">ai-module</span>             <span class="comment">// AI client + streaming</span>
+<span class="fn">16.</span> <span class="type">summarization-module</span>  <span class="comment">// Context summarization</span>
+<span class="fn">17.</span> <span class="type">test-server-module</span>    <span class="comment">// Test harness</span>
+<span class="fn">18.</span> <span class="type">file-tools-module</span>     <span class="comment">// File tool wrappers</span>
+<span class="fn">19.</span> <span class="type">screenshot-module</span>     <span class="comment">// Screenshots</span>
+<span class="fn">20.</span> <span class="type">minimax-image-module</span>  <span class="comment">// Image generation</span>
+<span class="fn">21.</span> <span class="type">minimax-tts-module</span>    <span class="comment">// Text-to-speech</span>
+<span class="fn">22.</span> <span class="type">minimax-files-module</span>  <span class="comment">// File upload</span>
+<span class="fn">23.</span> <span class="type">project-module</span>        <span class="comment">// Project manager</span>
+<span class="fn">24.</span> <span class="type">obsidian-vault-module</span> <span class="comment">// Obsidian</span>
+<span class="fn">25.</span> <span class="type">conversation-module</span>   <span class="comment">// Conversation state</span>
+<span class="fn">26.</span> <span class="type">tasks-engine</span>          <span class="comment">// Task management</span>
+<span class="fn">27.</span> <span class="type">git-module</span>            <span class="comment">// Git operations</span>
+<span class="fn">28.</span> <span class="type">orchestration-module</span>  <span class="comment">// Main AI loop (must be last)</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════ PHILOSOPHY ═══════════════════ -->
+<section class="section" id="philosophy">
+  <div class="container">
+    <div class="section-label">Core Principle</div>
+    <h2>Don't Change the Agent &mdash; Change the Framework</h2>
+    <p class="subtitle">The single architectural decision that makes everything else possible.</p>
+
+    <div class="callout cyan">
+      <strong>Rooms define behavior, not agents.</strong> When an agent enters a room, the room's rules, tools, and output templates merge into their context. Change the testing room rules once &mdash; every agent that enters inherits them. Add a new agent? It just works in existing rooms.
+    </div>
+
+    <div class="card-grid cols-3">
+      <div class="card">
+        <h3><span class="tag red">v1</span> Agent-Centric</h3>
+        <p>Each agent carries 200+ line system prompts with behavioral rules. 15 agents = 15 places to maintain rules. Change one, miss the others. 4-tier approval system with confidence scores and broken tier registry.</p>
+      </div>
+      <div class="card">
+        <h3><span class="tag green">v2</span> Framework-Centric</h3>
+        <p>Agents are 10-line identity cards (name, capabilities, room access). Rooms own the rules. One change propagates to every agent that enters. Tool access is structural, not instructional.</p>
+      </div>
+      <div class="card">
+        <h3><span class="tag purple">v2+</span> Scriptable</h3>
+        <p>Rooms, floors, tables are plugins &mdash; scriptable modules (Lua or JS). Even built-in features are implemented as plugins. Users can create custom room types for use cases we haven't imagined.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════ TERMINOLOGY ═══════════════════ -->
+<section class="section" id="terminology">
+  <div class="container">
+    <div class="section-label">Language</div>
+    <h2>Terminology Guide</h2>
+    <p class="subtitle">Words matter. These terms are chosen because AI models respond to them predictably.</p>
+
+    <table class="data-table">
+      <thead><tr><th>Term</th><th>Meaning</th><th>Why This Word</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Building</strong></td><td>The entire Overlord instance for a project</td><td>Spatial metaphor that contains everything</td></tr>
+        <tr><td><strong>Floor</strong></td><td>A category of rooms (Governance, Execution, etc.)</td><td>Modular &mdash; can add/remove floors like a tycoon game</td></tr>
+        <tr><td><strong>Room</strong></td><td>A bounded workspace with rules, tools, access control</td><td>Matches Socket.IO "rooms", Discord channels, real offices</td></tr>
+        <tr><td><strong>Table</strong></td><td>A work mode within a room (focus, collab, review)</td><td>You sit at a table to do a specific type of work</td></tr>
+        <tr><td><strong>Chair</strong></td><td>An agent slot at a table (capacity limit)</td><td>Filled chair = active agent. Need more? Get a boardroom.</td></tr>
+        <tr><td><strong>Todo</strong></td><td>A single discrete unit of work for one agent</td><td>AI understands "todo" natively &mdash; auto-creates checklists</td></tr>
+        <tr><td><strong>Task</strong></td><td>A milestone-level item (may have many todos)</td><td>"Task" implies bigger scope &mdash; AI treats them differently</td></tr>
+        <tr><td><strong>Phase</strong></td><td>A project stage (discovery, architecture, execution...)</td><td>Standard PM terminology, maps to floor activation</td></tr>
+        <tr><td><strong>Gate</strong></td><td>A go/no-go checkpoint between phases</td><td>Forces structured sign-off, prevents premature advancement</td></tr>
+        <tr><td><strong>Exit Document</strong></td><td>Structured output required to leave a room</td><td>Audit trail &mdash; decisions, rationale, evidence, citations</td></tr>
+        <tr><td><strong>RAID Log</strong></td><td>Risks, Assumptions, Issues, Decisions database</td><td>Standard PM tool. Searchable history for agent reference.</td></tr>
+        <tr><td><strong>Strategist</strong></td><td>Phase Zero agent that helps set up the building</td><td>Consultative &mdash; asks "what does success look like?"</td></tr>
+        <tr><td><strong>Lobby</strong></td><td>Permanent ground floor: user interface, dashboard, routing</td><td>Always there, can be upgraded but never changed to another type</td></tr>
+        <tr><td><strong>City</strong></td><td>Multiple buildings for enterprise integration</td><td>Each project = a building, portfolio = a city</td></tr>
+        <tr><td><strong>Boardroom</strong></td><td>Conference table for when a room needs more agents</td><td>More chairs than standard table. Upgrade path for collaboration.</td></tr>
+        <tr><td><strong>Security Badge</strong></td><td>Agent access control token for room entry</td><td>Physical metaphor for authentication/authorization</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ═══════════════════ BUILDING ═══════════════════ -->
+<section class="section" id="building">
+  <div class="container">
+    <div class="section-label">Spatial Architecture</div>
+    <h2>The Building</h2>
+    <p class="subtitle">Click each floor to explore its rooms. Buildings scale per project &mdash; 2 floors for a doc project, 7 for a full build. Multiple buildings can form a "city" for enterprise integration.</p>
+
+    <div class="building" id="building-viz">
+
+      <div class="floor f-gov" onclick="toggleFloor(this)">
+        <div class="floor-header">
+          <span style="font-size:16px">&#127970;</span>
+          Governance Floor
+          <span class="floor-badge" style="background:rgba(250,204,21,0.15);color:var(--accent-yellow)">GATES</span>
+          <span class="floor-chevron">&#9654;</span>
+        </div>
+        <div class="floor-rooms">
+          <div class="room-card"><h5 style="color:var(--accent-yellow)">Review Room</h5><p>Go/no-go decisions. Risk questionnaire with independent analysis. Produces: exit document with citations.</p><p style="margin-top:4px"><span class="tag yellow">Gate</span> <span class="tag purple">PM</span> <span class="tag cyan">Architect</span></p></div>
+          <div class="room-card"><h5 style="color:var(--accent-yellow)">Audit Room</h5><p>Security review, compliance checks. Read-only tools. Must cite specific evidence.</p><p style="margin-top:4px"><span class="tag red">Security</span> <span class="tag yellow">Read-only</span></p></div>
+          <div class="room-card"><h5 style="color:var(--accent-yellow)">Release Lounge</h5><p>Pre-release checklist, deployment readiness, rollback plan.</p><p style="margin-top:4px"><span class="tag green">DevOps</span> <span class="tag cyan">Architect</span></p></div>
+        </div>
+      </div>
+
+      <div class="floor f-exec" onclick="toggleFloor(this)">
+        <div class="floor-header">
+          <span style="font-size:16px">&#128187;</span>
+          Execution Floor
+          <span class="floor-badge" style="background:rgba(56,189,248,0.15);color:var(--accent-cyan)">BUILD</span>
+          <span class="floor-chevron">&#9654;</span>
+        </div>
+        <div class="floor-rooms">
+          <div class="room-card"><h5 style="color:var(--accent-cyan)">Code Lab</h5><p>Implementation. Full file read/write/shell. Scoped to assigned files only. Focus Desk (1 agent, 1 file) or Collab Table (multi-agent).</p><p style="margin-top:4px"><span class="tag cyan">Dev</span> <span class="tag green">Focus/Collab</span></p></div>
+          <div class="room-card"><h5 style="color:var(--accent-cyan)">Integration Room</h5><p>Multi-agent collaboration on tasks with dependencies. Shared context, cross-references.</p><p style="margin-top:4px"><span class="tag cyan">Dev</span> <span class="tag purple">Boardroom</span></p></div>
+          <div class="room-card"><h5 style="color:var(--accent-cyan)">Testing Lab</h5><p><strong>Cannot modify source code.</strong> Can only run tests, report results. write_file simply doesn't exist here.</p><p style="margin-top:4px"><span class="tag green">QA</span> <span class="tag red">No write tools</span></p></div>
+        </div>
+      </div>
+
+      <div class="floor f-collab" onclick="toggleFloor(this)">
+        <div class="floor-header">
+          <span style="font-size:16px">&#128172;</span>
+          Collaboration Floor
+          <span class="floor-badge" style="background:rgba(168,85,247,0.15);color:var(--accent-purple)">PLAN</span>
+          <span class="floor-chevron">&#9654;</span>
+        </div>
+        <div class="floor-rooms">
+          <div class="room-card"><h5 style="color:var(--accent-purple)">Discovery Room</h5><p>Phase 1. Define outcomes, constraints, unknowns. Produces requirements doc, gap analysis, risk assessment.</p><p style="margin-top:4px"><span class="tag purple">PM</span> <span class="tag cyan">SMEs</span></p></div>
+          <div class="room-card"><h5 style="color:var(--accent-purple)">Architecture Room</h5><p>Phase 2. Break requirements into milestones, tasks, dependency graph, tech decisions.</p><p style="margin-top:4px"><span class="tag cyan">Architect</span> <span class="tag purple">PM</span></p></div>
+          <div class="room-card"><h5 style="color:var(--accent-purple)">War Room</h5><p>Incident response. All-hands troubleshooting. Elevated access. Time-boxed.</p><p style="margin-top:4px"><span class="tag red">Principal</span> <span class="tag cyan">Elevated</span></p></div>
+        </div>
+      </div>
+
+      <div class="floor f-ops" onclick="toggleFloor(this)">
+        <div class="floor-header">
+          <span style="font-size:16px">&#9881;&#65039;</span>
+          Operations Floor
+          <span class="floor-badge" style="background:rgba(74,222,128,0.15);color:var(--accent-green)">DEPLOY</span>
+          <span class="floor-chevron">&#9654;</span>
+        </div>
+        <div class="floor-rooms">
+          <div class="room-card"><h5 style="color:var(--accent-green)">Deploy Room</h5><p>Git operations, CI/CD triggers, verification. Requires Release Lounge sign-off first.</p><p style="margin-top:4px"><span class="tag green">DevOps</span> <span class="tag yellow">Gate</span></p></div>
+          <div class="room-card"><h5 style="color:var(--accent-green)">Monitoring Room</h5><p>Health checks, log analysis, metrics. Read-only. Escalates to War Room on critical.</p><p style="margin-top:4px"><span class="tag green">DevOps</span> <span class="tag cyan">Auto</span></p></div>
+        </div>
+      </div>
+
+      <div class="floor f-integ" onclick="toggleFloor(this)">
+        <div class="floor-header">
+          <span style="font-size:16px">&#128268;</span>
+          Integration Floor
+          <span class="floor-badge" style="background:rgba(248,113,113,0.15);color:var(--accent-red)">I/O</span>
+          <span class="floor-chevron">&#9654;</span>
+        </div>
+        <div class="floor-rooms">
+          <div class="room-card"><h5 style="color:var(--accent-red)">Plugin Bay</h5><p>Lua/JS scripts register here. Strict typed I/O contracts. Sandboxed execution.</p><p style="margin-top:4px"><span class="tag red">Strict I/O</span> <span class="tag yellow">Sandboxed</span></p></div>
+          <div class="room-card"><h5 style="color:var(--accent-red)">Data Exchange</h5><p>External APIs, webhooks, MCP servers. Single point of external communication &mdash; security boundary.</p><p style="margin-top:4px"><span class="tag red">External</span> <span class="tag cyan">Typed</span></p></div>
+          <div class="room-card"><h5 style="color:var(--accent-red)">Provider Hub</h5><p>AI model providers (Anthropic, MiniMax, OpenAI, local). Provider-agnostic adapter layer.</p><p style="margin-top:4px"><span class="tag purple">Multi-model</span> <span class="tag green">Swappable</span></p></div>
+        </div>
+      </div>
+
+      <div class="floor f-strat" onclick="toggleFloor(this)">
+        <div class="floor-header">
+          <span style="font-size:16px">&#129488;</span>
+          Strategy Floor
+          <span class="floor-badge" style="background:rgba(232,121,249,0.15);color:var(--accent-magenta)">PHASE 0</span>
+          <span class="floor-chevron">&#9654;</span>
+        </div>
+        <div class="floor-rooms">
+          <div class="room-card"><h5 style="color:var(--accent-magenta)">Strategist Office</h5><p>Phase Zero. "What are you trying to build? What does success look like?" Consultative setup of the entire building.</p><p style="margin-top:4px"><span class="tag purple">Strategist</span> <span class="tag orange">User</span></p></div>
+          <div class="room-card"><h5 style="color:var(--accent-magenta)">Building Architect</h5><p>Configures floors, rooms, agents, tools based on Strategist output. Quick Start or Advanced mode.</p><p style="margin-top:4px"><span class="tag purple">Architect</span> <span class="tag cyan">Auto-config</span></p></div>
+        </div>
+      </div>
+
+      <div class="floor f-lobby open" onclick="toggleFloor(this)">
+        <div class="floor-header">
+          <span style="font-size:16px">&#128682;</span>
+          Lobby
+          <span class="floor-badge" style="background:rgba(251,146,60,0.15);color:var(--accent-orange)">PERMANENT</span>
+          <span class="floor-chevron">&#9654;</span>
+        </div>
+        <div class="floor-rooms">
+          <div class="room-card"><h5 style="color:var(--accent-orange)">Main Chat</h5><p>User's primary interface. Messages routed to rooms by orchestrator. Slash commands and @-mentions.</p><p style="margin-top:4px"><span class="tag orange">User</span> <span class="tag purple">Orchestrator</span></p></div>
+          <div class="room-card"><h5 style="color:var(--accent-orange)">Dashboard</h5><p>Project overview: KPIs, active rooms, agent status, phase progress, pending approvals.</p><p style="margin-top:4px"><span class="tag orange">User</span> <span class="tag cyan">Read-only</span></p></div>
+          <div class="room-card"><h5 style="color:var(--accent-orange)">Project Gallery</h5><p>Multi-project view. Each project = a building. Summary cards with test pass rate, open issues, phase.</p><p style="margin-top:4px"><span class="tag orange">Multi-project</span></p></div>
+          <div class="room-card"><h5 style="color:var(--accent-orange)">Security Desk</h5><p>Agent badging, room access management. Configure which agents can enter which rooms.</p><p style="margin-top:4px"><span class="tag red">Access Control</span></p></div>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="callout orange">
+      <strong>The Lobby is always the Lobby.</strong> Can be upgraded (add rooms like Security Desk, Project Gallery) but never changes floor type. It's the permanent ground floor &mdash; the foundation everything else is built on.
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════ ROOM CONTRACTS ═══════════════════ -->
+<section class="section" id="room-contracts">
+  <div class="container">
+    <div class="section-label">New in Rev 3</div>
+    <h2>Room Contracts &amp; Specifications</h2>
+    <p class="subtitle">Every room type has a formal contract: allowed tools, required exit documents, agent capacity, and escalation rules.</p>
+
+    <div class="accordion">
+      <div class="acc-item">
+        <div class="acc-header" onclick="toggleAcc(this)"><span class="acc-chevron">&#9654;</span><h4><span class="tag cyan">Execution</span> Code Lab</h4></div>
+        <div class="acc-body">
+          <div class="code-block">
+{
+  <span class="type">"roomType"</span>: <span class="string">"code-lab"</span>,
+  <span class="type">"floor"</span>: <span class="string">"execution"</span>,
+  <span class="type">"tables"</span>: {
+    <span class="type">"focus"</span>: { <span class="type">"chairs"</span>: 1, <span class="type">"description"</span>: <span class="string">"One agent, one file scope"</span> },
+    <span class="type">"collab"</span>: { <span class="type">"chairs"</span>: 4, <span class="type">"description"</span>: <span class="string">"Multi-agent, multi-file scope"</span> },
+    <span class="type">"boardroom"</span>: { <span class="type">"chairs"</span>: 8, <span class="type">"description"</span>: <span class="string">"Large integration tasks"</span> }
+  },
+  <span class="type">"tools"</span>: [<span class="string">"read_file"</span>, <span class="string">"write_file"</span>, <span class="string">"patch_file"</span>, <span class="string">"list_dir"</span>,
+           <span class="string">"bash"</span>, <span class="string">"web_search"</span>, <span class="string">"fetch_webpage"</span>],
+  <span class="type">"blockedTools"</span>: [],  <span class="comment">// No blocked list needed &mdash; only allowed tools exist</span>
+  <span class="type">"fileScope"</span>: <span class="string">"assigned"</span>,  <span class="comment">// Can only access files assigned to this task</span>
+  <span class="type">"exitRequired"</span>: {
+    <span class="type">"type"</span>: <span class="string">"implementation-report"</span>,
+    <span class="type">"fields"</span>: [<span class="string">"filesModified"</span>, <span class="string">"testsAdded"</span>, <span class="string">"changesDescription"</span>, <span class="string">"riskAssessment"</span>]
+  },
+  <span class="type">"escalation"</span>: { <span class="type">"onError"</span>: <span class="string">"war-room"</span>, <span class="type">"onScopeChange"</span>: <span class="string">"discovery"</span> },
+  <span class="type">"provider"</span>: <span class="string">"configurable"</span>  <span class="comment">// Fast model for coding, e.g. MiniMax or local</span>
+}
+          </div>
+        </div>
+      </div>
+
+      <div class="acc-item">
+        <div class="acc-header" onclick="toggleAcc(this)"><span class="acc-chevron">&#9654;</span><h4><span class="tag green">Execution</span> Testing Lab</h4></div>
+        <div class="acc-body">
+          <div class="code-block">
+{
+  <span class="type">"roomType"</span>: <span class="string">"testing-lab"</span>,
+  <span class="type">"floor"</span>: <span class="string">"execution"</span>,
+  <span class="type">"tables"</span>: {
+    <span class="type">"focus"</span>: { <span class="type">"chairs"</span>: 1, <span class="type">"description"</span>: <span class="string">"Single test suite runner"</span> },
+    <span class="type">"collab"</span>: { <span class="type">"chairs"</span>: 3, <span class="type">"description"</span>: <span class="string">"Parallel test suites"</span> }
+  },
+  <span class="type">"tools"</span>: [<span class="string">"read_file"</span>, <span class="string">"list_dir"</span>, <span class="string">"bash"</span>,
+           <span class="string">"qa_run_tests"</span>, <span class="string">"qa_check_lint"</span>, <span class="string">"qa_check_types"</span>,
+           <span class="string">"qa_check_coverage"</span>, <span class="string">"qa_audit_deps"</span>],
+  <span class="comment">// NOTE: write_file, patch_file NOT in tools list = structurally impossible to modify source</span>
+  <span class="type">"fileScope"</span>: <span class="string">"read-only"</span>,
+  <span class="type">"exitRequired"</span>: {
+    <span class="type">"type"</span>: <span class="string">"test-report"</span>,
+    <span class="type">"fields"</span>: [<span class="string">"testsRun"</span>, <span class="string">"testsPassed"</span>, <span class="string">"testsFailed"</span>, <span class="string">"coverage"</span>, <span class="string">"lintErrors"</span>, <span class="string">"recommendations"</span>]
+  },
+  <span class="type">"escalation"</span>: { <span class="type">"onFailure"</span>: <span class="string">"code-lab"</span>, <span class="type">"onCritical"</span>: <span class="string">"war-room"</span> },
+  <span class="type">"provider"</span>: <span class="string">"cheap"</span>  <span class="comment">// Repetitive test runs, cost-effective model</span>
+}
+          </div>
+        </div>
+      </div>
+
+      <div class="acc-item">
+        <div class="acc-header" onclick="toggleAcc(this)"><span class="acc-chevron">&#9654;</span><h4><span class="tag purple">Collaboration</span> Discovery Room</h4></div>
+        <div class="acc-body">
+          <div class="code-block">
+{
+  <span class="type">"roomType"</span>: <span class="string">"discovery"</span>,
+  <span class="type">"floor"</span>: <span class="string">"collaboration"</span>,
+  <span class="type">"tables"</span>: {
+    <span class="type">"collab"</span>: { <span class="type">"chairs"</span>: 4, <span class="type">"description"</span>: <span class="string">"PM + SMEs + User define requirements"</span> }
+  },
+  <span class="type">"tools"</span>: [<span class="string">"read_file"</span>, <span class="string">"list_dir"</span>, <span class="string">"web_search"</span>, <span class="string">"fetch_webpage"</span>,
+           <span class="string">"record_note"</span>, <span class="string">"recall_notes"</span>],
+  <span class="type">"fileScope"</span>: <span class="string">"read-only"</span>,
+  <span class="type">"exitRequired"</span>: {
+    <span class="type">"type"</span>: <span class="string">"requirements-document"</span>,
+    <span class="type">"fields"</span>: [<span class="string">"businessOutcomes"</span>, <span class="string">"constraints"</span>, <span class="string">"unknowns"</span>, <span class="string">"gapAnalysis"</span>,
+             <span class="string">"riskAssessment"</span>, <span class="string">"acceptanceCriteria"</span>]
+  },
+  <span class="type">"escalation"</span>: { <span class="type">"onComplete"</span>: <span class="string">"architecture"</span> },
+  <span class="type">"provider"</span>: <span class="string">"smart"</span>  <span class="comment">// Complex reasoning: Claude or equivalent</span>
+}
+          </div>
+        </div>
+      </div>
+
+      <div class="acc-item">
+        <div class="acc-header" onclick="toggleAcc(this)"><span class="acc-chevron">&#9654;</span><h4><span class="tag yellow">Governance</span> Review Room</h4></div>
+        <div class="acc-body">
+          <div class="code-block">
+{
+  <span class="type">"roomType"</span>: <span class="string">"review"</span>,
+  <span class="type">"floor"</span>: <span class="string">"governance"</span>,
+  <span class="type">"tables"</span>: {
+    <span class="type">"review"</span>: { <span class="type">"chairs"</span>: 3, <span class="type">"description"</span>: <span class="string">"PM + Architect + Reviewer"</span> }
+  },
+  <span class="type">"tools"</span>: [<span class="string">"read_file"</span>, <span class="string">"list_dir"</span>, <span class="string">"web_search"</span>, <span class="string">"recall_notes"</span>,
+           <span class="string">"qa_run_tests"</span>, <span class="string">"qa_check_lint"</span>],
+  <span class="type">"fileScope"</span>: <span class="string">"read-only"</span>,
+  <span class="type">"gateProtocol"</span>: {
+    <span class="type">"requiresExitDoc"</span>: <span class="keyword">true</span>,
+    <span class="type">"requiresRaidEntry"</span>: <span class="keyword">true</span>,
+    <span class="type">"requiresSignoff"</span>: <span class="keyword">true</span>,
+    <span class="type">"signoffRoles"</span>: [<span class="string">"architect"</span>, <span class="string">"user"</span>]
+  },
+  <span class="type">"exitRequired"</span>: {
+    <span class="type">"type"</span>: <span class="string">"gate-review"</span>,
+    <span class="type">"fields"</span>: [<span class="string">"verdict"</span>, <span class="string">"evidence"</span>, <span class="string">"conditions"</span>, <span class="string">"riskQuestionnaire"</span>]
+  },
+  <span class="type">"provider"</span>: <span class="string">"smart"</span>
+}
+          </div>
+        </div>
+      </div>
+
+      <div class="acc-item">
+        <div class="acc-header" onclick="toggleAcc(this)"><span class="acc-chevron">&#9654;</span><h4><span class="tag magenta">Strategy</span> Strategist Office</h4></div>
+        <div class="acc-body">
+          <div class="code-block">
+{
+  <span class="type">"roomType"</span>: <span class="string">"strategist"</span>,
+  <span class="type">"floor"</span>: <span class="string">"strategy"</span>,
+  <span class="type">"tables"</span>: {
+    <span class="type">"consultation"</span>: { <span class="type">"chairs"</span>: 2, <span class="type">"description"</span>: <span class="string">"Strategist + User"</span> }
+  },
+  <span class="type">"tools"</span>: [<span class="string">"web_search"</span>, <span class="string">"record_note"</span>, <span class="string">"recall_notes"</span>, <span class="string">"list_dir"</span>],
+  <span class="type">"exitRequired"</span>: {
+    <span class="type">"type"</span>: <span class="string">"building-blueprint"</span>,
+    <span class="type">"fields"</span>: [<span class="string">"projectGoals"</span>, <span class="string">"successCriteria"</span>, <span class="string">"floorsNeeded"</span>,
+             <span class="string">"roomConfig"</span>, <span class="string">"agentRoster"</span>, <span class="string">"estimatedPhases"</span>]
+  },
+  <span class="type">"modes"</span>: {
+    <span class="type">"quickStart"</span>: <span class="string">"Accept suggested template"</span>,
+    <span class="type">"advanced"</span>: <span class="string">"Drag-and-drop rooms into floors, custom agents"</span>
+  }
+}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════ PHASE ZERO ═══════════════════ -->
+<section class="section" id="phase-zero">
+  <div class="container">
+    <div class="section-label">Onboarding</div>
+    <h2>Phase Zero: The Strategist</h2>
+    <p class="subtitle">Before discovery. Before anything. A consultative setup that builds your building for you.</p>
+
+    <div class="card-grid cols-2">
+      <div class="card" style="border-top: 2px solid var(--accent-magenta);">
+        <h3>New User (Empty Building)</h3>
+        <p style="margin-top:8px">The <strong>Strategist</strong> agent activates:</p>
+        <ul style="list-style:none; margin-top:8px; font-size:13px; color:var(--text-1);">
+          <li style="margin-bottom:5px">1. "What are you trying to build/do?"</li>
+          <li style="margin-bottom:5px">2. "What does success look like?"</li>
+          <li style="margin-bottom:5px">3. "What inputs do you have? What outputs do you need?"</li>
+          <li style="margin-bottom:5px">4. "What constraints exist? (budget, timeline, tech)"</li>
+          <li style="margin-bottom:5px">5. Based on answers: suggests a building layout</li>
+          <li style="margin-bottom:5px">6. <strong>Quick Start</strong>: Accept suggested template</li>
+          <li style="margin-bottom:5px">7. <strong>Advanced</strong>: Drag-and-drop customization</li>
+        </ul>
+      </div>
+      <div class="card" style="border-top: 2px solid var(--accent-orange);">
+        <h3>Existing User (Full Building)</h3>
+        <p style="margin-top:8px">The <strong>Lobby Dashboard</strong> shows:</p>
+        <ul style="list-style:none; margin-top:8px; font-size:13px; color:var(--text-1);">
+          <li style="margin-bottom:5px">+ Project cards with pass/fail rates, open items</li>
+          <li style="margin-bottom:5px">+ Active agents and their current rooms</li>
+          <li style="margin-bottom:5px">+ Phase progress per project</li>
+          <li style="margin-bottom:5px">+ Pending approvals / gate reviews</li>
+          <li style="margin-bottom:5px">+ Quick action: "Start new project" &rarr; Strategist</li>
+          <li style="margin-bottom:5px">+ Quick action: "Resume project X" &rarr; active room</li>
+          <li style="margin-bottom:5px">+ RAID log search across all projects</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="callout magenta">
+      <strong>Modes based on intent:</strong> "Brainstorming mode" = only Discovery floor. "Coding mode" = Execution + Testing. "Full project" = all floors. "Risk analysis" = feed docs, get Governance output. The Strategist figures out which floors to activate.
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════ PHASES & GATES ═══════════════════ -->
+<section class="section" id="phases">
+  <div class="container">
+    <div class="section-label">Project Lifecycle</div>
+    <h2>Phases &amp; Gates</h2>
+    <p class="subtitle">Each phase has an entry protocol, a working period, and an exit protocol. You cannot skip a gate.</p>
+
+    <div class="diagram-container">
+      <div class="diagram"><span class="hl-purple">Phase 0</span>         <span class="hl-purple">Phase 1</span>           <span class="hl-cyan">Phase 2</span>          <span class="hl-green">Phase 3</span>         <span class="hl-yellow">Phase 4</span>          <span class="hl-green">Phase 5</span>
+<span class="hl-purple">STRATEGY</span>    <span class="hl-yellow">G</span>   <span class="hl-purple">DISCOVERY</span>     <span class="hl-yellow">G</span>    <span class="hl-cyan">ARCHITECTURE</span>  <span class="hl-yellow">G</span>   <span class="hl-green">EXECUTION</span>   <span class="hl-yellow">G</span>    <span class="hl-yellow">REVIEW</span>     <span class="hl-yellow">G</span>    <span class="hl-green">DEPLOY</span>
+                <span class="hl-yellow">|</span>                    <span class="hl-yellow">|</span>                   <span class="hl-yellow">|</span>                 <span class="hl-yellow">|</span>                  <span class="hl-yellow">|</span>
+           <span class="hl-yellow">Exit Doc</span>           <span class="hl-yellow">Exit Doc</span>           <span class="hl-yellow">Exit Doc</span>         <span class="hl-yellow">Exit Doc</span>          <span class="hl-yellow">Exit Doc</span>
+           <span class="hl-yellow">RAID Log</span>           <span class="hl-yellow">RAID Log</span>           <span class="hl-yellow">RAID Log</span>         <span class="hl-yellow">RAID Log</span>          <span class="hl-yellow">RAID Log</span>
+           <span class="hl-yellow">Sign-off</span>           <span class="hl-yellow">Sign-off</span>           <span class="hl-yellow">Sign-off</span>         <span class="hl-yellow">Sign-off</span>          <span class="hl-yellow">Sign-off</span>
+
+<span class="dim">G = Gate (go/no-go checkpoint). Cannot be bypassed.</span>
+<span class="dim">Each gate requires: structured exit document + RAID log entry + sign-off</span>
+<span class="dim">Next phase receives previous phase's output as input template</span></div>
+    </div>
+
+    <div class="card" style="border-left: 3px solid var(--accent-yellow);">
+      <h3>Gate Protocol Schema</h3>
+      <div class="code-block">
+<span class="comment">// Gate checklist (cannot be bypassed)</span>
+{
+  <span class="type">"phase"</span>: <span class="string">"discovery"</span>,
+  <span class="type">"exitDocument"</span>: {
+    <span class="type">"completedBy"</span>: <span class="string">"pm-agent"</span>,
+    <span class="type">"decisionsLog"</span>: [...],       <span class="comment">// What was decided + rationale + evidence</span>
+    <span class="type">"risksIdentified"</span>: [...],    <span class="comment">// Each with independent analysis</span>
+    <span class="type">"openItems"</span>: [...],           <span class="comment">// Unresolved items + owner</span>
+    <span class="type">"outputArtifacts"</span>: [...]      <span class="comment">// Links to docs, schemas, etc.</span>
+  },
+  <span class="type">"raidLogEntries"</span>: [...],       <span class="comment">// New RAID entries from this phase</span>
+  <span class="type">"signoff"</span>: {
+    <span class="type">"reviewer"</span>: <span class="string">"architect-agent"</span>,
+    <span class="type">"verdict"</span>: <span class="string">"GO"</span>,             <span class="comment">// GO | NO-GO | CONDITIONAL</span>
+    <span class="type">"conditions"</span>: [],
+    <span class="type">"timestamp"</span>: <span class="string">"..."</span>
+  },
+  <span class="type">"nextPhaseInput"</span>: { ... }    <span class="comment">// Structured input for the next phase</span>
+}
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════ EXIT DOCS & RAID ═══════════════════ -->
+<section class="section" id="exit-docs">
+  <div class="container">
+    <div class="section-label">Audit Trail</div>
+    <h2>Exit Documents &amp; RAID Log</h2>
+    <p class="subtitle">"You can't just say 'done.' You have to show you actually thought about it." &mdash; the risk questionnaire principle.</p>
+
+    <div class="comparison">
+      <div class="comp-side old">
+        <h4><span>&#x2718;</span> v1: "It says it's done"</h4>
+        <ul>
+          <li>Agent says "Done!" with no structured proof</li>
+          <li>Tests pass because there are no tests for missing features</li>
+          <li>UI looks complete but buttons aren't wired up</li>
+          <li>No audit trail of decisions made during execution</li>
+          <li>No way to reference what was decided in earlier phases</li>
+          <li>Scope changes lose all context</li>
+        </ul>
+      </div>
+      <div class="comp-side new">
+        <h4><span>&#x2713;</span> v2: Prescriptive Exit Protocol</h4>
+        <ul>
+          <li>Agent must complete structured exit document to leave room</li>
+          <li>Exit doc requires: decisions, rationale, evidence, citations</li>
+          <li>RAID log entry: Risks, Assumptions, Issues, Decisions</li>
+          <li>Every phase's exit doc becomes next phase's input</li>
+          <li>Searchable RAID log &mdash; agents reference past decisions</li>
+          <li>Scope changes trigger re-entry with full history</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:20px;">
+      <h3>RAID Log Schema</h3>
+      <div class="code-block">
+<span class="comment">// Searchable database: every agent references this before starting work</span>
+{
+  <span class="type">"id"</span>: <span class="string">"raid_001"</span>,
+  <span class="type">"type"</span>: <span class="string">"decision"</span>,         <span class="comment">// risk | assumption | issue | decision</span>
+  <span class="type">"phase"</span>: <span class="string">"architecture"</span>,
+  <span class="type">"roomId"</span>: <span class="string">"arch-room-1"</span>,
+  <span class="type">"summary"</span>: <span class="string">"Use SQLite for MVP, migrate to Postgres later"</span>,
+  <span class="type">"rationale"</span>: <span class="string">"Simplicity for phase 1, single-file deploy..."</span>,
+  <span class="type">"decidedBy"</span>: <span class="string">"architect-agent"</span>,
+  <span class="type">"approvedBy"</span>: <span class="string">"user"</span>,
+  <span class="type">"affectedAreas"</span>: [<span class="string">"storage"</span>, <span class="string">"deployment"</span>],
+  <span class="type">"timestamp"</span>: <span class="string">"2026-03-10T..."</span>,
+  <span class="type">"status"</span>: <span class="string">"active"</span>           <span class="comment">// active | superseded | closed</span>
+}
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════ SCOPE CHANGE ═══════════════════ -->
+<section class="section" id="scope-change">
+  <div class="container">
+    <div class="section-label">Change Management</div>
+    <h2>Mid-Stream Scope Changes</h2>
+    <p class="subtitle">"What happens if we're in test phase but want to add a new feature?" &mdash; structured re-entry.</p>
+
+    <div class="diagram-container">
+      <div class="diagram"><span class="hl-cyan">Scenario: Project is in TESTING phase. User wants to add a new feature.</span>
+
+  <span class="hl-orange">User</span>: "I want to add search filtering before we deploy"
+         |
+  <span class="hl-purple">Orchestrator</span> checks:
+    1. Current phase = <span class="hl-green">Testing</span>
+    2. Requested work = <span class="hl-cyan">New feature</span> (requires Discovery + Architecture + Execution)
+    3. <span class="hl-yellow">Scope change detected</span>
+         |
+  <span class="hl-yellow">Scope Change Protocol:</span>
+    a. Query RAID log for all <span class="hl-purple">decisions made so far</span>
+    b. Package relevant decisions as <span class="hl-purple">context brief</span>
+    c. <span class="hl-red">Re-enter Discovery Room</span> with context brief attached
+    d. Discovery room knows: "We are in test phase, adding scope"
+    e. Discovery output = mini-requirements (scoped to new feature only)
+         |
+    f. Fast-track through <span class="hl-cyan">Architecture</span> (existing architecture + delta)
+    g. Fast-track through <span class="hl-green">Execution</span> (scoped to new files only)
+    h. Return to <span class="hl-green">Testing</span> (re-run all tests including new feature)
+         |
+  <span class="hl-green">Result:</span> New feature integrated without losing any previous context.
+  All downstream dependencies updated via RAID log cascading.</div>
+    </div>
+
+    <div class="callout yellow">
+      <strong>Key principle:</strong> When scope changes, agents don't just "go build." They re-enter the relevant rooms <em>with the full RAID log context brief</em>. This prevents the AI from ignoring previous work.
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════ ARCHITECTURE ═══════════════════ -->
+<section class="section" id="architecture">
+  <div class="container">
+    <div class="section-label">Technical Architecture</div>
+    <h2>System Architecture: v1 vs v2</h2>
+
+    <div class="tabs" id="arch-tabs">
+      <button class="tab-btn active" data-tab="arch-current">Current (v1)</button>
+      <button class="tab-btn" data-tab="arch-new">New (v2)</button>
+    </div>
+
+    <div class="tab-content active" id="arch-current">
+      <div class="diagram-container">
+        <div class="diagram"><span class="dim">v1: Hub-Spoke &mdash; 48 modules, all through one 2300-line hub</span>
+
+                                <span class="hl-yellow">[ server.js ]</span> (389 lines, 28 module loader)
+                                      |
+                         <span class="hl-cyan">[ hub.js (2300+ lines) ]</span>
+                      <span class="dim">137 socket handlers, 23 services, rate limiting, rooms</span>
+                       /    |    |    |    |    \
+  <span class="hl-red">config</span>  <span class="hl-red">ai-client</span>  <span class="hl-purple">orchestration-core</span>  <span class="hl-green">tools-registry</span>  <span class="hl-cyan">agent-mgr</span>  <span class="hl-yellow">conv-store</span>
+                            |         |     \           |                 |
+                     <span class="hl-red">chat-stream</span>  <span class="hl-purple">orch-state</span>  <span class="hl-purple">tool-executor</span>  <span class="hl-green">shell-exec</span>      <span class="hl-cyan">agent-session</span>
+                     <span class="hl-red">msg-builder</span>       |           |      <span class="hl-green">file-ops</span>
+                                 <span class="hl-purple">approval</span>   <span class="hl-purple">agent-sys</span>  <span class="hl-green">web-fetch</span>
+  <span class="dim">+ 30 more modules... circular deps everywhere, lazy require() hacks</span>
+  <span class="hl-red">48 files, ~18.5K backend LOC, one god-hub, 61 shared state getters</span></div>
+      </div>
+    </div>
+
+    <div class="tab-content" id="arch-new">
+      <div class="diagram-container">
+        <div class="diagram"><span class="dim">v2: Layered Domains &mdash; ~20 modules, strict dependency direction</span>
+
+  <span class="hl-yellow">[ server.js ]</span> (~200 lines)
+        |
+  <span class="hl-cyan">[ core/bus.js ]</span> (~100 lines, event bus only)
+        |
+  <span class="hl-green">TRANSPORT</span>     socket-handler.js, api-handler.js
+        |
+  <span class="hl-purple">ROOMS</span>         room-manager.js
+        |         room-types/ (discovery, architecture, testing, execution, review, deploy)
+        |         table.js, phase-gate.js
+        |         <span class="hl-yellow">exit-document.js, raid-log.js</span>
+        |
+  <span class="hl-cyan">AGENTS</span>        agent-registry.js, agent-session.js, agent-router.js
+        |         <span class="hl-magenta">strategist.js</span>  <span class="dim">&larr; Phase Zero agent</span>
+        |
+  <span class="hl-green">TOOLS</span>         tool-registry.js, tool-executor.js (room-scoped)
+        |         providers/ (shell, file, web, git, mcp)
+        |
+  <span class="hl-red">AI</span>            ai-provider.js (provider-agnostic adapter)
+        |         ai-stream.js, prompt-builder.js
+        |
+  <span class="hl-yellow">STORAGE</span>       db.js (swappable: SQLite, Postgres, Redis...)
+        |         models/ (Room, Agent, Message, Task, PhaseGate, RaidLog, ExitDoc)
+        |
+  <span class="hl-orange">PLUGINS</span>       plugin-loader.js, plugin-sandbox.js
+                  Lua/JS scripts register as room types, tools, floor configs
+
+  <span class="hl-green">Each layer only depends on layers below. No circular deps.</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════ DATA MODEL ═══════════════════ -->
+<section class="section" id="data-model">
+  <div class="container">
+    <div class="section-label">New in Rev 3</div>
+    <h2>Data Model &amp; Storage Schema</h2>
+    <p class="subtitle">Swappable storage (SQLite &rarr; Postgres &rarr; Redis). Same schema, different engines. v2 adds 6 new entities.</p>
+
+    <div class="tabs" id="dm-tabs">
+      <button class="tab-btn active" data-tab="dm-v1">v1 Entities</button>
+      <button class="tab-btn" data-tab="dm-v2">v2 Entities</button>
+    </div>
+
+    <div class="tab-content active" id="dm-v1">
+      <div class="card-grid cols-3">
+        <div class="card"><h3 style="color:var(--accent-red)">Conversation</h3><p>id, workingDir, createdAt, messages[], tasks[], roadmap[], milestones[]</p></div>
+        <div class="card"><h3 style="color:var(--accent-red)">Message</h3><p>role, content, tool_calls[], tool_call_id, source, timestamp</p></div>
+        <div class="card"><h3 style="color:var(--accent-red)">Agent</h3><p>name, role, instructions (200+ lines), tools[], blockedTools[], capabilities[]</p></div>
+        <div class="card"><h3 style="color:var(--accent-red)">Task</h3><p>id, title, status, parentId, children[], milestoneId, assignee</p></div>
+        <div class="card"><h3 style="color:var(--accent-red)">Project</h3><p>id, name, description, linkedProjects[], workingDir</p></div>
+        <div class="card"><h3 style="color:var(--accent-red)">Config</h3><p>40+ flat key-value fields in .env + runtime overrides</p></div>
+      </div>
+    </div>
+
+    <div class="tab-content" id="dm-v2">
+      <div class="card-grid cols-3">
+        <div class="card" style="border-top:2px solid var(--accent-green)"><h3 style="color:var(--accent-green)">Room</h3><p>id, type, floorId, tables[], allowedTools[], exitTemplate, fileScope, provider, config</p></div>
+        <div class="card" style="border-top:2px solid var(--accent-green)"><h3 style="color:var(--accent-green)">Agent (v2)</h3><p>id, name, role, capabilities[], roomAccess[], badge (10-line identity card)</p></div>
+        <div class="card" style="border-top:2px solid var(--accent-green)"><h3 style="color:var(--accent-green)">Message (v2)</h3><p>id, roomId, role, content, toolCalls[], threadId, timestamp</p></div>
+        <div class="card" style="border-top:2px solid var(--accent-purple)"><h3 style="color:var(--accent-purple)">PhaseGate</h3><p>id, phase, status, exitDocId, raidEntries[], signoff, nextPhaseInput</p></div>
+        <div class="card" style="border-top:2px solid var(--accent-purple)"><h3 style="color:var(--accent-purple)">RaidEntry</h3><p>id, type (R/A/I/D), phase, roomId, summary, rationale, decidedBy, status</p></div>
+        <div class="card" style="border-top:2px solid var(--accent-purple)"><h3 style="color:var(--accent-purple)">ExitDocument</h3><p>id, roomId, type, completedBy, fields{}, artifacts[], timestamp</p></div>
+        <div class="card" style="border-top:2px solid var(--accent-cyan)"><h3 style="color:var(--accent-cyan)">Building</h3><p>id, projectId, floors[], activePhase, config, createdAt</p></div>
+        <div class="card" style="border-top:2px solid var(--accent-cyan)"><h3 style="color:var(--accent-cyan)">Floor</h3><p>id, type, buildingId, rooms[], order, isActive</p></div>
+        <div class="card" style="border-top:2px solid var(--accent-cyan)"><h3 style="color:var(--accent-cyan)">Todo</h3><p>id, taskId, agentId, roomId, description, status, exitDocRef</p></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════ AGENTS ═══════════════════ -->
+<section class="section" id="agents">
+  <div class="container">
+    <div class="section-label">Agent System</div>
+    <h2>Agents: Simple Identity, Room-Driven Behavior</h2>
+
+    <div class="card-grid cols-2">
+      <div class="card">
+        <h3><span class="tag red">v1</span> 200-line prompts per agent</h3>
+        <div class="code-block" style="font-size:11px;">
+{
+  <span class="type">name</span>: <span class="string">"testing-engineer"</span>,
+  <span class="type">instructions</span>: <span class="string">`
+    You are a testing engineer.
+    NEVER modify source code...
+    ... 200 lines of behavioral rules ...
+    ... scattered across agent-system-module.js ...
+  `</span>,
+  <span class="type">tools</span>: [<span class="string">"bash"</span>, <span class="string">"read_file"</span>, <span class="string">"write_file"</span>, ...],
+  <span class="type">blockedTools</span>: [<span class="string">"write_file"</span>, <span class="string">"patch_file"</span>],
+  <span class="comment">// Problem: blockedTools is instructional, not structural</span>
+  <span class="comment">// The tool IS available &mdash; we just told it "please don't use it"</span>
+  <span class="comment">// Result: agents modify tests to pass because they CAN</span>
+}
+        </div>
+      </div>
+      <div class="card">
+        <h3><span class="tag green">v2</span> 10-line identity cards</h3>
+        <div class="code-block" style="font-size:11px;">
+{
+  <span class="type">name</span>: <span class="string">"testing-engineer"</span>,
+  <span class="type">role</span>: <span class="string">"QA Lead"</span>,
+  <span class="type">capabilities</span>: [<span class="string">"testing"</span>, <span class="string">"qa"</span>, <span class="string">"code-review"</span>],
+  <span class="type">roomAccess</span>: [<span class="string">"testing-lab"</span>, <span class="string">"review"</span>],
+  <span class="type">badge</span>: <span class="string">"qa-level-1"</span>
+}
+<span class="comment">// Room injects: tools, rules, output template</span>
+<span class="comment">// Testing Lab tools: [read_file, bash, qa_run_tests, ...]</span>
+<span class="comment">// write_file is NOT in the list = structurally impossible</span>
+<span class="comment">// Agent = who. Room = what they can do.</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="callout cyan" style="margin-top:20px">
+      <strong>One agent, one todo.</strong> Agents handle one discrete todo at a time. Todos are the atomic unit of work. "Task" = milestone-level with many todos. AI responds predictably to "todo" &mdash; auto-creates checklists and marks them off.
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════ TOOLS MIGRATION ═══════════════════ -->
+<section class="section" id="tools-migration">
+  <div class="container">
+    <div class="section-label">New in Rev 3</div>
+    <h2>Tool Migration: v1 &rarr; v2</h2>
+    <p class="subtitle">All 42 tools mapped to their v2 fate. Room-scoped access replaces the 4-tier approval system entirely.</p>
+
+    <table class="data-table">
+      <thead><tr><th>v1 Tool</th><th>v1 Tier</th><th>v2 Fate</th><th>v2 Room Access</th></tr></thead>
+      <tbody>
+        <tr><td><code>bash</code></td><td><span class="tag cyan">T2</span></td><td><span class="tag green">Keep</span></td><td>Code Lab, Deploy Room</td></tr>
+        <tr><td><code>read_file</code></td><td><span class="tag green">T1</span></td><td><span class="tag green">Keep</span></td><td>All rooms (universal read)</td></tr>
+        <tr><td><code>write_file</code></td><td><span class="tag cyan">T2</span></td><td><span class="tag green">Keep</span></td><td>Code Lab only (not Testing Lab)</td></tr>
+        <tr><td><code>patch_file</code></td><td><span class="tag cyan">T2</span></td><td><span class="tag green">Keep</span></td><td>Code Lab only</td></tr>
+        <tr><td><code>list_dir</code></td><td><span class="tag green">T1</span></td><td><span class="tag green">Keep</span></td><td>All rooms</td></tr>
+        <tr><td><code>web_search</code></td><td><span class="tag green">T1</span></td><td><span class="tag green">Keep</span></td><td>Discovery, Architecture, Code Lab</td></tr>
+        <tr><td><code>qa_run_tests</code></td><td><span class="tag green">T1</span></td><td><span class="tag green">Keep</span></td><td>Testing Lab, Review Room</td></tr>
+        <tr><td><code>github</code></td><td><span class="tag yellow">T3</span></td><td><span class="tag green">Keep</span></td><td>Deploy Room only</td></tr>
+        <tr><td><code>delegate_to_agent</code></td><td><span class="tag cyan">T2</span></td><td><span class="tag yellow">Rewrite</span></td><td>Replaced by room-based routing</td></tr>
+        <tr><td><code>ask_user</code></td><td><span class="tag green">T1</span></td><td><span class="tag green">Keep</span></td><td>All rooms (escalation path)</td></tr>
+        <tr><td><code>ui_action</code></td><td><span class="tag green">T1</span></td><td><span class="tag yellow">Rewrite</span></td><td>Lobby only</td></tr>
+      </tbody>
+    </table>
+
+    <div class="callout red" style="margin-top:20px">
+      <strong>The 4-tier approval system is eliminated.</strong> In v2, tool access is binary and structural: either the room includes the tool, or the tool doesn't exist for that agent in that context. No confidence scores, no tier registry, no escalation chains. If you need write access, enter the Code Lab.
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════ PLUGINS ═══════════════════ -->
+<section class="section" id="plugins">
+  <div class="container">
+    <div class="section-label">Extensibility</div>
+    <h2>Plugin &amp; Scripting Architecture</h2>
+    <p class="subtitle">Even built-in features are plugins. The core is just a bus + loader. Everything else plugs in.</p>
+
+    <div class="card-grid cols-2">
+      <div class="card" style="border-top: 2px solid var(--accent-red);">
+        <h3>Integration Floor = Plugin Boundary</h3>
+        <p>All external communication goes through <strong>one floor</strong>. Single security boundary.</p>
+        <ul style="list-style:none; margin-top:10px; font-size:13px; color:var(--text-1);">
+          <li style="margin-bottom:5px">+ Plugin Bay: Lua/JS scripts register here</li>
+          <li style="margin-bottom:5px">+ Data Exchange: webhooks, APIs, MCP</li>
+          <li style="margin-bottom:5px">+ Provider Hub: AI model adapters</li>
+          <li style="margin-bottom:5px">+ Strict typed I/O at the boundary</li>
+          <li style="margin-bottom:5px">+ Sandboxed execution</li>
+        </ul>
+      </div>
+      <div class="card" style="border-top: 2px solid var(--accent-purple);">
+        <h3>What's Pluggable</h3>
+        <ul style="list-style:none; margin-top:4px; font-size:13px; color:var(--text-1);">
+          <li style="margin-bottom:6px"><span class="tag purple">Floor</span> New floor type with rooms, rules, access</li>
+          <li style="margin-bottom:6px"><span class="tag cyan">Room</span> New room type with tools, output template</li>
+          <li style="margin-bottom:6px"><span class="tag green">Tool</span> New tool with I/O contract</li>
+          <li style="margin-bottom:6px"><span class="tag orange">Agent</span> New agent type with capabilities</li>
+          <li style="margin-bottom:6px"><span class="tag red">Provider</span> New AI provider adapter</li>
+          <li style="margin-bottom:6px"><span class="tag yellow">Storage</span> Swap storage backend</li>
+          <li style="margin-bottom:6px"><span class="tag purple">Phase</span> Custom project phases</li>
+        </ul>
+        <p style="margin-top:10px; font-style:italic; color:var(--text-2); font-size:12px;">"When I want to add built-in stuff, I add a plugin just like an end user would."</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════ I/O CONTRACTS ═══════════════════ -->
+<section class="section" id="io">
+  <div class="container">
+    <div class="section-label">Standardization</div>
+    <h2>I/O Contracts: "Every Module is an API"</h2>
+    <p class="subtitle">Standardized input/output for every module, room, tool, and agent.</p>
+
+    <div class="card">
+      <h3>Universal I/O Contract</h3>
+      <div class="code-block">
+<span class="comment">// Every module, room, tool, agent, and plugin follows this pattern</span>
+{
+  <span class="type">"input"</span>: {
+    <span class="type">"schema"</span>: { <span class="comment">/* JSON Schema */</span> },
+    <span class="type">"required"</span>: [<span class="string">"field1"</span>, <span class="string">"field2"</span>],
+    <span class="type">"defaults"</span>: { <span class="string">"field3"</span>: <span class="string">"default_value"</span> }
+  },
+  <span class="type">"output"</span>: {
+    <span class="type">"schema"</span>: { <span class="comment">/* JSON Schema */</span> },
+    <span class="type">"required"</span>: [<span class="string">"result"</span>, <span class="string">"metadata"</span>],
+    <span class="type">"validate"</span>: <span class="comment">/* fn(output) =&gt; boolean */</span>
+  },
+  <span class="type">"error"</span>: {
+    <span class="type">"code"</span>: <span class="string">"string"</span>,
+    <span class="type">"message"</span>: <span class="string">"string"</span>,
+    <span class="type">"retryable"</span>: <span class="keyword">boolean</span>,
+    <span class="type">"context"</span>: { <span class="comment">/* debug info */</span> }
+  }
+}
+      </div>
+      <p style="margin-top:10px; color: var(--text-1); font-size:13px;">Content can change. Hierarchy stays consistent. Like a socket that always fits &mdash; plug anything into anything.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════ COMMANDS ═══════════════════ -->
+<section class="section" id="commands">
+  <div class="container">
+    <div class="section-label">User Interaction</div>
+    <h2>Commands &amp; Mentions</h2>
+    <p class="subtitle">Discord-style interaction: slash commands for actions, @-mentions for agents and rooms.</p>
+
+    <div class="card-grid cols-3">
+      <div class="card">
+        <h3>/ Slash Commands</h3>
+        <div class="code-block" style="font-size:11px;">
+<span class="fn">/kickoff</span>       <span class="comment">Start new project</span>
+<span class="fn">/phase</span>        <span class="comment">Show current phase</span>
+<span class="fn">/gate</span>         <span class="comment">Trigger phase gate</span>
+<span class="fn">/raid</span>         <span class="comment">Search RAID log</span>
+<span class="fn">/status</span>       <span class="comment">Building overview</span>
+<span class="fn">/scope-change</span> <span class="comment">Initiate scope change</span>
+<span class="fn">/deploy</span>       <span class="comment">Start deploy process</span>
+        </div>
+      </div>
+      <div class="card">
+        <h3>@ Agent Mentions</h3>
+        <div class="code-block" style="font-size:11px;">
+<span class="fn">@architect</span>    <span class="comment">Summon to current room</span>
+<span class="fn">@qa-lead</span>      <span class="comment">Summon to current room</span>
+<span class="fn">@orchestrator</span> <span class="comment">PA system: page agent</span>
+
+<span class="comment">Like Discord: @mention pages</span>
+<span class="comment">the agent to come to your room</span>
+        </div>
+      </div>
+      <div class="card">
+        <h3># Room References</h3>
+        <div class="code-block" style="font-size:11px;">
+<span class="fn">#testing-lab</span>  <span class="comment">Link to room</span>
+<span class="fn">#discovery:47</span> <span class="comment">Link to specific msg</span>
+<span class="fn">#raid:001</span>     <span class="comment">Link to RAID entry</span>
+
+<span class="comment">Cross-room citations without</span>
+<span class="comment">copying full context</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════ PROVIDERS ═══════════════════ -->
+<section class="section" id="providers">
+  <div class="container">
+    <div class="section-label">AI Layer</div>
+    <h2>Provider-Agnostic AI Layer</h2>
+    <p class="subtitle">Not locked to MiniMax or Claude. Swap providers per room, per task, per budget.</p>
+
+    <div class="comparison">
+      <div class="comp-side old">
+        <h4>v1: MiniMax-Specific Hacks</h4>
+        <ul>
+          <li>Emoji-to-ASCII mapping in message-builder.js</li>
+          <li>Unicode repair via guardrail-module.js</li>
+          <li>Synthetic tool IDs from text fallback parser</li>
+          <li>Temperature clamping (0.01-1.0 for MiniMax)</li>
+          <li>Provider-specific code scattered across 6+ files</li>
+          <li>anthropic-version header sent to non-Anthropic API</li>
+        </ul>
+      </div>
+      <div class="comp-side new">
+        <h4>v2: Provider Adapter Pattern</h4>
+        <ul>
+          <li>One adapter file per provider</li>
+          <li>Internal format = Anthropic-native</li>
+          <li>Adapters translate at the boundary</li>
+          <li>Swap provider = swap one file</li>
+          <li>All quirks contained in the adapter</li>
+          <li>Different models for different rooms</li>
+        </ul>
+      </div>
+    </div>
+
+    <table class="data-table" style="margin-top:20px;">
+      <thead><tr><th>Provider</th><th>Use Case</th><th>Room Affinity</th></tr></thead>
+      <tbody>
+        <tr><td>Anthropic (Claude)</td><td>Complex reasoning, architecture, planning</td><td>Discovery, Architecture, Review</td></tr>
+        <tr><td>MiniMax</td><td>Fast coding, high throughput, cost-effective</td><td>Code Lab, Testing Lab</td></tr>
+        <tr><td>OpenAI</td><td>Broad capabilities, function calling</td><td>Any (configurable)</td></tr>
+        <tr><td>Local (Ollama)</td><td>Offline, privacy, experimentation</td><td>Code Lab, Monitoring</td></tr>
+        <tr><td>Open Source</td><td>Custom fine-tuning, cost control</td><td>Testing Lab, repetitive tasks</td></tr>
+      </tbody>
+    </table>
+
+    <div class="callout green" style="margin-top:20px;">
+      <strong>Different models for different rooms.</strong> Discovery room might use Claude (complex reasoning). Code Lab uses a fast local model. Testing Lab uses a cheap model for repetitive test runs.
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════ MIGRATION ═══════════════════ -->
+<section class="section" id="migration">
+  <div class="container">
+    <div class="section-label">Migration Assessment</div>
+    <h2>What Carries Over, What's New</h2>
+
+    <div style="margin-bottom: 28px;">
+      <div class="progress-row"><span class="progress-label">Tool implementations</span><div class="progress-bar"><div class="progress-fill green" style="width:85%"></div></div><span class="progress-pct">85%</span></div>
+      <div class="progress-row"><span class="progress-label">UI components</span><div class="progress-bar"><div class="progress-fill green" style="width:70%"></div></div><span class="progress-pct">70%</span></div>
+      <div class="progress-row"><span class="progress-label">AI streaming</span><div class="progress-bar"><div class="progress-fill cyan" style="width:60%"></div></div><span class="progress-pct">60%</span></div>
+      <div class="progress-row"><span class="progress-label">Socket bridge</span><div class="progress-bar"><div class="progress-fill yellow" style="width:40%"></div></div><span class="progress-pct">40%</span></div>
+      <div class="progress-row"><span class="progress-label">Agent system</span><div class="progress-bar"><div class="progress-fill yellow" style="width:30%"></div></div><span class="progress-pct">30%</span></div>
+      <div class="progress-row"><span class="progress-label">Orchestration</span><div class="progress-bar"><div class="progress-fill red" style="width:15%"></div></div><span class="progress-pct">15%</span></div>
+      <div class="progress-row"><span class="progress-label">Room system</span><div class="progress-bar"><div class="progress-fill purple" style="width:0%"></div></div><span class="progress-pct">New</span></div>
+      <div class="progress-row"><span class="progress-label">Plugin system</span><div class="progress-bar"><div class="progress-fill purple" style="width:0%"></div></div><span class="progress-pct">New</span></div>
+      <div class="progress-row"><span class="progress-label">RAID / Exit docs</span><div class="progress-bar"><div class="progress-fill purple" style="width:0%"></div></div><span class="progress-pct">New</span></div>
+      <div class="progress-row"><span class="progress-label">Phase Zero</span><div class="progress-bar"><div class="progress-fill purple" style="width:0%"></div></div><span class="progress-pct">New</span></div>
+    </div>
+
+    <div class="card-grid cols-3">
+      <div class="card" style="border-top:2px solid var(--accent-green)">
+        <h3 style="color:var(--accent-green)">Keep (Reuse)</h3>
+        <ul style="list-style:none;font-size:13px;color:var(--text-1)">
+          <li>+ Shell executor</li><li>+ File operations</li><li>+ Web fetch / search</li><li>+ QA tools</li><li>+ GitHub tools</li><li>+ MCP protocol</li><li>+ UI Component class</li><li>+ Store (state.js)</li><li>+ CSS design tokens</li><li>+ SQLite engine</li><li>+ Token tracking</li><li>+ Config module</li>
+        </ul>
+      </div>
+      <div class="card" style="border-top:2px solid var(--accent-yellow)">
+        <h3 style="color:var(--accent-yellow)">Rewrite</h3>
+        <ul style="list-style:none;font-size:13px;color:var(--text-1)">
+          <li>~ Hub &rarr; thin bus</li><li>~ AI client &rarr; provider adapters</li><li>~ Message format &rarr; native only</li><li>~ Agent manager &rarr; room-aware</li><li>~ Tool executor &rarr; room-scoped</li><li>~ Approval flow &rarr; room access</li><li>~ Socket bridge &rarr; typed protocol</li><li>~ Conv store &rarr; room-threaded</li><li>~ System prompt &rarr; room-aware</li>
+        </ul>
+      </div>
+      <div class="card" style="border-top:2px solid var(--accent-purple)">
+        <h3 style="color:var(--accent-purple)">Build New</h3>
+        <ul style="list-style:none;font-size:13px;color:var(--text-1)">
+          <li>* Room Manager + types</li><li>* Table system</li><li>* Phase Gates</li><li>* Exit Document engine</li><li>* RAID Log database</li><li>* Strategist (Phase 0)</li><li>* Plugin loader + sandbox</li><li>* Integration Floor</li><li>* Provider adapters</li><li>* Building overview UI</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════ TIMELINE ═══════════════════ -->
+<section class="section" id="timeline">
+  <div class="container">
+    <div class="section-label">Build Plan</div>
+    <h2>Implementation Timeline</h2>
+
+    <div class="timeline">
+      <div class="tl-item">
+        <div class="tl-dot cyan"></div>
+        <div class="tl-phase" style="color:var(--accent-cyan)">Phase 0 &mdash; Stabilize</div>
+        <h4>Merge Fixes &amp; Tag v1 Baseline</h4>
+        <p>Merge current bug fixes (API errors, tier registry, agent messages). Tag as <code>v1.0-baseline</code>.</p>
+        <div class="tl-deliverables"><ul>
+          <li>Tagged commit: v1.0-baseline</li>
+          <li>All open bugs on feat/context-system-rework merged</li>
+          <li>Documentation snapshot in docs/</li>
+        </ul></div>
+      </div>
+      <div class="tl-item">
+        <div class="tl-dot purple"></div>
+        <div class="tl-phase" style="color:var(--accent-purple)">Phase 1 &mdash; Foundation</div>
+        <h4>Core Bus + Storage + Config</h4>
+        <p>Thin event bus (~100 lines). Database schema (rooms, agents, messages, gates, RAID, exit docs). Config with validation. Swappable storage.</p>
+        <div class="tl-deliverables"><ul>
+          <li>core/bus.js (event emitter, no socket handlers)</li>
+          <li>db.js with SQLite + migration system</li>
+          <li>9 model schemas: Building, Floor, Room, Agent, Message, Task, Todo, PhaseGate, RaidEntry, ExitDocument</li>
+          <li>Config service with JSON schema validation</li>
+        </ul></div>
+      </div>
+      <div class="tl-item">
+        <div class="tl-dot green"></div>
+        <div class="tl-phase" style="color:var(--accent-green)">Phase 2 &mdash; Rooms</div>
+        <h4>Room Manager + Testing Lab + Exit Protocol</h4>
+        <p>Room base class. Testing Lab (simplest rules). Exit document engine. Verify room constraints prevent tool access.</p>
+        <div class="tl-deliverables"><ul>
+          <li>room-manager.js with room lifecycle</li>
+          <li>Testing Lab room type (no write tools)</li>
+          <li>exit-document.js with template validation</li>
+          <li>Integration test: agent in Testing Lab cannot call write_file</li>
+        </ul></div>
+      </div>
+      <div class="tl-item">
+        <div class="tl-dot yellow"></div>
+        <div class="tl-phase" style="color:var(--accent-yellow)">Phase 3 &mdash; Agents + AI</div>
+        <h4>Agent Registry + Provider Adapters + Tool Executor</h4>
+        <p>Provider-agnostic AI layer. Agent registry with room access. Room-scoped tool executor. First end-to-end flow.</p>
+        <div class="tl-deliverables"><ul>
+          <li>ai-provider.js with Anthropic + MiniMax adapters</li>
+          <li>agent-registry.js with 10-line identity cards</li>
+          <li>Room-scoped tool-executor.js (no tier system)</li>
+          <li>End-to-end: user &rarr; agent enters room &rarr; tools &rarr; exit doc &rarr; gate</li>
+        </ul></div>
+      </div>
+      <div class="tl-item">
+        <div class="tl-dot purple"></div>
+        <div class="tl-phase" style="color:var(--accent-purple)">Phase 4 &mdash; All Rooms + RAID</div>
+        <h4>Remaining Rooms + Phase Gates + RAID Log</h4>
+        <p>Discovery, Architecture, Code Lab, Review, Deploy rooms. Phase gates. RAID log. Scope change protocol.</p>
+        <div class="tl-deliverables"><ul>
+          <li>6 room types: discovery, architecture, code-lab, review, deploy, monitoring</li>
+          <li>phase-gate.js with GO/NO-GO/CONDITIONAL</li>
+          <li>raid-log.js with search and cascading</li>
+          <li>Full project lifecycle test (Phase 0 &rarr; Deploy)</li>
+        </ul></div>
+      </div>
+      <div class="tl-item">
+        <div class="tl-dot magenta"></div>
+        <div class="tl-phase" style="color:var(--accent-magenta)">Phase 5 &mdash; Phase Zero</div>
+        <h4>Strategist + Building Architect + Quick Start</h4>
+        <p>Strategist agent. Building Architect. Quick Start templates. Advanced drag-and-drop.</p>
+        <div class="tl-deliverables"><ul>
+          <li>strategist.js (consultative setup agent)</li>
+          <li>building-architect.js (auto-config based on Q&amp;A)</li>
+          <li>3 Quick Start templates: Brainstorm, Code, Full Project</li>
+        </ul></div>
+      </div>
+      <div class="tl-item">
+        <div class="tl-dot orange"></div>
+        <div class="tl-phase" style="color:var(--accent-orange)">Phase 6 &mdash; UI</div>
+        <h4>Building-Themed Frontend</h4>
+        <p>Floor/room/table visual layout (tycoon-style). Agent "chairs" at tables. Phase progress. RAID viewer. Dashboard.</p>
+        <div class="tl-deliverables"><ul>
+          <li>Building visualization component (interactive floors)</li>
+          <li>Room view with table/chair layout</li>
+          <li>RAID log search UI</li>
+          <li>Dashboard with project KPIs</li>
+          <li>Port v1 component system (engine, store, panels)</li>
+        </ul></div>
+      </div>
+      <div class="tl-item">
+        <div class="tl-dot green"></div>
+        <div class="tl-phase" style="color:var(--accent-green)">Phase 7 &mdash; Plugins + Polish</div>
+        <h4>Plugin System + Integration Floor + Commands</h4>
+        <p>Lua/JS scripting. Plugin sandbox. Integration Floor. Slash commands, @-mentions, #references. Docker dev stack.</p>
+        <div class="tl-deliverables"><ul>
+          <li>plugin-loader.js + plugin-sandbox.js</li>
+          <li>Integration Floor with Data Exchange + Provider Hub</li>
+          <li>Command parser: /, @, # tokens</li>
+          <li>Docker-based development environment</li>
+          <li>Cross-room tagging and citations</li>
+        </ul></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════ LESSONS ═══════════════════ -->
+<section class="section" id="lessons">
+  <div class="container">
+    <div class="section-label">Lessons Learned</div>
+    <h2>What v1 Taught Us</h2>
+
+    <div class="accordion">
+      <div class="acc-item">
+        <div class="acc-header" onclick="toggleAcc(this)"><span class="acc-chevron">&#9654;</span><h4><span class="tag red">Bug</span> API Error 2013: Orphaned tool_results</h4></div>
+        <div class="acc-body"><p><strong>Cause:</strong> Tool denial paths injected bare assistant messages, breaking Anthropic's strict alternation rule. <code>_sanitizeAlternation()</code> in chat-stream.js was a band-aid. <strong>v2 fix:</strong> Append-only message history validated at insert time. Impossible to create orphans by construction. Messages stored per-room, not globally.</p></div>
+      </div>
+      <div class="acc-item">
+        <div class="acc-header" onclick="toggleAcc(this)"><span class="acc-chevron">&#9654;</span><h4><span class="tag red">Bug</span> Tool loop stops after one cycle</h4></div>
+        <div class="acc-body"><p><strong>Cause:</strong> Three simultaneous root causes: (1) <code>addToolResult</code> not registered as a service method, (2) wrong <code>continueLoop</code> condition checking for tool_calls on the response instead of results, (3) <code>toAnthropicMessages()</code> not converting internal format to Anthropic API format. <strong>v2 fix:</strong> Strict layered architecture prevents these cross-cutting bugs. Tool results flow through a typed pipeline, not ad-hoc method calls.</p></div>
+      </div>
+      <div class="acc-item">
+        <div class="acc-header" onclick="toggleAcc(this)"><span class="acc-chevron">&#9654;</span><h4><span class="tag red">Bug</span> 25+ tools missing from tier registry</h4></div>
+        <div class="acc-body"><p><strong>Cause:</strong> approval-flow.js had a hardcoded tier map that wasn't updated when new tools were added. Unregistered tools defaulted to "unknown" tier, prompting for approval on every read_file call. <strong>v2 fix:</strong> No tier registry at all. Room-scoped access is binary: tool exists in room or it doesn't.</p></div>
+      </div>
+      <div class="acc-item">
+        <div class="acc-header" onclick="toggleAcc(this)"><span class="acc-chevron">&#9654;</span><h4><span class="tag yellow">Pattern</span> "It says done but nothing works"</h4></div>
+        <div class="acc-body"><p><strong>Cause:</strong> No structured proof of work. Agent says "Done!" without evidence. <strong>v2 fix:</strong> Exit documents require: files modified, tests passed, decisions made, risk assessment. The risk questionnaire pattern &mdash; agents must fill in structured fields with evidence, not just say "approved."</p></div>
+      </div>
+      <div class="acc-item">
+        <div class="acc-header" onclick="toggleAcc(this)"><span class="acc-chevron">&#9654;</span><h4><span class="tag yellow">Pattern</span> Testing agent modifies tests to pass</h4></div>
+        <div class="acc-body"><p><strong>Cause:</strong> Agent prompt said "don't change tests" but <code>write_file</code> was in its tool list. Instructions are suggestions to AI; tool access is structural. <strong>v2 fix:</strong> Testing Lab room's tool list doesn't include <code>write_file</code>. Structurally impossible, not instructionally prohibited.</p></div>
+      </div>
+      <div class="acc-item">
+        <div class="acc-header" onclick="toggleAcc(this)"><span class="acc-chevron">&#9654;</span><h4><span class="tag yellow">Pattern</span> Circular dependencies everywhere</h4></div>
+        <div class="acc-body"><p><strong>Cause:</strong> Hub-spoke with no layering. orchestration-core requires agent-session which requires orchestration-core (lazy <code>require()</code> hacks). 61 shared state getters in orchestration-state.js accessed by 8+ modules. <strong>v2 fix:</strong> Strict layer ordering: Transport &rarr; Rooms &rarr; Agents &rarr; Tools &rarr; AI &rarr; Storage. Each layer only depends on layers below.</p></div>
+      </div>
+      <div class="acc-item">
+        <div class="acc-header" onclick="toggleAcc(this)"><span class="acc-chevron">&#9654;</span><h4><span class="tag yellow">Pattern</span> MiniMax-specific hacks in 6+ files</h4></div>
+        <div class="acc-body"><p><strong>Cause:</strong> MiniMax corrupts Unicode, requires emoji stripping, has different temperature range, sends tool calls in text format sometimes. Workarounds scattered across ai-client.js, chat-stream.js, message-builder.js, guardrail-module.js, character-normalization.js, tool-parser.js. <strong>v2 fix:</strong> One adapter per provider. All quirks contained in the adapter file. Rest of system speaks one internal format.</p></div>
+      </div>
+      <div class="acc-item">
+        <div class="acc-header" onclick="toggleAcc(this)"><span class="acc-chevron">&#9654;</span><h4><span class="tag green">Insight</span> Scope changes lose all context</h4></div>
+        <div class="acc-body"><p><strong>Cause:</strong> No structured record of decisions. No RAID log. When scope changed mid-project, agents started fresh with no awareness of prior work. <strong>v2 fix:</strong> Every phase produces an exit document. Scope changes trigger re-entry to relevant rooms with a context brief summarizing all RAID log decisions.</p></div>
+      </div>
+      <div class="acc-item">
+        <div class="acc-header" onclick="toggleAcc(this)"><span class="acc-chevron">&#9654;</span><h4><span class="tag green">Insight</span> No phase gates = premature execution</h4></div>
+        <div class="acc-body"><p><strong>Cause:</strong> AI starts building immediately with no discovery phase. No requirements, no architecture review. <strong>v2 fix:</strong> Phase Zero (Strategist) asks consultative questions first. Phase gates require structured sign-off. Can't enter Execution without Architecture sign-off.</p></div>
+      </div>
+      <div class="acc-item">
+        <div class="acc-header" onclick="toggleAcc(this)"><span class="acc-chevron">&#9654;</span><h4><span class="tag green">Insight</span> 137 socket handlers in one file</h4></div>
+        <div class="acc-body"><p><strong>Cause:</strong> hub.js grew organically. Every new feature added more handlers. At 137 handlers and 2300+ lines, it's the single largest bottleneck for understanding, modifying, or debugging the system. <strong>v2 fix:</strong> Transport layer with typed event contracts. Socket handlers organized by domain (room events, agent events, system events). Each domain module owns its handlers.</p></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════ FOOTER ═══════════════════ -->
+<footer class="footer">
+  <div class="container">
+    <p style="font-family:var(--font-display);font-size:16px;color:var(--text-0)">Overlord v2 Architecture Report</p>
+    <p style="margin-top:4px;color:var(--text-2)">Rev 3 &bull; Branch: feat/context-system-rework &bull; Updated: 2026-03-11</p>
+    <p style="margin-top:8px;color:var(--text-2);font-size:11px;max-width:700px;margin-left:auto;margin-right:auto">
+      v1 Audit: 48 backend modules, 45+ frontend files, 137 socket handlers, 42 tools, 23 services &bull;
+      New in Rev 3: Room Contracts, Data Model, Tool Migration Map, Detailed v1 Audit with exact counts
+    </p>
+  </div>
+</footer>
+
+<script>
+// Tab switching
+document.querySelectorAll('.tabs').forEach(tabs => {
+  tabs.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const tabId = btn.dataset.tab;
+      tabs.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      const section = tabs.closest('.section') || tabs.parentElement;
+      section.querySelectorAll('.tab-content').forEach(tc => {
+        tc.classList.toggle('active', tc.id === tabId);
+      });
+    });
+  });
+});
+
+// Accordion toggle
+function toggleAcc(header) { header.closest('.acc-item').classList.toggle('open'); }
+
+// Floor toggle
+function toggleFloor(floor) { floor.classList.toggle('open'); }
+
+// Table filter
+function filterTable(input, tableId) {
+  const q = input.value.toLowerCase();
+  const table = document.getElementById(tableId);
+  if (!table) return;
+  table.querySelectorAll('tbody tr').forEach(row => {
+    row.style.display = row.textContent.toLowerCase().includes(q) ? '' : 'none';
+  });
+}
+
+// Active nav link tracking
+const sections = document.querySelectorAll('.section');
+const navLinks = document.querySelectorAll('.nav-link');
+const observer = new IntersectionObserver(entries => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      const id = entry.target.id;
+      navLinks.forEach(link => {
+        link.classList.toggle('active', link.getAttribute('href') === '#' + id);
+      });
+    }
+  });
+}, { rootMargin: '-80px 0px -60% 0px' });
+sections.forEach(s => observer.observe(s));
+
+// Staggered animations on scroll
+const animObserver = new IntersectionObserver(entries => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      entry.target.style.animationPlayState = 'running';
+    }
+  });
+}, { threshold: 0.1 });
+document.querySelectorAll('.animate').forEach(el => {
+  el.style.animationPlayState = 'paused';
+  animObserver.observe(el);
+});
+</script>
+</body>
+</html>

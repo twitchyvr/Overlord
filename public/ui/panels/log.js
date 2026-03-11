@@ -58,8 +58,10 @@ export class LogPanel extends PanelComponent {
     mount() {
         super.mount();
         this._contentEl = this.$('#log') || this.$('.panel-content');
+        this._statsBar = null;
 
-        // Build filter bar
+        // Build usage stats bar + filter bar
+        this._buildStatsBar();
         this._buildFilterBar();
 
         // Listen for log events
@@ -67,6 +69,12 @@ export class LogPanel extends PanelComponent {
             this._addEntry(entry);
         });
         this._subs.push(unsub);
+
+        // Listen for usage stats updates
+        const unsubStats = OverlordUI.subscribe('usage_stats', (data) => {
+            this._updateStats(data);
+        });
+        this._subs.push(unsubStats);
 
         // Clear button handler
         this.on('click', '[data-action="clear-log"]', () => {
@@ -81,6 +89,60 @@ export class LogPanel extends PanelComponent {
         });
 
         this.render();
+    }
+
+    _buildStatsBar() {
+        if (!this._contentEl) return;
+        const parent = this._contentEl.parentElement;
+        if (!parent || parent.querySelector('.log-usage-stats')) return;
+
+        this._statsBar = h('div', {
+            class: 'log-usage-stats',
+            style: 'display:none;padding:4px 8px;font-size:10px;color:var(--text-muted);' +
+                   'background:var(--bg-secondary,#161b22);border-bottom:1px solid var(--border-subtle,#21262d);' +
+                   'flex-wrap:wrap;align-items:center;gap:10px;'
+        });
+        parent.insertBefore(this._statsBar, this._contentEl);
+    }
+
+    _updateStats(data) {
+        if (!this._statsBar || !data?.session) return;
+        const s = data.session;
+        const req = data.request || {};
+
+        const fmt = n => (n || 0).toLocaleString();
+        const savings = s.cacheSavingsPct || 0;
+        const hasCache = s.cacheReadTokens > 0;
+
+        // Clear and rebuild with DOM (no innerHTML)
+        while (this._statsBar.firstChild) this._statsBar.removeChild(this._statsBar.firstChild);
+        this._statsBar.style.display = 'flex';
+
+        const items = [
+            ['In', fmt(s.inputTokens), null],
+            ['Out', fmt(s.outputTokens), null],
+            ['Cache\u2193', fmt(s.cacheReadTokens), hasCache ? '#10b981' : null],
+            ['Cache\u2191', fmt(s.cacheWriteTokens), null],
+            ['Saved', `${savings}%`, savings > 0 ? '#10b981' : null],
+            ['Reqs', String(s.requests), null],
+        ];
+
+        for (const [label, val, color] of items) {
+            const el = h('span', {
+                style: `white-space:nowrap;${color ? `color:${color};font-weight:600;` : ''}`
+            });
+            el.textContent = `${label}: ${val}`;
+            this._statsBar.appendChild(el);
+        }
+
+        if (req.cacheRead > 0) {
+            const badge = h('span', {
+                style: 'margin-left:auto;padding:1px 5px;border-radius:3px;' +
+                       'background:#0d4429;color:#10b981;font-weight:600;'
+            });
+            badge.textContent = `CACHE HIT +${fmt(req.cacheRead)}`;
+            this._statsBar.appendChild(badge);
+        }
     }
 
     _buildFilterBar() {

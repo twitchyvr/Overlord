@@ -1,0 +1,4160 @@
+WEBVTT
+Kind: captions
+Language: en
+
+00:00:00.320 --> 00:00:02.149 align:start position:0%
+ 
+Using<00:00:00.719><c> agents</c><00:00:01.120><c> to</c><00:00:01.280><c> write</c><00:00:01.520><c> code</c><00:00:01.760><c> has</c><00:00:02.000><c> never</c>
+
+00:00:02.149 --> 00:00:02.159 align:start position:0%
+Using agents to write code has never
+ 
+
+00:00:02.159 --> 00:00:03.990 align:start position:0%
+Using agents to write code has never
+been<00:00:02.320><c> easier.</c><00:00:02.879><c> And</c><00:00:03.040><c> in</c><00:00:03.280><c> the</c><00:00:03.360><c> past</c><00:00:03.600><c> few</c><00:00:03.760><c> weeks,</c>
+
+00:00:03.990 --> 00:00:04.000 align:start position:0%
+been easier. And in the past few weeks,
+ 
+
+00:00:04.000 --> 00:00:06.070 align:start position:0%
+been easier. And in the past few weeks,
+I've<00:00:04.240><c> had</c><00:00:04.480><c> several</c><00:00:04.880><c> conversations</c><00:00:05.680><c> with</c>
+
+00:00:06.070 --> 00:00:06.080 align:start position:0%
+I've had several conversations with
+ 
+
+00:00:06.080 --> 00:00:08.790 align:start position:0%
+I've had several conversations with
+company<00:00:06.480><c> leaders,</c><00:00:07.200><c> developers,</c><00:00:08.160><c> and</c><00:00:08.559><c> other</c>
+
+00:00:08.790 --> 00:00:08.800 align:start position:0%
+company leaders, developers, and other
+ 
+
+00:00:08.800 --> 00:00:11.110 align:start position:0%
+company leaders, developers, and other
+people<00:00:09.120><c> using</c><00:00:09.519><c> agents</c><00:00:09.920><c> to</c><00:00:10.160><c> write</c><00:00:10.480><c> code,</c>
+
+00:00:11.110 --> 00:00:11.120 align:start position:0%
+people using agents to write code,
+ 
+
+00:00:11.120 --> 00:00:13.190 align:start position:0%
+people using agents to write code,
+talking<00:00:11.440><c> about</c><00:00:12.080><c> automation</c><00:00:12.639><c> that</c><00:00:12.960><c> you</c><00:00:13.120><c> can</c>
+
+00:00:13.190 --> 00:00:13.200 align:start position:0%
+talking about automation that you can
+ 
+
+00:00:13.200 --> 00:00:15.829 align:start position:0%
+talking about automation that you can
+achieve<00:00:13.599><c> with</c><00:00:13.840><c> agents</c><00:00:14.240><c> in</c><00:00:14.480><c> your</c><00:00:14.639><c> codebase.</c><00:00:15.519><c> So</c>
+
+00:00:15.829 --> 00:00:15.839 align:start position:0%
+achieve with agents in your codebase. So
+ 
+
+00:00:15.839 --> 00:00:17.349 align:start position:0%
+achieve with agents in your codebase. So
+today<00:00:16.080><c> I</c><00:00:16.240><c> kind</c><00:00:16.320><c> of</c><00:00:16.400><c> want</c><00:00:16.560><c> to</c><00:00:16.640><c> walk</c><00:00:16.800><c> through</c><00:00:17.039><c> my</c>
+
+00:00:17.349 --> 00:00:17.359 align:start position:0%
+today I kind of want to walk through my
+ 
+
+00:00:17.359 --> 00:00:20.230 align:start position:0%
+today I kind of want to walk through my
+personal<00:00:17.840><c> ladder</c><00:00:18.400><c> of</c><00:00:18.800><c> the</c><00:00:19.119><c> six</c><00:00:19.439><c> levels</c><00:00:19.760><c> that</c><00:00:20.000><c> I</c>
+
+00:00:20.230 --> 00:00:20.240 align:start position:0%
+personal ladder of the six levels that I
+ 
+
+00:00:20.240 --> 00:00:21.830 align:start position:0%
+personal ladder of the six levels that I
+have<00:00:20.400><c> when</c><00:00:20.640><c> I</c><00:00:20.800><c> think</c><00:00:20.960><c> about</c><00:00:21.199><c> agentic</c>
+
+00:00:21.830 --> 00:00:21.840 align:start position:0%
+have when I think about agentic
+ 
+
+00:00:21.840 --> 00:00:24.150 align:start position:0%
+have when I think about agentic
+engineering<00:00:22.800><c> and</c><00:00:23.199><c> where</c><00:00:23.439><c> I</c><00:00:23.680><c> think</c><00:00:23.840><c> most</c>
+
+00:00:24.150 --> 00:00:24.160 align:start position:0%
+engineering and where I think most
+ 
+
+00:00:24.160 --> 00:00:25.830 align:start position:0%
+engineering and where I think most
+people<00:00:24.320><c> are</c><00:00:24.480><c> at,</c><00:00:24.880><c> how</c><00:00:25.119><c> you</c><00:00:25.279><c> can</c><00:00:25.359><c> get</c><00:00:25.519><c> between</c>
+
+00:00:25.830 --> 00:00:25.840 align:start position:0%
+people are at, how you can get between
+ 
+
+00:00:25.840 --> 00:00:28.070 align:start position:0%
+people are at, how you can get between
+levels,<00:00:26.320><c> as</c><00:00:26.480><c> well</c><00:00:26.560><c> as</c><00:00:26.800><c> show</c><00:00:27.039><c> actual</c><00:00:27.519><c> examples</c>
+
+00:00:28.070 --> 00:00:28.080 align:start position:0%
+levels, as well as show actual examples
+ 
+
+00:00:28.080 --> 00:00:30.310 align:start position:0%
+levels, as well as show actual examples
+in<00:00:28.320><c> the</c><00:00:28.560><c> code</c><00:00:28.800><c> of</c><00:00:29.039><c> what</c><00:00:29.359><c> each</c><00:00:29.679><c> level</c><00:00:30.000><c> looks</c>
+
+00:00:30.310 --> 00:00:30.320 align:start position:0%
+in the code of what each level looks
+ 
+
+00:00:30.320 --> 00:00:33.190 align:start position:0%
+in the code of what each level looks
+like.<00:00:30.640><c> So</c><00:00:31.279><c> let's</c><00:00:31.519><c> dig</c><00:00:31.760><c> into</c><00:00:32.000><c> it.</c><00:00:32.640><c> So</c><00:00:32.880><c> at</c><00:00:33.040><c> the</c>
+
+00:00:33.190 --> 00:00:33.200 align:start position:0%
+like. So let's dig into it. So at the
+ 
+
+00:00:33.200 --> 00:00:35.110 align:start position:0%
+like. So let's dig into it. So at the
+very<00:00:33.360><c> bottom</c><00:00:33.600><c> of</c><00:00:33.680><c> the</c><00:00:33.840><c> ladder</c><00:00:34.160><c> here,</c><00:00:34.480><c> we</c><00:00:34.800><c> have</c>
+
+00:00:35.110 --> 00:00:35.120 align:start position:0%
+very bottom of the ladder here, we have
+ 
+
+00:00:35.120 --> 00:00:36.870 align:start position:0%
+very bottom of the ladder here, we have
+level<00:00:35.440><c> one,</c><00:00:35.680><c> which</c><00:00:35.920><c> is</c><00:00:36.079><c> interactive.</c><00:00:36.719><c> And</c>
+
+00:00:36.870 --> 00:00:36.880 align:start position:0%
+level one, which is interactive. And
+ 
+
+00:00:36.880 --> 00:00:38.310 align:start position:0%
+level one, which is interactive. And
+this<00:00:36.960><c> is</c><00:00:37.120><c> where</c><00:00:37.280><c> every</c><00:00:37.520><c> developer</c><00:00:38.000><c> starts</c>
+
+00:00:38.310 --> 00:00:38.320 align:start position:0%
+this is where every developer starts
+ 
+
+00:00:38.320 --> 00:00:40.470 align:start position:0%
+this is where every developer starts
+when<00:00:38.480><c> they</c><00:00:38.640><c> get</c><00:00:38.800><c> into</c><00:00:39.200><c> using</c><00:00:39.520><c> LLM</c><00:00:40.160><c> to</c><00:00:40.320><c> write</c>
+
+00:00:40.470 --> 00:00:40.480 align:start position:0%
+when they get into using LLM to write
+ 
+
+00:00:40.480 --> 00:00:43.990 align:start position:0%
+when they get into using LLM to write
+their<00:00:40.800><c> code</c><00:00:41.040><c> for</c><00:00:41.280><c> them.</c><00:00:41.920><c> This</c><00:00:42.239><c> is</c><00:00:43.040><c> default</c>
+
+00:00:43.990 --> 00:00:44.000 align:start position:0%
+their code for them. This is default
+ 
+
+00:00:44.000 --> 00:00:46.630 align:start position:0%
+their code for them. This is default
+cloud<00:00:44.399><c> code</c><00:00:44.719><c> for</c><00:00:44.879><c> example</c><00:00:45.520><c> configuration</c><00:00:46.320><c> or</c>
+
+00:00:46.630 --> 00:00:46.640 align:start position:0%
+cloud code for example configuration or
+ 
+
+00:00:46.640 --> 00:00:48.869 align:start position:0%
+cloud code for example configuration or
+it<00:00:46.879><c> could</c><00:00:47.039><c> be</c><00:00:47.200><c> pi</c><00:00:47.520><c> or</c><00:00:47.760><c> open</c><00:00:48.079><c> code</c><00:00:48.320><c> whatever</c><00:00:48.640><c> you</c>
+
+00:00:48.869 --> 00:00:48.879 align:start position:0%
+it could be pi or open code whatever you
+ 
+
+00:00:48.879 --> 00:00:52.310 align:start position:0%
+it could be pi or open code whatever you
+use<00:00:49.680><c> and</c><00:00:49.920><c> this</c><00:00:50.079><c> is</c><00:00:50.320><c> no</c><00:00:50.640><c> configuration</c><00:00:52.000><c> no</c>
+
+00:00:52.310 --> 00:00:52.320 align:start position:0%
+use and this is no configuration no
+ 
+
+00:00:52.320 --> 00:00:54.950 align:start position:0%
+use and this is no configuration no
+skills<00:00:53.039><c> nothing</c><00:00:53.360><c> custom</c><00:00:53.760><c> at</c><00:00:54.000><c> all</c><00:00:54.480><c> and</c><00:00:54.719><c> you're</c>
+
+00:00:54.950 --> 00:00:54.960 align:start position:0%
+skills nothing custom at all and you're
+ 
+
+00:00:54.960 --> 00:00:57.189 align:start position:0%
+skills nothing custom at all and you're
+babysitting<00:00:55.600><c> every</c><00:00:55.920><c> step</c><00:00:56.160><c> of</c><00:00:56.399><c> the</c><00:00:56.640><c> agent</c>
+
+00:00:57.189 --> 00:00:57.199 align:start position:0%
+babysitting every step of the agent
+ 
+
+00:00:57.199 --> 00:00:59.189 align:start position:0%
+babysitting every step of the agent
+diving<00:00:57.520><c> into</c><00:00:57.760><c> the</c><00:00:57.920><c> code</c><00:00:58.079><c> here</c><00:00:58.239><c> for</c><00:00:58.399><c> level</c><00:00:58.719><c> one</c>
+
+00:00:59.189 --> 00:00:59.199 align:start position:0%
+diving into the code here for level one
+ 
+
+00:00:59.199 --> 00:01:01.189 align:start position:0%
+diving into the code here for level one
+let's<00:00:59.760><c> assume</c><00:01:00.160><c> that</c><00:01:00.399><c> I'm</c><00:01:00.640><c> working</c><00:01:00.800><c> in</c><00:01:00.960><c> a</c>
+
+00:01:01.189 --> 00:01:01.199 align:start position:0%
+let's assume that I'm working in a
+ 
+
+00:01:01.199 --> 00:01:02.790 align:start position:0%
+let's assume that I'm working in a
+project<00:01:01.520><c> here</c><00:01:01.680><c> that</c><00:01:01.920><c> I've</c><00:01:02.079><c> already</c><00:01:02.239><c> had</c><00:01:02.399><c> a</c><00:01:02.640><c> ton</c>
+
+00:01:02.790 --> 00:01:02.800 align:start position:0%
+project here that I've already had a ton
+ 
+
+00:01:02.800 --> 00:01:04.180 align:start position:0%
+project here that I've already had a ton
+of<00:01:02.960><c> work</c><00:01:03.120><c> done</c><00:01:03.359><c> on</c><00:01:03.920><c> maybe</c><00:01:04.159><c> I've</c>
+
+00:01:04.180 --> 00:01:04.190 align:start position:0%
+of work done on maybe I've
+ 
+
+00:01:04.190 --> 00:01:05.030 align:start position:0%
+of work done on maybe I've
+[clears throat]<00:01:04.400><c> written</c><00:01:04.640><c> this</c><00:01:04.879><c> whole</c>
+
+00:01:05.030 --> 00:01:05.040 align:start position:0%
+[clears throat] written this whole
+ 
+
+00:01:05.040 --> 00:01:07.510 align:start position:0%
+[clears throat] written this whole
+project<00:01:05.439><c> by</c><00:01:05.680><c> hand</c><00:01:06.320><c> and</c><00:01:06.479><c> I'm</c><00:01:06.799><c> just</c><00:01:06.960><c> installing</c>
+
+00:01:07.510 --> 00:01:07.520 align:start position:0%
+project by hand and I'm just installing
+ 
+
+00:01:07.520 --> 00:01:09.510 align:start position:0%
+project by hand and I'm just installing
+claude<00:01:07.920><c> for</c><00:01:08.080><c> the</c><00:01:08.159><c> first</c><00:01:08.320><c> time</c><00:01:08.640><c> so</c><00:01:08.799><c> I'll</c><00:01:09.119><c> remove</c>
+
+00:01:09.510 --> 00:01:09.520 align:start position:0%
+claude for the first time so I'll remove
+ 
+
+00:01:09.520 --> 00:01:11.429 align:start position:0%
+claude for the first time so I'll remove
+all<00:01:09.760><c> of</c><00:01:09.840><c> the</c><00:01:10.080><c> claude</c><00:01:10.479><c> related</c>
+
+00:01:11.429 --> 00:01:11.439 align:start position:0%
+all of the claude related
+ 
+
+00:01:11.439 --> 00:01:13.750 align:start position:0%
+all of the claude related
+setup<00:01:11.840><c> files</c><00:01:12.240><c> here.</c><00:01:13.040><c> If</c><00:01:13.200><c> we</c><00:01:13.360><c> open</c><00:01:13.520><c> up</c><00:01:13.600><c> the</c>
+
+00:01:13.750 --> 00:01:13.760 align:start position:0%
+setup files here. If we open up the
+ 
+
+00:01:13.760 --> 00:01:15.670 align:start position:0%
+setup files here. If we open up the
+context<00:01:14.240><c> window</c><00:01:14.479><c> here</c><00:01:14.720><c> in</c><00:01:14.960><c> cloud</c><00:01:15.280><c> code,</c><00:01:15.520><c> we</c>
+
+00:01:15.670 --> 00:01:15.680 align:start position:0%
+context window here in cloud code, we
+ 
+
+00:01:15.680 --> 00:01:17.429 align:start position:0%
+context window here in cloud code, we
+can<00:01:15.840><c> see</c><00:01:15.920><c> that</c><00:01:16.159><c> this</c><00:01:16.400><c> is</c><00:01:16.799><c> there's</c><00:01:17.040><c> one</c><00:01:17.280><c> little</c>
+
+00:01:17.429 --> 00:01:17.439 align:start position:0%
+can see that this is there's one little
+ 
+
+00:01:17.439 --> 00:01:19.030 align:start position:0%
+can see that this is there's one little
+memory<00:01:17.759><c> file</c><00:01:18.000><c> here,</c><00:01:18.159><c> but</c><00:01:18.320><c> it's</c><00:01:18.479><c> just</c><00:01:18.640><c> 300</c>
+
+00:01:19.030 --> 00:01:19.040 align:start position:0%
+memory file here, but it's just 300
+ 
+
+00:01:19.040 --> 00:01:20.390 align:start position:0%
+memory file here, but it's just 300
+tokens,<00:01:19.520><c> so</c><00:01:19.680><c> I'm</c><00:01:19.840><c> going</c><00:01:19.840><c> to</c><00:01:19.920><c> keep</c><00:01:20.080><c> it</c><00:01:20.240><c> for</c>
+
+00:01:20.390 --> 00:01:20.400 align:start position:0%
+tokens, so I'm going to keep it for
+ 
+
+00:01:20.400 --> 00:01:22.469 align:start position:0%
+tokens, so I'm going to keep it for
+right<00:01:20.560><c> now.</c><00:01:20.880><c> But</c><00:01:21.200><c> other</c><00:01:21.520><c> than</c><00:01:21.600><c> that,</c><00:01:22.000><c> this</c><00:01:22.159><c> is</c>
+
+00:01:22.469 --> 00:01:22.479 align:start position:0%
+right now. But other than that, this is
+ 
+
+00:01:22.479 --> 00:01:25.749 align:start position:0%
+right now. But other than that, this is
+cloud<00:01:23.200><c> running</c><00:01:24.000><c> completely</c><00:01:24.640><c> default</c><00:01:25.119><c> with</c><00:01:25.439><c> no</c>
+
+00:01:25.749 --> 00:01:25.759 align:start position:0%
+cloud running completely default with no
+ 
+
+00:01:25.759 --> 00:01:27.830 align:start position:0%
+cloud running completely default with no
+guidance<00:01:26.159><c> of</c><00:01:26.320><c> how</c><00:01:26.479><c> to</c><00:01:26.640><c> use</c><00:01:26.799><c> this</c><00:01:27.119><c> project.</c>
+
+00:01:27.830 --> 00:01:27.840 align:start position:0%
+guidance of how to use this project.
+ 
+
+00:01:27.840 --> 00:01:29.830 align:start position:0%
+guidance of how to use this project.
+What<00:01:28.080><c> level</c><00:01:28.400><c> one</c><00:01:28.640><c> looks</c><00:01:28.799><c> like</c><00:01:29.040><c> here</c><00:01:29.200><c> is</c><00:01:29.600><c> say</c>
+
+00:01:29.830 --> 00:01:29.840 align:start position:0%
+What level one looks like here is say
+ 
+
+00:01:29.840 --> 00:01:31.670 align:start position:0%
+What level one looks like here is say
+I'm<00:01:30.080><c> very</c><00:01:30.320><c> familiar</c><00:01:30.560><c> with</c><00:01:30.720><c> this</c><00:01:30.960><c> codebase.</c><00:01:31.439><c> I</c>
+
+00:01:31.670 --> 00:01:31.680 align:start position:0%
+I'm very familiar with this codebase. I
+ 
+
+00:01:31.680 --> 00:01:34.630 align:start position:0%
+I'm very familiar with this codebase. I
+know<00:01:31.759><c> that</c><00:01:32.000><c> I</c><00:01:32.240><c> want</c><00:01:33.119><c> let's</c><00:01:33.520><c> say</c><00:01:33.920><c> add</c><00:01:34.240><c> a</c><00:01:34.479><c> new</c>
+
+00:01:34.630 --> 00:01:34.640 align:start position:0%
+know that I want let's say add a new
+ 
+
+00:01:34.640 --> 00:01:37.830 align:start position:0%
+know that I want let's say add a new
+type<00:01:34.960><c> to</c><00:01:35.200><c> this</c><00:01:35.600><c> snapshot</c><00:01:36.400><c> row.</c><00:01:37.360><c> I</c><00:01:37.600><c> can</c><00:01:37.680><c> just</c>
+
+00:01:37.830 --> 00:01:37.840 align:start position:0%
+type to this snapshot row. I can just
+ 
+
+00:01:37.840 --> 00:01:43.670 align:start position:0%
+type to this snapshot row. I can just
+ask<00:01:38.159><c> claude</c><00:01:38.720><c> add</c><00:01:40.079><c> a</c><00:01:40.320><c> new</c><00:01:41.360><c> agent</c><00:01:41.920><c> type</c><00:01:42.400><c> to</c><00:01:43.439><c> and</c>
+
+00:01:43.670 --> 00:01:43.680 align:start position:0%
+ask claude add a new agent type to and
+ 
+
+00:01:43.680 --> 00:01:45.830 align:start position:0%
+ask claude add a new agent type to and
+I'll<00:01:44.000><c> just</c><00:01:44.159><c> copy</c><00:01:44.479><c> the</c><00:01:44.640><c> path</c><00:01:44.880><c> of</c><00:01:45.040><c> this</c><00:01:45.200><c> file</c><00:01:45.680><c> and</c>
+
+00:01:45.830 --> 00:01:45.840 align:start position:0%
+I'll just copy the path of this file and
+ 
+
+00:01:45.840 --> 00:01:47.910 align:start position:0%
+I'll just copy the path of this file and
+I'll<00:01:46.159><c> send</c><00:01:46.320><c> it</c><00:01:46.479><c> off</c><00:01:46.720><c> with</c><00:01:46.880><c> this</c><00:01:47.119><c> task.</c><00:01:47.600><c> It's</c><00:01:47.759><c> a</c>
+
+00:01:47.910 --> 00:01:47.920 align:start position:0%
+I'll send it off with this task. It's a
+ 
+
+00:01:47.920 --> 00:01:49.830 align:start position:0%
+I'll send it off with this task. It's a
+very<00:01:48.159><c> manual</c><00:01:48.640><c> process.</c><00:01:49.040><c> It's</c><00:01:49.280><c> asking</c><00:01:49.520><c> me</c><00:01:49.600><c> a</c>
+
+00:01:49.830 --> 00:01:49.840 align:start position:0%
+very manual process. It's asking me a
+ 
+
+00:01:49.840 --> 00:01:51.270 align:start position:0%
+very manual process. It's asking me a
+good<00:01:50.000><c> question</c><00:01:50.159><c> here.</c><00:01:50.560><c> What</c><00:01:50.720><c> do</c><00:01:50.799><c> we</c><00:01:50.960><c> want</c><00:01:51.040><c> this</c>
+
+00:01:51.270 --> 00:01:51.280 align:start position:0%
+good question here. What do we want this
+ 
+
+00:01:51.280 --> 00:01:53.350 align:start position:0%
+good question here. What do we want this
+to<00:01:51.439><c> look</c><00:01:51.600><c> like?</c><00:01:52.320><c> But</c><00:01:52.479><c> you</c><00:01:52.640><c> can</c><00:01:52.720><c> imagine</c><00:01:53.119><c> here</c>
+
+00:01:53.350 --> 00:01:53.360 align:start position:0%
+to look like? But you can imagine here
+ 
+
+00:01:53.360 --> 00:01:55.429 align:start position:0%
+to look like? But you can imagine here
+if<00:01:53.520><c> I</c><00:01:53.680><c> wanted</c><00:01:53.920><c> to</c><00:01:54.000><c> get</c><00:01:54.159><c> development</c><00:01:54.640><c> done,</c><00:01:55.200><c> I</c>
+
+00:01:55.429 --> 00:01:55.439 align:start position:0%
+if I wanted to get development done, I
+ 
+
+00:01:55.439 --> 00:01:57.190 align:start position:0%
+if I wanted to get development done, I
+have<00:01:55.520><c> to</c><00:01:55.680><c> sit</c><00:01:55.840><c> in</c><00:01:56.079><c> this</c><00:01:56.320><c> single</c><00:01:56.640><c> cloud</c><00:01:57.040><c> code</c>
+
+00:01:57.190 --> 00:01:57.200 align:start position:0%
+have to sit in this single cloud code
+ 
+
+00:01:57.200 --> 00:01:59.350 align:start position:0%
+have to sit in this single cloud code
+instance,<00:01:57.680><c> sit</c><00:01:57.840><c> in</c><00:01:58.000><c> this</c><00:01:58.159><c> agent</c><00:01:58.479><c> window</c><00:01:59.119><c> and</c>
+
+00:01:59.350 --> 00:01:59.360 align:start position:0%
+instance, sit in this agent window and
+ 
+
+00:01:59.360 --> 00:02:00.789 align:start position:0%
+instance, sit in this agent window and
+have<00:01:59.520><c> a</c><00:01:59.759><c> conversation</c><00:02:00.159><c> about</c><00:02:00.399><c> what</c><00:02:00.560><c> I'm</c>
+
+00:02:00.789 --> 00:02:00.799 align:start position:0%
+have a conversation about what I'm
+ 
+
+00:02:00.799 --> 00:02:03.109 align:start position:0%
+have a conversation about what I'm
+looking<00:02:00.960><c> for,</c><00:02:01.520><c> explain</c><00:02:02.000><c> to</c><00:02:02.159><c> it,</c><00:02:02.560><c> okay,</c><00:02:02.799><c> if</c><00:02:02.960><c> we</c>
+
+00:02:03.109 --> 00:02:03.119 align:start position:0%
+looking for, explain to it, okay, if we
+ 
+
+00:02:03.119 --> 00:02:04.789 align:start position:0%
+looking for, explain to it, okay, if we
+change<00:02:03.360><c> this</c><00:02:03.600><c> type,</c><00:02:04.000><c> this</c><00:02:04.240><c> other</c><00:02:04.399><c> file</c><00:02:04.640><c> is</c>
+
+00:02:04.789 --> 00:02:04.799 align:start position:0%
+change this type, this other file is
+ 
+
+00:02:04.799 --> 00:02:05.910 align:start position:0%
+change this type, this other file is
+going<00:02:04.880><c> to</c><00:02:04.960><c> break.</c><00:02:05.280><c> So</c><00:02:05.360><c> we</c><00:02:05.520><c> have</c><00:02:05.600><c> to</c><00:02:05.759><c> make</c><00:02:05.840><c> sure</c>
+
+00:02:05.910 --> 00:02:05.920 align:start position:0%
+going to break. So we have to make sure
+ 
+
+00:02:05.920 --> 00:02:07.670 align:start position:0%
+going to break. So we have to make sure
+that<00:02:06.079><c> the</c><00:02:06.240><c> other</c><00:02:06.399><c> file</c><00:02:06.719><c> gets</c><00:02:07.040><c> updated</c><00:02:07.439><c> as</c>
+
+00:02:07.670 --> 00:02:07.680 align:start position:0%
+that the other file gets updated as
+ 
+
+00:02:07.680 --> 00:02:09.830 align:start position:0%
+that the other file gets updated as
+well.<00:02:08.319><c> It's</c><00:02:08.479><c> a</c><00:02:08.640><c> very</c><00:02:08.879><c> manual</c><00:02:09.280><c> hands-on</c>
+
+00:02:09.830 --> 00:02:09.840 align:start position:0%
+well. It's a very manual hands-on
+ 
+
+00:02:09.840 --> 00:02:12.309 align:start position:0%
+well. It's a very manual hands-on
+process.<00:02:10.479><c> So</c><00:02:10.959><c> let's</c><00:02:11.200><c> see</c><00:02:11.360><c> how</c><00:02:11.520><c> we</c><00:02:11.760><c> can</c><00:02:11.920><c> move</c><00:02:12.160><c> a</c>
+
+00:02:12.309 --> 00:02:12.319 align:start position:0%
+process. So let's see how we can move a
+ 
+
+00:02:12.319 --> 00:02:14.470 align:start position:0%
+process. So let's see how we can move a
+bit<00:02:12.480><c> further</c><00:02:12.800><c> up</c><00:02:12.959><c> the</c><00:02:13.200><c> stack</c><00:02:13.440><c> here.</c><00:02:14.080><c> Next</c><00:02:14.239><c> up</c>
+
+00:02:14.470 --> 00:02:14.480 align:start position:0%
+bit further up the stack here. Next up
+ 
+
+00:02:14.480 --> 00:02:16.869 align:start position:0%
+bit further up the stack here. Next up
+we<00:02:14.640><c> have</c><00:02:14.720><c> level</c><00:02:15.120><c> two</c><00:02:15.599><c> which</c><00:02:15.840><c> is</c><00:02:16.160><c> expertise</c>
+
+00:02:16.869 --> 00:02:16.879 align:start position:0%
+we have level two which is expertise
+ 
+
+00:02:16.879 --> 00:02:19.190 align:start position:0%
+we have level two which is expertise
+adding<00:02:17.280><c> configuration</c><00:02:18.080><c> and</c><00:02:18.720><c> persistent</c>
+
+00:02:19.190 --> 00:02:19.200 align:start position:0%
+adding configuration and persistent
+ 
+
+00:02:19.200 --> 00:02:21.910 align:start position:0%
+adding configuration and persistent
+memory<00:02:19.599><c> between</c><00:02:20.000><c> sessions</c><00:02:20.480><c> to</c><00:02:20.720><c> your</c><00:02:20.959><c> agents.</c>
+
+00:02:21.910 --> 00:02:21.920 align:start position:0%
+memory between sessions to your agents.
+ 
+
+00:02:21.920 --> 00:02:24.070 align:start position:0%
+memory between sessions to your agents.
+What<00:02:22.160><c> this</c><00:02:22.400><c> looks</c><00:02:22.640><c> like</c><00:02:22.800><c> is</c><00:02:23.120><c> a</c><00:02:23.360><c> very</c><00:02:23.680><c> basic</c>
+
+00:02:24.070 --> 00:02:24.080 align:start position:0%
+What this looks like is a very basic
+ 
+
+00:02:24.080 --> 00:02:28.150 align:start position:0%
+What this looks like is a very basic
+claw.md<00:02:25.120><c> setup</c><00:02:25.840><c> or</c><00:02:26.160><c> agents.md</c><00:02:27.280><c> setup.</c><00:02:27.920><c> You</c>
+
+00:02:28.150 --> 00:02:28.160 align:start position:0%
+claw.md setup or agents.md setup. You
+ 
+
+00:02:28.160 --> 00:02:30.390 align:start position:0%
+claw.md setup or agents.md setup. You
+have<00:02:28.319><c> custom</c><00:02:28.720><c> commands</c><00:02:29.120><c> and</c><00:02:29.280><c> prompts.</c><00:02:30.160><c> You</c>
+
+00:02:30.390 --> 00:02:30.400 align:start position:0%
+have custom commands and prompts. You
+ 
+
+00:02:30.400 --> 00:02:31.589 align:start position:0%
+have custom commands and prompts. You
+want<00:02:30.480><c> to</c><00:02:30.560><c> make</c><00:02:30.720><c> sure</c><00:02:30.800><c> that</c><00:02:30.959><c> your</c><00:02:31.120><c> agents</c><00:02:31.440><c> are</c>
+
+00:02:31.589 --> 00:02:31.599 align:start position:0%
+want to make sure that your agents are
+ 
+
+00:02:31.599 --> 00:02:33.350 align:start position:0%
+want to make sure that your agents are
+getting<00:02:31.840><c> persistent</c><00:02:32.400><c> context</c><00:02:32.879><c> and</c><00:02:33.040><c> memory</c>
+
+00:02:33.350 --> 00:02:33.360 align:start position:0%
+getting persistent context and memory
+ 
+
+00:02:33.360 --> 00:02:35.430 align:start position:0%
+getting persistent context and memory
+when<00:02:33.599><c> they</c><00:02:33.840><c> begin</c><00:02:34.160><c> work</c><00:02:34.400><c> on</c><00:02:34.640><c> your</c><00:02:34.879><c> project</c><00:02:35.280><c> so</c>
+
+00:02:35.430 --> 00:02:35.440 align:start position:0%
+when they begin work on your project so
+ 
+
+00:02:35.440 --> 00:02:37.910 align:start position:0%
+when they begin work on your project so
+that<00:02:36.160><c> they're</c><00:02:36.480><c> not</c><00:02:36.720><c> going</c><00:02:36.959><c> into</c><00:02:37.200><c> every</c><00:02:37.519><c> task</c>
+
+00:02:37.910 --> 00:02:37.920 align:start position:0%
+that they're not going into every task
+ 
+
+00:02:37.920 --> 00:02:40.229 align:start position:0%
+that they're not going into every task
+blind.<00:02:38.480><c> So</c><00:02:38.720><c> I</c><00:02:38.879><c> built</c><00:02:39.120><c> a</c><00:02:39.280><c> tool</c><00:02:39.440><c> called</c><00:02:39.680><c> Mulch.</c>
+
+00:02:40.229 --> 00:02:40.239 align:start position:0%
+blind. So I built a tool called Mulch.
+ 
+
+00:02:40.239 --> 00:02:42.550 align:start position:0%
+blind. So I built a tool called Mulch.
+And<00:02:40.400><c> tools</c><00:02:40.720><c> like</c><00:02:40.959><c> Mulch,</c><00:02:41.519><c> they</c><00:02:42.080><c> allow</c><00:02:42.319><c> your</c>
+
+00:02:42.550 --> 00:02:42.560 align:start position:0%
+And tools like Mulch, they allow your
+ 
+
+00:02:42.560 --> 00:02:44.550 align:start position:0%
+And tools like Mulch, they allow your
+agents<00:02:42.879><c> to</c><00:02:43.280><c> persist</c><00:02:43.680><c> learnings</c><00:02:44.160><c> across</c>
+
+00:02:44.550 --> 00:02:44.560 align:start position:0%
+agents to persist learnings across
+ 
+
+00:02:44.560 --> 00:02:46.710 align:start position:0%
+agents to persist learnings across
+sessions.<00:02:45.120><c> So</c><00:02:45.599><c> an</c><00:02:45.760><c> agent</c><00:02:46.080><c> runs</c><00:02:46.319><c> into</c><00:02:46.560><c> a</c>
+
+00:02:46.710 --> 00:02:46.720 align:start position:0%
+sessions. So an agent runs into a
+ 
+
+00:02:46.720 --> 00:02:48.229 align:start position:0%
+sessions. So an agent runs into a
+problem<00:02:46.959><c> and</c><00:02:47.200><c> it</c><00:02:47.360><c> can</c><00:02:47.519><c> store</c><00:02:47.680><c> that</c><00:02:47.920><c> so</c><00:02:48.080><c> that</c>
+
+00:02:48.229 --> 00:02:48.239 align:start position:0%
+problem and it can store that so that
+ 
+
+00:02:48.239 --> 00:02:50.470 align:start position:0%
+problem and it can store that so that
+the<00:02:48.480><c> next</c><00:02:48.640><c> agent</c><00:02:49.280><c> knows</c><00:02:49.680><c> that</c><00:02:50.000><c> problem</c><00:02:50.239><c> and</c>
+
+00:02:50.470 --> 00:02:50.480 align:start position:0%
+the next agent knows that problem and
+ 
+
+00:02:50.480 --> 00:02:52.229 align:start position:0%
+the next agent knows that problem and
+how<00:02:50.640><c> to</c><00:02:50.800><c> avoid</c><00:02:51.040><c> it.</c><00:02:51.360><c> This</c><00:02:51.519><c> means</c><00:02:51.760><c> your</c><00:02:51.920><c> agent</c>
+
+00:02:52.229 --> 00:02:52.239 align:start position:0%
+how to avoid it. This means your agent
+ 
+
+00:02:52.239 --> 00:02:54.630 align:start position:0%
+how to avoid it. This means your agent
+isn't<00:02:52.480><c> guessing</c><00:02:52.879><c> anymore,</c><00:02:53.680><c> but</c><00:02:54.000><c> you</c><00:02:54.239><c> as</c><00:02:54.480><c> a</c>
+
+00:02:54.630 --> 00:02:54.640 align:start position:0%
+isn't guessing anymore, but you as a
+ 
+
+00:02:54.640 --> 00:02:56.550 align:start position:0%
+isn't guessing anymore, but you as a
+developer<00:02:55.040><c> are</c><00:02:55.200><c> still</c><00:02:55.440><c> in</c><00:02:55.599><c> the</c><00:02:55.760><c> loop</c><00:02:56.080><c> for</c><00:02:56.400><c> all</c>
+
+00:02:56.550 --> 00:02:56.560 align:start position:0%
+developer are still in the loop for all
+ 
+
+00:02:56.560 --> 00:02:59.110 align:start position:0%
+developer are still in the loop for all
+of<00:02:56.720><c> that.</c><00:02:57.360><c> Let's</c><00:02:57.680><c> take</c><00:02:57.760><c> a</c><00:02:57.920><c> look</c><00:02:58.160><c> at</c><00:02:58.480><c> what</c><00:02:58.800><c> level</c>
+
+00:02:59.110 --> 00:02:59.120 align:start position:0%
+of that. Let's take a look at what level
+ 
+
+00:02:59.120 --> 00:03:00.949 align:start position:0%
+of that. Let's take a look at what level
+two<00:02:59.360><c> looks</c><00:02:59.599><c> like</c><00:02:59.760><c> in</c><00:02:59.920><c> the</c><00:03:00.080><c> code.</c><00:03:00.400><c> So</c><00:03:00.480><c> I</c><00:03:00.640><c> can</c><00:03:00.800><c> run</c>
+
+00:03:00.949 --> 00:03:00.959 align:start position:0%
+two looks like in the code. So I can run
+ 
+
+00:03:00.959 --> 00:03:03.190 align:start position:0%
+two looks like in the code. So I can run
+claude<00:03:01.360><c> again.</c><00:03:02.000><c> And</c><00:03:02.239><c> now</c><00:03:02.480><c> if</c><00:03:02.640><c> I</c><00:03:02.800><c> run</c><00:03:02.959><c> the</c>
+
+00:03:03.190 --> 00:03:03.200 align:start position:0%
+claude again. And now if I run the
+ 
+
+00:03:03.200 --> 00:03:05.750 align:start position:0%
+claude again. And now if I run the
+context<00:03:03.680><c> window,</c><00:03:04.720><c> we</c><00:03:04.959><c> can</c><00:03:05.040><c> see</c><00:03:05.200><c> it</c><00:03:05.360><c> has</c><00:03:05.519><c> access</c>
+
+00:03:05.750 --> 00:03:05.760 align:start position:0%
+context window, we can see it has access
+ 
+
+00:03:05.760 --> 00:03:07.990 align:start position:0%
+context window, we can see it has access
+to<00:03:05.920><c> the</c><00:03:06.000><c> cloud.</c><00:03:06.560><c> MD</c><00:03:06.879><c> file</c><00:03:07.120><c> now.</c><00:03:07.440><c> And</c><00:03:07.599><c> if</c><00:03:07.760><c> I</c><00:03:07.920><c> go</c>
+
+00:03:07.990 --> 00:03:08.000 align:start position:0%
+to the cloud. MD file now. And if I go
+ 
+
+00:03:08.000 --> 00:03:10.229 align:start position:0%
+to the cloud. MD file now. And if I go
+into<00:03:08.239><c> cloud.md</c><00:03:09.120><c> for</c><00:03:09.360><c> my</c><00:03:09.599><c> project</c><00:03:09.920><c> in</c>
+
+00:03:10.229 --> 00:03:10.239 align:start position:0%
+into cloud.md for my project in
+ 
+
+00:03:10.239 --> 00:03:12.149 align:start position:0%
+into cloud.md for my project in
+specific,<00:03:11.040><c> we</c><00:03:11.200><c> can</c><00:03:11.280><c> see</c><00:03:11.440><c> this</c><00:03:11.599><c> is</c><00:03:11.760><c> a</c><00:03:11.920><c> very</c>
+
+00:03:12.149 --> 00:03:12.159 align:start position:0%
+specific, we can see this is a very
+ 
+
+00:03:12.159 --> 00:03:14.869 align:start position:0%
+specific, we can see this is a very
+detailed<00:03:12.640><c> file.</c><00:03:13.200><c> It's</c><00:03:13.440><c> quite</c><00:03:13.760><c> large.</c><00:03:14.480><c> And</c>
+
+00:03:14.869 --> 00:03:14.879 align:start position:0%
+detailed file. It's quite large. And
+ 
+
+00:03:14.879 --> 00:03:17.350 align:start position:0%
+detailed file. It's quite large. And
+essentially<00:03:15.760><c> what</c><00:03:16.000><c> it</c><00:03:16.239><c> shows</c><00:03:16.560><c> the</c><00:03:16.800><c> agent</c><00:03:17.120><c> is</c>
+
+00:03:17.350 --> 00:03:17.360 align:start position:0%
+essentially what it shows the agent is
+ 
+
+00:03:17.360 --> 00:03:20.149 align:start position:0%
+essentially what it shows the agent is
+how<00:03:17.519><c> to</c><00:03:17.760><c> use</c><00:03:18.080><c> a</c><00:03:18.319><c> tool</c><00:03:18.720><c> like</c><00:03:19.040><c> mulch.</c><00:03:19.599><c> I</c><00:03:19.760><c> added</c><00:03:20.000><c> a</c>
+
+00:03:20.149 --> 00:03:20.159 align:start position:0%
+how to use a tool like mulch. I added a
+ 
+
+00:03:20.159 --> 00:03:21.830 align:start position:0%
+how to use a tool like mulch. I added a
+bit<00:03:20.319><c> to</c><00:03:20.480><c> the</c><00:03:20.720><c> initial</c><00:03:21.040><c> prompt</c><00:03:21.360><c> here</c><00:03:21.519><c> that</c><00:03:21.680><c> just</c>
+
+00:03:21.830 --> 00:03:21.840 align:start position:0%
+bit to the initial prompt here that just
+ 
+
+00:03:21.840 --> 00:03:23.990 align:start position:0%
+bit to the initial prompt here that just
+says<00:03:22.080><c> run</c><00:03:22.239><c> the</c><00:03:22.400><c> session</c><00:03:22.800><c> start</c><00:03:23.040><c> protocol</c><00:03:23.760><c> and</c>
+
+00:03:23.990 --> 00:03:24.000 align:start position:0%
+says run the session start protocol and
+ 
+
+00:03:24.000 --> 00:03:25.910 align:start position:0%
+says run the session start protocol and
+then<00:03:24.159><c> add</c><00:03:24.400><c> this</c><00:03:24.640><c> new</c><00:03:24.800><c> type.</c><00:03:25.200><c> the</c><00:03:25.440><c> same</c><00:03:25.599><c> task</c>
+
+00:03:25.910 --> 00:03:25.920 align:start position:0%
+then add this new type. the same task
+ 
+
+00:03:25.920 --> 00:03:28.070 align:start position:0%
+then add this new type. the same task
+from<00:03:26.239><c> the</c><00:03:26.400><c> beginning.</c><00:03:26.959><c> So,</c><00:03:27.200><c> it's</c><00:03:27.440><c> set</c><00:03:27.680><c> priming</c>
+
+00:03:28.070 --> 00:03:28.080 align:start position:0%
+from the beginning. So, it's set priming
+ 
+
+00:03:28.080 --> 00:03:29.830 align:start position:0%
+from the beginning. So, it's set priming
+its<00:03:28.319><c> context.</c><00:03:28.800><c> So,</c><00:03:28.959><c> when</c><00:03:29.120><c> it</c><00:03:29.280><c> goes</c><00:03:29.440><c> into</c><00:03:29.599><c> this</c>
+
+00:03:29.830 --> 00:03:29.840 align:start position:0%
+its context. So, when it goes into this
+ 
+
+00:03:29.840 --> 00:03:32.309 align:start position:0%
+its context. So, when it goes into this
+task,<00:03:30.159><c> it's</c><00:03:30.480><c> not</c><00:03:30.640><c> starting</c><00:03:30.959><c> from</c><00:03:31.280><c> scratch.</c><00:03:32.080><c> It</c>
+
+00:03:32.309 --> 00:03:32.319 align:start position:0%
+task, it's not starting from scratch. It
+ 
+
+00:03:32.319 --> 00:03:33.910 align:start position:0%
+task, it's not starting from scratch. It
+also<00:03:32.560><c> has</c><00:03:32.799><c> all</c><00:03:32.959><c> of</c><00:03:33.120><c> this</c><00:03:33.360><c> context</c><00:03:33.760><c> from</c>
+
+00:03:33.910 --> 00:03:33.920 align:start position:0%
+also has all of this context from
+ 
+
+00:03:33.920 --> 00:03:35.509 align:start position:0%
+also has all of this context from
+claw.md.
+
+00:03:35.509 --> 00:03:35.519 align:start position:0%
+claw.md.
+ 
+
+00:03:35.519 --> 00:03:37.110 align:start position:0%
+claw.md.
+If<00:03:35.680><c> you've</c><00:03:35.920><c> been</c><00:03:36.080><c> using</c><00:03:36.319><c> tools</c><00:03:36.640><c> like</c><00:03:36.799><c> this</c><00:03:36.959><c> for</c>
+
+00:03:37.110 --> 00:03:37.120 align:start position:0%
+If you've been using tools like this for
+ 
+
+00:03:37.120 --> 00:03:38.869 align:start position:0%
+If you've been using tools like this for
+a<00:03:37.280><c> while,</c><00:03:37.599><c> this</c><00:03:37.760><c> is</c><00:03:37.920><c> nothing</c><00:03:38.159><c> new.</c><00:03:38.560><c> This</c><00:03:38.720><c> is</c>
+
+00:03:38.869 --> 00:03:38.879 align:start position:0%
+a while, this is nothing new. This is
+ 
+
+00:03:38.879 --> 00:03:41.190 align:start position:0%
+a while, this is nothing new. This is
+just<00:03:39.040><c> how</c><00:03:39.360><c> we</c><00:03:39.680><c> already</c><00:03:40.000><c> operate.</c><00:03:40.720><c> So,</c><00:03:40.959><c> this</c>
+
+00:03:41.190 --> 00:03:41.200 align:start position:0%
+just how we already operate. So, this
+ 
+
+00:03:41.200 --> 00:03:42.949 align:start position:0%
+just how we already operate. So, this
+agent<00:03:41.680><c> immediately</c><00:03:42.080><c> has</c><00:03:42.319><c> improved</c><00:03:42.720><c> its</c>
+
+00:03:42.949 --> 00:03:42.959 align:start position:0%
+agent immediately has improved its
+ 
+
+00:03:42.959 --> 00:03:44.710 align:start position:0%
+agent immediately has improved its
+results<00:03:43.360><c> over</c><00:03:43.599><c> the</c><00:03:43.760><c> first</c><00:03:43.920><c> agent</c><00:03:44.319><c> where</c><00:03:44.560><c> we</c>
+
+00:03:44.710 --> 00:03:44.720 align:start position:0%
+results over the first agent where we
+ 
+
+00:03:44.720 --> 00:03:47.190 align:start position:0%
+results over the first agent where we
+can<00:03:44.879><c> see</c><00:03:45.680><c> it's</c><00:03:46.159><c> looking</c><00:03:46.480><c> at</c><00:03:46.640><c> other</c><00:03:46.959><c> parts</c><00:03:47.120><c> of</c>
+
+00:03:47.190 --> 00:03:47.200 align:start position:0%
+can see it's looking at other parts of
+ 
+
+00:03:47.200 --> 00:03:48.550 align:start position:0%
+can see it's looking at other parts of
+the<00:03:47.360><c> codebase.</c><00:03:47.840><c> It's</c><00:03:48.000><c> looking</c><00:03:48.159><c> at</c><00:03:48.319><c> this</c>
+
+00:03:48.550 --> 00:03:48.560 align:start position:0%
+the codebase. It's looking at this
+ 
+
+00:03:48.560 --> 00:03:51.350 align:start position:0%
+the codebase. It's looking at this
+metric<00:03:49.040><c> store</c><00:03:49.440><c> which</c><00:03:49.680><c> is</c><00:03:49.920><c> correct</c><00:03:50.720><c> and</c><00:03:51.040><c> it's</c>
+
+00:03:51.350 --> 00:03:51.360 align:start position:0%
+metric store which is correct and it's
+ 
+
+00:03:51.360 --> 00:03:53.910 align:start position:0%
+metric store which is correct and it's
+asking<00:03:51.680><c> me</c><00:03:51.840><c> a</c><00:03:52.080><c> more</c><00:03:52.239><c> detailed</c><00:03:52.720><c> question.</c><00:03:53.120><c> So</c><00:03:53.680><c> I</c>
+
+00:03:53.910 --> 00:03:53.920 align:start position:0%
+asking me a more detailed question. So I
+ 
+
+00:03:53.920 --> 00:03:55.750 align:start position:0%
+asking me a more detailed question. So I
+as<00:03:54.080><c> the</c><00:03:54.239><c> developer</c><00:03:54.640><c> here</c><00:03:54.799><c> in</c><00:03:55.040><c> level</c><00:03:55.280><c> two,</c><00:03:55.519><c> I'm</c>
+
+00:03:55.750 --> 00:03:55.760 align:start position:0%
+as the developer here in level two, I'm
+ 
+
+00:03:55.760 --> 00:03:57.190 align:start position:0%
+as the developer here in level two, I'm
+still<00:03:55.920><c> very</c><00:03:56.239><c> interactive</c><00:03:56.720><c> with</c><00:03:56.959><c> this</c>
+
+00:03:57.190 --> 00:03:57.200 align:start position:0%
+still very interactive with this
+ 
+
+00:03:57.200 --> 00:03:59.350 align:start position:0%
+still very interactive with this
+process.<00:03:57.920><c> So</c><00:03:58.080><c> let's</c><00:03:58.400><c> move</c><00:03:58.480><c> on</c><00:03:58.640><c> to</c><00:03:58.799><c> level</c><00:03:59.120><c> three</c>
+
+00:03:59.350 --> 00:03:59.360 align:start position:0%
+process. So let's move on to level three
+ 
+
+00:03:59.360 --> 00:04:01.350 align:start position:0%
+process. So let's move on to level three
+here.<00:03:59.760><c> And</c><00:04:00.000><c> what</c><00:04:00.159><c> level</c><00:04:00.480><c> three</c><00:04:00.720><c> looks</c><00:04:00.959><c> like</c><00:04:01.120><c> is</c>
+
+00:04:01.350 --> 00:04:01.360 align:start position:0%
+here. And what level three looks like is
+ 
+
+00:04:01.360 --> 00:04:03.350 align:start position:0%
+here. And what level three looks like is
+you<00:04:01.519><c> have</c><00:04:01.680><c> your</c><00:04:01.840><c> agent</c><00:04:02.239><c> start</c><00:04:02.480><c> delegating</c>
+
+00:04:03.350 --> 00:04:03.360 align:start position:0%
+you have your agent start delegating
+ 
+
+00:04:03.360 --> 00:04:05.589 align:start position:0%
+you have your agent start delegating
+tasks,<00:04:04.000><c> right?</c><00:04:04.159><c> So</c><00:04:04.319><c> your</c><00:04:04.480><c> agent</c><00:04:04.799><c> is</c><00:04:04.959><c> now</c><00:04:05.200><c> using</c>
+
+00:04:05.589 --> 00:04:05.599 align:start position:0%
+tasks, right? So your agent is now using
+ 
+
+00:04:05.599 --> 00:04:07.750 align:start position:0%
+tasks, right? So your agent is now using
+scouts,<00:04:06.239><c> builders,</c><00:04:06.720><c> and</c><00:04:06.959><c> it's</c><00:04:07.200><c> delegating</c>
+
+00:04:07.750 --> 00:04:07.760 align:start position:0%
+scouts, builders, and it's delegating
+ 
+
+00:04:07.760 --> 00:04:10.390 align:start position:0%
+scouts, builders, and it's delegating
+work<00:04:08.080><c> to</c><00:04:08.239><c> other</c><00:04:08.480><c> agent.</c><00:04:09.599><c> This</c><00:04:09.840><c> means</c><00:04:10.159><c> your</c>
+
+00:04:10.390 --> 00:04:10.400 align:start position:0%
+work to other agent. This means your
+ 
+
+00:04:10.400 --> 00:04:12.309 align:start position:0%
+work to other agent. This means your
+agent<00:04:10.720><c> gets</c><00:04:11.040><c> more</c><00:04:11.200><c> intelligent</c><00:04:11.760><c> because</c><00:04:12.080><c> it's</c>
+
+00:04:12.309 --> 00:04:12.319 align:start position:0%
+agent gets more intelligent because it's
+ 
+
+00:04:12.319 --> 00:04:13.990 align:start position:0%
+agent gets more intelligent because it's
+having<00:04:12.560><c> other</c><00:04:12.799><c> agents</c><00:04:13.200><c> gather</c><00:04:13.599><c> information</c>
+
+00:04:13.990 --> 00:04:14.000 align:start position:0%
+having other agents gather information
+ 
+
+00:04:14.000 --> 00:04:16.229 align:start position:0%
+having other agents gather information
+and<00:04:14.319><c> return</c><00:04:14.720><c> findings</c><00:04:15.200><c> back</c><00:04:15.439><c> to</c><00:04:15.760><c> the</c><00:04:15.920><c> base</c>
+
+00:04:16.229 --> 00:04:16.239 align:start position:0%
+and return findings back to the base
+ 
+
+00:04:16.239 --> 00:04:18.870 align:start position:0%
+and return findings back to the base
+agent.<00:04:17.120><c> And</c><00:04:17.280><c> the</c><00:04:17.440><c> base</c><00:04:17.680><c> agents</c><00:04:18.160><c> context</c><00:04:18.639><c> is</c>
+
+00:04:18.870 --> 00:04:18.880 align:start position:0%
+agent. And the base agents context is
+ 
+
+00:04:18.880 --> 00:04:20.550 align:start position:0%
+agent. And the base agents context is
+preserved,<00:04:19.519><c> meaning</c><00:04:19.759><c> it</c><00:04:20.000><c> can</c><00:04:20.160><c> be</c><00:04:20.320><c> more</c>
+
+00:04:20.550 --> 00:04:20.560 align:start position:0%
+preserved, meaning it can be more
+ 
+
+00:04:20.560 --> 00:04:22.790 align:start position:0%
+preserved, meaning it can be more
+efficient<00:04:20.880><c> in</c><00:04:21.120><c> its</c><00:04:21.359><c> work.</c><00:04:22.000><c> You</c><00:04:22.240><c> can</c><00:04:22.320><c> imagine</c>
+
+00:04:22.790 --> 00:04:22.800 align:start position:0%
+efficient in its work. You can imagine
+ 
+
+00:04:22.800 --> 00:04:24.870 align:start position:0%
+efficient in its work. You can imagine
+we<00:04:23.040><c> have</c><00:04:23.280><c> a</c><00:04:23.600><c> pretty</c><00:04:23.840><c> simple</c><00:04:24.240><c> outline</c><00:04:24.639><c> of</c>
+
+00:04:24.870 --> 00:04:24.880 align:start position:0%
+we have a pretty simple outline of
+ 
+
+00:04:24.880 --> 00:04:27.030 align:start position:0%
+we have a pretty simple outline of
+phases<00:04:25.280><c> here.</c><00:04:25.520><c> A</c><00:04:25.759><c> scout,</c><00:04:26.160><c> plan,</c><00:04:26.560><c> build,</c>
+
+00:04:27.030 --> 00:04:27.040 align:start position:0%
+phases here. A scout, plan, build,
+ 
+
+00:04:27.040 --> 00:04:29.030 align:start position:0%
+phases here. A scout, plan, build,
+review<00:04:27.360><c> phase.</c><00:04:28.160><c> And</c><00:04:28.479><c> essentially,</c><00:04:28.800><c> all</c><00:04:28.960><c> of</c>
+
+00:04:29.030 --> 00:04:29.040 align:start position:0%
+review phase. And essentially, all of
+ 
+
+00:04:29.040 --> 00:04:31.749 align:start position:0%
+review phase. And essentially, all of
+this<00:04:29.280><c> happens</c><00:04:29.680><c> in</c><00:04:30.000><c> one</c><00:04:30.320><c> session.</c><00:04:30.880><c> So</c><00:04:31.440><c> again,</c>
+
+00:04:31.749 --> 00:04:31.759 align:start position:0%
+this happens in one session. So again,
+ 
+
+00:04:31.759 --> 00:04:33.430 align:start position:0%
+this happens in one session. So again,
+you're<00:04:32.000><c> still</c><00:04:32.240><c> limited</c><00:04:32.560><c> to</c><00:04:32.720><c> a</c><00:04:32.880><c> single</c><00:04:33.120><c> session</c>
+
+00:04:33.430 --> 00:04:33.440 align:start position:0%
+you're still limited to a single session
+ 
+
+00:04:33.440 --> 00:04:35.350 align:start position:0%
+you're still limited to a single session
+and<00:04:33.600><c> a</c><00:04:33.840><c> single</c><00:04:34.080><c> task.</c><00:04:34.560><c> So</c><00:04:34.720><c> let's</c><00:04:34.960><c> take</c><00:04:35.040><c> a</c><00:04:35.199><c> look</c>
+
+00:04:35.350 --> 00:04:35.360 align:start position:0%
+and a single task. So let's take a look
+ 
+
+00:04:35.360 --> 00:04:37.189 align:start position:0%
+and a single task. So let's take a look
+at<00:04:35.520><c> what</c><00:04:35.680><c> this</c><00:04:35.919><c> actually</c><00:04:36.160><c> looks</c><00:04:36.400><c> like</c><00:04:36.800><c> in</c><00:04:37.040><c> the</c>
+
+00:04:37.189 --> 00:04:37.199 align:start position:0%
+at what this actually looks like in the
+ 
+
+00:04:37.199 --> 00:04:39.909 align:start position:0%
+at what this actually looks like in the
+cloud<00:04:37.520><c> code</c><00:04:37.759><c> session.</c><00:04:38.479><c> I've</c><00:04:38.960><c> started</c><00:04:39.360><c> cla</c>
+
+00:04:39.909 --> 00:04:39.919 align:start position:0%
+cloud code session. I've started cla
+ 
+
+00:04:39.919 --> 00:04:41.590 align:start position:0%
+cloud code session. I've started cla
+with<00:04:40.000><c> dangerously</c><00:04:40.560><c> skip</c><00:04:40.880><c> permissions</c><00:04:41.360><c> just</c>
+
+00:04:41.590 --> 00:04:41.600 align:start position:0%
+with dangerously skip permissions just
+ 
+
+00:04:41.600 --> 00:04:43.670 align:start position:0%
+with dangerously skip permissions just
+so<00:04:41.759><c> I</c><00:04:42.000><c> can</c><00:04:42.080><c> be</c><00:04:42.240><c> a</c><00:04:42.400><c> little</c><00:04:42.560><c> more</c><00:04:42.720><c> hands-off</c><00:04:43.360><c> and</c>
+
+00:04:43.670 --> 00:04:43.680 align:start position:0%
+so I can be a little more hands-off and
+ 
+
+00:04:43.680 --> 00:04:45.350 align:start position:0%
+so I can be a little more hands-off and
+let<00:04:43.840><c> it</c><00:04:44.080><c> delegate</c><00:04:44.479><c> without</c><00:04:44.880><c> having</c><00:04:45.040><c> to</c><00:04:45.199><c> check</c>
+
+00:04:45.350 --> 00:04:45.360 align:start position:0%
+let it delegate without having to check
+ 
+
+00:04:45.360 --> 00:04:47.430 align:start position:0%
+let it delegate without having to check
+with<00:04:45.600><c> me</c><00:04:45.759><c> at</c><00:04:45.919><c> every</c><00:04:46.080><c> tool</c><00:04:46.400><c> use.</c><00:04:47.040><c> So</c><00:04:47.199><c> I'll</c><00:04:47.360><c> give</c>
+
+00:04:47.430 --> 00:04:47.440 align:start position:0%
+with me at every tool use. So I'll give
+ 
+
+00:04:47.440 --> 00:04:49.430 align:start position:0%
+with me at every tool use. So I'll give
+it<00:04:47.600><c> a</c><00:04:47.759><c> very</c><00:04:47.919><c> similar</c><00:04:48.240><c> prompt.</c><00:04:48.880><c> I'll</c><00:04:49.199><c> also</c>
+
+00:04:49.430 --> 00:04:49.440 align:start position:0%
+it a very similar prompt. I'll also
+ 
+
+00:04:49.440 --> 00:04:51.189 align:start position:0%
+it a very similar prompt. I'll also
+append<00:04:49.840><c> a</c><00:04:50.080><c> section</c><00:04:50.320><c> here</c><00:04:50.479><c> to</c><00:04:50.639><c> the</c><00:04:50.720><c> prompt</c><00:04:51.040><c> that</c>
+
+00:04:51.189 --> 00:04:51.199 align:start position:0%
+append a section here to the prompt that
+ 
+
+00:04:51.199 --> 00:04:53.030 align:start position:0%
+append a section here to the prompt that
+just<00:04:51.360><c> says</c><00:04:51.600><c> delegate</c><00:04:52.160><c> scouting</c><00:04:52.639><c> before</c><00:04:52.880><c> you</c>
+
+00:04:53.030 --> 00:04:53.040 align:start position:0%
+just says delegate scouting before you
+ 
+
+00:04:53.040 --> 00:04:55.189 align:start position:0%
+just says delegate scouting before you
+implement.<00:04:53.919><c> So</c><00:04:54.080><c> now</c><00:04:54.320><c> what</c><00:04:54.479><c> this</c><00:04:54.720><c> agent</c><00:04:55.040><c> is</c>
+
+00:04:55.189 --> 00:04:55.199 align:start position:0%
+implement. So now what this agent is
+ 
+
+00:04:55.199 --> 00:04:56.469 align:start position:0%
+implement. So now what this agent is
+going<00:04:55.280><c> to</c><00:04:55.360><c> do</c><00:04:55.440><c> is</c><00:04:55.680><c> it's</c><00:04:55.840><c> going</c><00:04:55.919><c> to</c><00:04:56.000><c> prime</c><00:04:56.240><c> its</c>
+
+00:04:56.469 --> 00:04:56.479 align:start position:0%
+going to do is it's going to prime its
+ 
+
+00:04:56.479 --> 00:04:58.070 align:start position:0%
+going to do is it's going to prime its
+context<00:04:56.960><c> with</c><00:04:57.199><c> the</c><00:04:57.360><c> mulch</c><00:04:57.680><c> and</c><00:04:57.840><c> all</c><00:04:57.919><c> those</c>
+
+00:04:58.070 --> 00:04:58.080 align:start position:0%
+context with the mulch and all those
+ 
+
+00:04:58.080 --> 00:05:00.070 align:start position:0%
+context with the mulch and all those
+tools<00:04:58.400><c> I</c><00:04:58.560><c> talked</c><00:04:58.800><c> about</c><00:04:58.960><c> earlier.</c><00:04:59.759><c> And</c><00:04:59.919><c> then</c>
+
+00:05:00.070 --> 00:05:00.080 align:start position:0%
+tools I talked about earlier. And then
+ 
+
+00:05:00.080 --> 00:05:03.270 align:start position:0%
+tools I talked about earlier. And then
+it's<00:05:00.400><c> going</c><00:05:00.560><c> to</c><00:05:01.120><c> delegate</c><00:05:01.759><c> scouts.</c><00:05:02.800><c> So</c><00:05:02.960><c> it's</c>
+
+00:05:03.270 --> 00:05:03.280 align:start position:0%
+it's going to delegate scouts. So it's
+ 
+
+00:05:03.280 --> 00:05:05.510 align:start position:0%
+it's going to delegate scouts. So it's
+going<00:05:03.440><c> to</c><00:05:03.600><c> call</c><00:05:03.919><c> sub</c><00:05:04.240><c> agents</c><00:05:04.720><c> to</c><00:05:04.960><c> go</c><00:05:05.120><c> and</c><00:05:05.360><c> do</c>
+
+00:05:05.510 --> 00:05:05.520 align:start position:0%
+going to call sub agents to go and do
+ 
+
+00:05:05.520 --> 00:05:07.430 align:start position:0%
+going to call sub agents to go and do
+some<00:05:05.840><c> work</c><00:05:06.000><c> for</c><00:05:06.320><c> it.</c><00:05:06.560><c> So</c><00:05:06.800><c> instead</c><00:05:07.039><c> of</c><00:05:07.199><c> it</c>
+
+00:05:07.430 --> 00:05:07.440 align:start position:0%
+some work for it. So instead of it
+ 
+
+00:05:07.440 --> 00:05:09.110 align:start position:0%
+some work for it. So instead of it
+having<00:05:07.680><c> to</c><00:05:07.840><c> go</c><00:05:08.000><c> through</c><00:05:08.160><c> and</c><00:05:08.479><c> read</c><00:05:08.639><c> a</c><00:05:08.800><c> bunch</c><00:05:08.960><c> of</c>
+
+00:05:09.110 --> 00:05:09.120 align:start position:0%
+having to go through and read a bunch of
+ 
+
+00:05:09.120 --> 00:05:11.590 align:start position:0%
+having to go through and read a bunch of
+files,<00:05:10.000><c> it's</c><00:05:10.240><c> going</c><00:05:10.320><c> to</c><00:05:10.479><c> have</c><00:05:10.639><c> a</c><00:05:11.120><c> explore</c>
+
+00:05:11.590 --> 00:05:11.600 align:start position:0%
+files, it's going to have a explore
+ 
+
+00:05:11.600 --> 00:05:13.670 align:start position:0%
+files, it's going to have a explore
+agent<00:05:12.000><c> here.</c><00:05:12.479><c> So</c><00:05:12.720><c> this</c><00:05:12.880><c> is</c><00:05:12.960><c> a</c><00:05:13.120><c> separate</c><00:05:13.440><c> sub</c>
+
+00:05:13.670 --> 00:05:13.680 align:start position:0%
+agent here. So this is a separate sub
+ 
+
+00:05:13.680 --> 00:05:16.629 align:start position:0%
+agent here. So this is a separate sub
+agent<00:05:14.960><c> scouting</c><00:05:15.360><c> out</c><00:05:15.520><c> the</c><00:05:15.840><c> problem,</c>
+
+00:05:16.629 --> 00:05:16.639 align:start position:0%
+agent scouting out the problem,
+ 
+
+00:05:16.639 --> 00:05:18.230 align:start position:0%
+agent scouting out the problem,
+gathering<00:05:17.199><c> information,</c><00:05:17.840><c> gathering</c>
+
+00:05:18.230 --> 00:05:18.240 align:start position:0%
+gathering information, gathering
+ 
+
+00:05:18.240 --> 00:05:20.550 align:start position:0%
+gathering information, gathering
+highquality<00:05:18.880><c> context</c><00:05:19.600><c> that</c><00:05:19.840><c> it</c><00:05:20.000><c> will</c><00:05:20.160><c> return</c>
+
+00:05:20.550 --> 00:05:20.560 align:start position:0%
+highquality context that it will return
+ 
+
+00:05:20.560 --> 00:05:22.629 align:start position:0%
+highquality context that it will return
+back<00:05:20.720><c> to</c><00:05:20.880><c> this</c><00:05:21.039><c> base</c><00:05:21.280><c> agent.</c><00:05:21.919><c> So</c><00:05:22.080><c> the</c><00:05:22.320><c> agent</c>
+
+00:05:22.629 --> 00:05:22.639 align:start position:0%
+back to this base agent. So the agent
+ 
+
+00:05:22.639 --> 00:05:24.070 align:start position:0%
+back to this base agent. So the agent
+has<00:05:22.800><c> reported</c><00:05:23.120><c> back.</c><00:05:23.440><c> It's</c><00:05:23.600><c> asking</c><00:05:23.840><c> me</c>
+
+00:05:24.070 --> 00:05:24.080 align:start position:0%
+has reported back. It's asking me
+ 
+
+00:05:24.080 --> 00:05:26.310 align:start position:0%
+has reported back. It's asking me
+questions<00:05:24.479><c> now.</c><00:05:25.199><c> The</c><00:05:25.360><c> scout</c><00:05:25.759><c> report</c><00:05:26.080><c> came</c>
+
+00:05:26.310 --> 00:05:26.320 align:start position:0%
+questions now. The scout report came
+ 
+
+00:05:26.320 --> 00:05:29.590 align:start position:0%
+questions now. The scout report came
+back.<00:05:26.960><c> It</c><00:05:27.199><c> saved</c><00:05:27.680><c> this</c><00:05:28.240><c> base</c><00:05:28.560><c> agent</c><00:05:28.960><c> a</c><00:05:29.199><c> ton</c><00:05:29.440><c> of</c>
+
+00:05:29.590 --> 00:05:29.600 align:start position:0%
+back. It saved this base agent a ton of
+ 
+
+00:05:29.600 --> 00:05:32.310 align:start position:0%
+back. It saved this base agent a ton of
+tokens<00:05:30.000><c> and</c><00:05:30.160><c> a</c><00:05:30.400><c> ton</c><00:05:30.479><c> of</c><00:05:30.639><c> tool</c><00:05:30.960><c> usage.</c><00:05:31.840><c> And</c><00:05:32.080><c> now</c>
+
+00:05:32.310 --> 00:05:32.320 align:start position:0%
+tokens and a ton of tool usage. And now
+ 
+
+00:05:32.320 --> 00:05:35.270 align:start position:0%
+tokens and a ton of tool usage. And now
+the<00:05:33.199><c> base</c><00:05:33.520><c> agent</c><00:05:33.919><c> is</c><00:05:34.160><c> asking</c><00:05:34.560><c> me</c><00:05:34.720><c> for</c><00:05:34.960><c> what</c><00:05:35.120><c> I</c>
+
+00:05:35.270 --> 00:05:35.280 align:start position:0%
+the base agent is asking me for what I
+ 
+
+00:05:35.280 --> 00:05:37.270 align:start position:0%
+the base agent is asking me for what I
+want<00:05:35.360><c> to</c><00:05:35.520><c> do</c><00:05:35.680><c> next.</c><00:05:35.919><c> So</c><00:05:36.080><c> you</c><00:05:36.240><c> can</c><00:05:36.320><c> imagine</c><00:05:36.960><c> that</c>
+
+00:05:37.270 --> 00:05:37.280 align:start position:0%
+want to do next. So you can imagine that
+ 
+
+00:05:37.280 --> 00:05:39.590 align:start position:0%
+want to do next. So you can imagine that
+I<00:05:37.520><c> decide</c><00:05:37.840><c> what</c><00:05:38.080><c> I</c><00:05:38.240><c> want</c><00:05:38.320><c> to</c><00:05:38.400><c> do</c><00:05:38.560><c> next.</c><00:05:39.199><c> Then</c><00:05:39.440><c> I</c>
+
+00:05:39.590 --> 00:05:39.600 align:start position:0%
+I decide what I want to do next. Then I
+ 
+
+00:05:39.600 --> 00:05:41.670 align:start position:0%
+I decide what I want to do next. Then I
+have<00:05:39.680><c> it</c><00:05:39.840><c> delegate</c><00:05:40.240><c> that</c><00:05:40.479><c> to</c><00:05:40.639><c> a</c><00:05:40.880><c> plan</c><00:05:41.199><c> agent</c>
+
+00:05:41.670 --> 00:05:41.680 align:start position:0%
+have it delegate that to a plan agent
+ 
+
+00:05:41.680 --> 00:05:43.830 align:start position:0%
+have it delegate that to a plan agent
+for<00:05:41.759><c> example,</c><00:05:42.479><c> a</c><00:05:42.720><c> build</c><00:05:42.960><c> agent</c><00:05:43.280><c> and</c><00:05:43.440><c> a</c><00:05:43.600><c> review</c>
+
+00:05:43.830 --> 00:05:43.840 align:start position:0%
+for example, a build agent and a review
+ 
+
+00:05:43.840 --> 00:05:45.590 align:start position:0%
+for example, a build agent and a review
+agent.<00:05:44.320><c> This</c><00:05:44.560><c> base</c><00:05:44.800><c> agent</c><00:05:45.039><c> that</c><00:05:45.280><c> I'm</c><00:05:45.440><c> actually</c>
+
+00:05:45.590 --> 00:05:45.600 align:start position:0%
+agent. This base agent that I'm actually
+ 
+
+00:05:45.600 --> 00:05:47.830 align:start position:0%
+agent. This base agent that I'm actually
+having<00:05:45.840><c> a</c><00:05:46.080><c> conversation</c><00:05:46.479><c> with</c><00:05:46.880><c> is</c><00:05:47.280><c> acting</c><00:05:47.600><c> as</c>
+
+00:05:47.830 --> 00:05:47.840 align:start position:0%
+having a conversation with is acting as
+ 
+
+00:05:47.840 --> 00:05:50.550 align:start position:0%
+having a conversation with is acting as
+a<00:05:48.080><c> like</c><00:05:48.320><c> pseudo</c><00:05:48.720><c> orchestrator</c><00:05:49.520><c> already.</c><00:05:50.320><c> It's</c>
+
+00:05:50.550 --> 00:05:50.560 align:start position:0%
+a like pseudo orchestrator already. It's
+ 
+
+00:05:50.560 --> 00:05:52.469 align:start position:0%
+a like pseudo orchestrator already. It's
+delegating<00:05:51.039><c> tasks</c><00:05:51.440><c> to</c><00:05:51.680><c> other</c><00:05:51.840><c> agents.</c><00:05:52.320><c> It's</c>
+
+00:05:52.469 --> 00:05:52.479 align:start position:0%
+delegating tasks to other agents. It's
+ 
+
+00:05:52.479 --> 00:05:56.070 align:start position:0%
+delegating tasks to other agents. It's
+paralyzing<00:05:53.199><c> work.</c><00:05:54.000><c> This</c><00:05:54.560><c> is</c><00:05:54.880><c> a</c><00:05:55.360><c> glimpse</c><00:05:55.680><c> into</c>
+
+00:05:56.070 --> 00:05:56.080 align:start position:0%
+paralyzing work. This is a glimpse into
+ 
+
+00:05:56.080 --> 00:05:58.469 align:start position:0%
+paralyzing work. This is a glimpse into
+a<00:05:56.240><c> more</c><00:05:56.479><c> powerful</c><00:05:56.880><c> workflow.</c><00:05:57.680><c> Level</c><00:05:58.000><c> four</c><00:05:58.240><c> is</c>
+
+00:05:58.469 --> 00:05:58.479 align:start position:0%
+a more powerful workflow. Level four is
+ 
+
+00:05:58.479 --> 00:05:59.749 align:start position:0%
+a more powerful workflow. Level four is
+where<00:05:58.639><c> things</c><00:05:58.960><c> start</c><00:05:59.120><c> to</c><00:05:59.280><c> get</c><00:05:59.440><c> interesting</c>
+
+00:05:59.749 --> 00:05:59.759 align:start position:0%
+where things start to get interesting
+ 
+
+00:05:59.759 --> 00:06:01.749 align:start position:0%
+where things start to get interesting
+and<00:06:00.000><c> this</c><00:06:00.160><c> is</c><00:06:00.240><c> where</c><00:06:00.400><c> I</c><00:06:00.639><c> feel</c><00:06:00.960><c> most</c><00:06:01.280><c> developers</c>
+
+00:06:01.749 --> 00:06:01.759 align:start position:0%
+and this is where I feel most developers
+ 
+
+00:06:01.759 --> 00:06:04.790 align:start position:0%
+and this is where I feel most developers
+are<00:06:01.919><c> at</c><00:06:02.240><c> right</c><00:06:02.400><c> now.</c><00:06:02.800><c> This</c><00:06:03.120><c> is</c><00:06:04.000><c> you</c><00:06:04.400><c> as</c><00:06:04.639><c> the</c>
+
+00:06:04.790 --> 00:06:04.800 align:start position:0%
+are at right now. This is you as the
+ 
+
+00:06:04.800 --> 00:06:07.189 align:start position:0%
+are at right now. This is you as the
+developer<00:06:05.280><c> acting</c><00:06:05.680><c> as</c><00:06:06.000><c> the</c><00:06:06.240><c> orchestrator</c>
+
+00:06:07.189 --> 00:06:07.199 align:start position:0%
+developer acting as the orchestrator
+ 
+
+00:06:07.199 --> 00:06:09.270 align:start position:0%
+developer acting as the orchestrator
+orchestrating<00:06:07.840><c> a</c><00:06:08.080><c> ton</c><00:06:08.240><c> of</c><00:06:08.479><c> intelligence,</c><00:06:09.120><c> a</c>
+
+00:06:09.270 --> 00:06:09.280 align:start position:0%
+orchestrating a ton of intelligence, a
+ 
+
+00:06:09.280 --> 00:06:11.510 align:start position:0%
+orchestrating a ton of intelligence, a
+ton<00:06:09.440><c> of</c><00:06:09.600><c> agents.</c><00:06:10.479><c> So</c><00:06:10.720><c> you</c><00:06:10.960><c> have</c><00:06:11.120><c> multiple</c>
+
+00:06:11.510 --> 00:06:11.520 align:start position:0%
+ton of agents. So you have multiple
+ 
+
+00:06:11.520 --> 00:06:13.350 align:start position:0%
+ton of agents. So you have multiple
+agent<00:06:11.840><c> sessions</c><00:06:12.319><c> running</c><00:06:12.639><c> in</c><00:06:12.960><c> multiple</c>
+
+00:06:13.350 --> 00:06:13.360 align:start position:0%
+agent sessions running in multiple
+ 
+
+00:06:13.360 --> 00:06:15.590 align:start position:0%
+agent sessions running in multiple
+terminals<00:06:13.840><c> at</c><00:06:14.080><c> the</c><00:06:14.240><c> same</c><00:06:14.479><c> time,</c><00:06:15.039><c> but</c><00:06:15.280><c> you</c><00:06:15.520><c> are</c>
+
+00:06:15.590 --> 00:06:15.600 align:start position:0%
+terminals at the same time, but you are
+ 
+
+00:06:15.600 --> 00:06:17.510 align:start position:0%
+terminals at the same time, but you are
+the<00:06:15.840><c> one</c><00:06:16.000><c> deciding</c><00:06:16.560><c> which</c><00:06:16.800><c> agent</c><00:06:17.199><c> works</c>
+
+00:06:17.510 --> 00:06:17.520 align:start position:0%
+the one deciding which agent works
+ 
+
+00:06:17.520 --> 00:06:19.670 align:start position:0%
+the one deciding which agent works
+where.<00:06:18.240><c> You</c><00:06:18.400><c> know</c><00:06:18.560><c> what</c><00:06:18.800><c> it's</c><00:06:19.039><c> working</c><00:06:19.280><c> on,</c>
+
+00:06:19.670 --> 00:06:19.680 align:start position:0%
+where. You know what it's working on,
+ 
+
+00:06:19.680 --> 00:06:22.230 align:start position:0%
+where. You know what it's working on,
+when<00:06:20.000><c> it</c><00:06:20.160><c> has</c><00:06:20.319><c> to</c><00:06:20.479><c> work</c><00:06:20.720><c> on</c><00:06:20.880><c> that</c><00:06:21.120><c> thing.</c><00:06:21.919><c> And</c>
+
+00:06:22.230 --> 00:06:22.240 align:start position:0%
+when it has to work on that thing. And
+ 
+
+00:06:22.240 --> 00:06:24.390 align:start position:0%
+when it has to work on that thing. And
+you<00:06:22.560><c> move</c><00:06:23.039><c> much</c><00:06:23.360><c> faster</c><00:06:23.759><c> when</c><00:06:24.000><c> you</c><00:06:24.080><c> start</c><00:06:24.240><c> to</c>
+
+00:06:24.390 --> 00:06:24.400 align:start position:0%
+you move much faster when you start to
+ 
+
+00:06:24.400 --> 00:06:27.110 align:start position:0%
+you move much faster when you start to
+paralyze<00:06:24.960><c> like</c><00:06:25.120><c> this.</c><00:06:25.919><c> But</c><00:06:26.080><c> it</c><00:06:26.319><c> requires</c><00:06:26.800><c> a</c>
+
+00:06:27.110 --> 00:06:27.120 align:start position:0%
+paralyze like this. But it requires a
+ 
+
+00:06:27.120 --> 00:06:29.430 align:start position:0%
+paralyze like this. But it requires a
+ton<00:06:27.360><c> of</c><00:06:27.600><c> focus</c><00:06:28.000><c> and</c><00:06:28.240><c> a</c><00:06:28.400><c> ton</c><00:06:28.560><c> of</c><00:06:28.720><c> attention.</c><00:06:29.199><c> And</c>
+
+00:06:29.430 --> 00:06:29.440 align:start position:0%
+ton of focus and a ton of attention. And
+ 
+
+00:06:29.440 --> 00:06:31.990 align:start position:0%
+ton of focus and a ton of attention. And
+it's<00:06:29.680><c> very</c><00:06:30.479><c> taxing</c><00:06:30.960><c> when</c><00:06:31.199><c> you</c><00:06:31.360><c> start</c><00:06:31.600><c> working</c>
+
+00:06:31.990 --> 00:06:32.000 align:start position:0%
+it's very taxing when you start working
+ 
+
+00:06:32.000 --> 00:06:34.230 align:start position:0%
+it's very taxing when you start working
+with<00:06:32.319><c> multiple</c><00:06:32.720><c> agents</c><00:06:33.120><c> at</c><00:06:33.360><c> a</c><00:06:33.520><c> time</c><00:06:34.000><c> and</c>
+
+00:06:34.230 --> 00:06:34.240 align:start position:0%
+with multiple agents at a time and
+ 
+
+00:06:34.240 --> 00:06:36.469 align:start position:0%
+with multiple agents at a time and
+you're<00:06:34.479><c> like</c><00:06:34.639><c> trying</c><00:06:34.800><c> to</c><00:06:35.039><c> coordinate</c><00:06:36.000><c> five,</c>
+
+00:06:36.469 --> 00:06:36.479 align:start position:0%
+you're like trying to coordinate five,
+ 
+
+00:06:36.479 --> 00:06:38.950 align:start position:0%
+you're like trying to coordinate five,
+six<00:06:36.720><c> agents</c><00:06:37.120><c> at</c><00:06:37.280><c> a</c><00:06:37.440><c> time.</c><00:06:37.759><c> So</c><00:06:38.000><c> agents</c><00:06:38.479><c> can</c><00:06:38.639><c> also</c>
+
+00:06:38.950 --> 00:06:38.960 align:start position:0%
+six agents at a time. So agents can also
+ 
+
+00:06:38.960 --> 00:06:41.350 align:start position:0%
+six agents at a time. So agents can also
+easily<00:06:39.280><c> run</c><00:06:39.520><c> into</c><00:06:39.840><c> conflicts</c><00:06:40.800><c> because</c><00:06:41.120><c> you're</c>
+
+00:06:41.350 --> 00:06:41.360 align:start position:0%
+easily run into conflicts because you're
+ 
+
+00:06:41.360 --> 00:06:44.309 align:start position:0%
+easily run into conflicts because you're
+not<00:06:41.600><c> isolating</c><00:06:42.479><c> code</c><00:06:42.720><c> changes.</c><00:06:43.840><c> Now</c><00:06:44.160><c> there</c>
+
+00:06:44.309 --> 00:06:44.319 align:start position:0%
+not isolating code changes. Now there
+ 
+
+00:06:44.319 --> 00:06:46.390 align:start position:0%
+not isolating code changes. Now there
+are<00:06:44.880><c> exceptions</c><00:06:45.360><c> to</c><00:06:45.520><c> this.</c><00:06:45.840><c> You</c><00:06:46.000><c> can</c><00:06:46.160><c> run</c>
+
+00:06:46.390 --> 00:06:46.400 align:start position:0%
+are exceptions to this. You can run
+ 
+
+00:06:46.400 --> 00:06:47.909 align:start position:0%
+are exceptions to this. You can run
+multiple<00:06:46.800><c> sessions</c><00:06:47.199><c> and</c><00:06:47.360><c> multiple</c><00:06:47.680><c> work</c>
+
+00:06:47.909 --> 00:06:47.919 align:start position:0%
+multiple sessions and multiple work
+ 
+
+00:06:47.919 --> 00:06:49.430 align:start position:0%
+multiple sessions and multiple work
+trees.<00:06:48.240><c> I'm</c><00:06:48.400><c> not</c><00:06:48.560><c> saying</c><00:06:48.639><c> that</c><00:06:48.880><c> isolation</c>
+
+00:06:49.430 --> 00:06:49.440 align:start position:0%
+trees. I'm not saying that isolation
+ 
+
+00:06:49.440 --> 00:06:51.350 align:start position:0%
+trees. I'm not saying that isolation
+doesn't<00:06:49.680><c> exist</c><00:06:50.000><c> here,</c><00:06:50.639><c> but</c><00:06:50.800><c> for</c><00:06:51.039><c> the</c><00:06:51.199><c> most</c>
+
+00:06:51.350 --> 00:06:51.360 align:start position:0%
+doesn't exist here, but for the most
+ 
+
+00:06:51.360 --> 00:06:53.350 align:start position:0%
+doesn't exist here, but for the most
+part,<00:06:51.840><c> the</c><00:06:52.160><c> developers</c><00:06:52.560><c> I</c><00:06:52.880><c> see</c><00:06:53.039><c> that</c><00:06:53.199><c> are</c>
+
+00:06:53.350 --> 00:06:53.360 align:start position:0%
+part, the developers I see that are
+ 
+
+00:06:53.360 --> 00:06:55.670 align:start position:0%
+part, the developers I see that are
+running<00:06:53.600><c> at</c><00:06:53.840><c> level</c><00:06:54.080><c> 4</c><00:06:54.880><c> aren't</c><00:06:55.280><c> really</c>
+
+00:06:55.670 --> 00:06:55.680 align:start position:0%
+running at level 4 aren't really
+ 
+
+00:06:55.680 --> 00:06:58.390 align:start position:0%
+running at level 4 aren't really
+utilizing<00:06:56.319><c> work</c><00:06:56.639><c> trees,</c><00:06:57.360><c> isolation,</c><00:06:58.160><c> stuff</c>
+
+00:06:58.390 --> 00:06:58.400 align:start position:0%
+utilizing work trees, isolation, stuff
+ 
+
+00:06:58.400 --> 00:07:00.390 align:start position:0%
+utilizing work trees, isolation, stuff
+like<00:06:58.639><c> that.</c><00:06:58.960><c> So,</c><00:06:59.440><c> let's</c><00:06:59.759><c> take</c><00:06:59.840><c> a</c><00:07:00.000><c> look</c><00:07:00.080><c> at</c><00:07:00.240><c> what</c>
+
+00:07:00.390 --> 00:07:00.400 align:start position:0%
+like that. So, let's take a look at what
+ 
+
+00:07:00.400 --> 00:07:02.629 align:start position:0%
+like that. So, let's take a look at what
+level<00:07:00.720><c> four</c><00:07:00.960><c> looks</c><00:07:01.199><c> like</c><00:07:01.520><c> in</c><00:07:01.759><c> the</c><00:07:02.000><c> code.</c><00:07:02.479><c> Here</c>
+
+00:07:02.629 --> 00:07:02.639 align:start position:0%
+level four looks like in the code. Here
+ 
+
+00:07:02.639 --> 00:07:04.469 align:start position:0%
+level four looks like in the code. Here
+I<00:07:02.880><c> am</c><00:07:03.039><c> back</c><00:07:03.120><c> in</c><00:07:03.280><c> the</c><00:07:03.440><c> codebase.</c><00:07:03.919><c> This</c><00:07:04.080><c> is</c><00:07:04.160><c> the</c>
+
+00:07:04.469 --> 00:07:04.479 align:start position:0%
+I am back in the codebase. This is the
+ 
+
+00:07:04.479 --> 00:07:05.830 align:start position:0%
+I am back in the codebase. This is the
+same<00:07:04.720><c> session</c><00:07:04.960><c> on</c><00:07:05.120><c> the</c><00:07:05.280><c> right</c><00:07:05.440><c> side</c><00:07:05.599><c> of</c><00:07:05.680><c> my</c>
+
+00:07:05.830 --> 00:07:05.840 align:start position:0%
+same session on the right side of my
+ 
+
+00:07:05.840 --> 00:07:08.390 align:start position:0%
+same session on the right side of my
+screen<00:07:06.160><c> from</c><00:07:06.720><c> step</c><00:07:07.039><c> three.</c><00:07:07.759><c> And</c><00:07:08.080><c> essentially</c>
+
+00:07:08.390 --> 00:07:08.400 align:start position:0%
+screen from step three. And essentially
+ 
+
+00:07:08.400 --> 00:07:09.990 align:start position:0%
+screen from step three. And essentially
+what<00:07:08.639><c> I'm</c><00:07:08.800><c> going</c><00:07:08.880><c> to</c><00:07:08.960><c> do</c><00:07:09.120><c> is</c><00:07:09.360><c> just</c><00:07:09.599><c> approve</c>
+
+00:07:09.990 --> 00:07:10.000 align:start position:0%
+what I'm going to do is just approve
+ 
+
+00:07:10.000 --> 00:07:11.990 align:start position:0%
+what I'm going to do is just approve
+whatever<00:07:10.319><c> it</c><00:07:10.479><c> wants</c><00:07:10.720><c> me</c><00:07:10.880><c> to</c><00:07:11.039><c> approve.</c><00:07:11.840><c> And</c>
+
+00:07:11.990 --> 00:07:12.000 align:start position:0%
+whatever it wants me to approve. And
+ 
+
+00:07:12.000 --> 00:07:13.749 align:start position:0%
+whatever it wants me to approve. And
+then<00:07:12.240><c> over</c><00:07:12.479><c> here,</c><00:07:12.720><c> I'm</c><00:07:12.960><c> going</c><00:07:13.039><c> to</c><00:07:13.120><c> give</c><00:07:13.440><c> this</c>
+
+00:07:13.749 --> 00:07:13.759 align:start position:0%
+then over here, I'm going to give this
+ 
+
+00:07:13.759 --> 00:07:16.629 align:start position:0%
+then over here, I'm going to give this
+agent<00:07:14.240><c> a</c><00:07:14.560><c> new</c><00:07:14.720><c> task.</c><00:07:15.199><c> So</c><00:07:15.440><c> you</c><00:07:15.680><c> can</c><00:07:15.840><c> see</c><00:07:16.400><c> right</c>
+
+00:07:16.629 --> 00:07:16.639 align:start position:0%
+agent a new task. So you can see right
+ 
+
+00:07:16.639 --> 00:07:19.830 align:start position:0%
+agent a new task. So you can see right
+away<00:07:16.960><c> I'm</c><00:07:17.280><c> starting</c><00:07:17.680><c> to</c><00:07:18.319><c> paralyze</c><00:07:18.880><c> my</c><00:07:19.120><c> agents.</c>
+
+00:07:19.830 --> 00:07:19.840 align:start position:0%
+away I'm starting to paralyze my agents.
+ 
+
+00:07:19.840 --> 00:07:21.909 align:start position:0%
+away I'm starting to paralyze my agents.
+What<00:07:20.080><c> I'm</c><00:07:20.160><c> going</c><00:07:20.240><c> to</c><00:07:20.400><c> do</c><00:07:20.479><c> here</c><00:07:20.720><c> is</c><00:07:21.199><c> for</c><00:07:21.440><c> example</c>
+
+00:07:21.909 --> 00:07:21.919 align:start position:0%
+What I'm going to do here is for example
+ 
+
+00:07:21.919 --> 00:07:25.029 align:start position:0%
+What I'm going to do here is for example
+just<00:07:22.160><c> add</c><00:07:22.400><c> like</c><00:07:22.639><c> a</c><00:07:22.880><c> tool</c><00:07:23.440><c> result</c><00:07:24.080><c> type</c><00:07:24.400><c> to</c><00:07:24.720><c> the</c>
+
+00:07:25.029 --> 00:07:25.039 align:start position:0%
+just add like a tool result type to the
+ 
+
+00:07:25.039 --> 00:07:27.270 align:start position:0%
+just add like a tool result type to the
+logger<00:07:25.440><c> in</c><00:07:25.680><c> my</c><00:07:25.840><c> system.</c><00:07:26.160><c> So</c><00:07:26.319><c> I've</c><00:07:26.560><c> given</c><00:07:26.800><c> this</c>
+
+00:07:27.270 --> 00:07:27.280 align:start position:0%
+logger in my system. So I've given this
+ 
+
+00:07:27.280 --> 00:07:29.830 align:start position:0%
+logger in my system. So I've given this
+second<00:07:27.599><c> agent</c><00:07:28.000><c> a</c><00:07:28.240><c> second</c><00:07:28.479><c> task.</c><00:07:29.280><c> This</c><00:07:29.520><c> first</c>
+
+00:07:29.830 --> 00:07:29.840 align:start position:0%
+second agent a second task. This first
+ 
+
+00:07:29.840 --> 00:07:32.230 align:start position:0%
+second agent a second task. This first
+agent<00:07:30.240><c> over</c><00:07:30.479><c> here</c><00:07:30.720><c> is</c><00:07:30.960><c> asking</c><00:07:31.360><c> me</c><00:07:31.599><c> for</c>
+
+00:07:32.230 --> 00:07:32.240 align:start position:0%
+agent over here is asking me for
+ 
+
+00:07:32.240 --> 00:07:34.710 align:start position:0%
+agent over here is asking me for
+whatever<00:07:32.639><c> it's</c><00:07:32.880><c> wanting</c><00:07:33.120><c> to</c><00:07:33.360><c> work</c><00:07:33.520><c> on.</c><00:07:34.319><c> Now</c><00:07:34.479><c> I</c>
+
+00:07:34.710 --> 00:07:34.720 align:start position:0%
+whatever it's wanting to work on. Now I
+ 
+
+00:07:34.720 --> 00:07:36.469 align:start position:0%
+whatever it's wanting to work on. Now I
+have<00:07:34.880><c> two</c><00:07:35.120><c> agents</c><00:07:35.520><c> working</c><00:07:35.759><c> on</c><00:07:35.919><c> two</c><00:07:36.160><c> separate</c>
+
+00:07:36.469 --> 00:07:36.479 align:start position:0%
+have two agents working on two separate
+ 
+
+00:07:36.479 --> 00:07:38.629 align:start position:0%
+have two agents working on two separate
+tasks<00:07:36.880><c> and</c><00:07:37.039><c> two</c><00:07:37.280><c> separate</c><00:07:37.520><c> terminal</c><00:07:37.919><c> windows.</c>
+
+00:07:38.629 --> 00:07:38.639 align:start position:0%
+tasks and two separate terminal windows.
+ 
+
+00:07:38.639 --> 00:07:41.270 align:start position:0%
+tasks and two separate terminal windows.
+So<00:07:38.880><c> now</c><00:07:39.120><c> I'm</c><00:07:39.360><c> the</c><00:07:39.680><c> one</c><00:07:39.840><c> orchestrating</c><00:07:40.960><c> what's</c>
+
+00:07:41.270 --> 00:07:41.280 align:start position:0%
+So now I'm the one orchestrating what's
+ 
+
+00:07:41.280 --> 00:07:43.110 align:start position:0%
+So now I'm the one orchestrating what's
+going<00:07:41.440><c> on</c><00:07:41.680><c> between</c><00:07:41.919><c> these</c><00:07:42.240><c> two.</c><00:07:42.720><c> So</c><00:07:42.960><c> this</c>
+
+00:07:43.110 --> 00:07:43.120 align:start position:0%
+going on between these two. So this
+ 
+
+00:07:43.120 --> 00:07:44.629 align:start position:0%
+going on between these two. So this
+agent<00:07:43.520><c> finished</c><00:07:43.759><c> up</c><00:07:43.919><c> some</c><00:07:44.160><c> work.</c><00:07:44.400><c> I'm</c><00:07:44.560><c> going</c>
+
+00:07:44.629 --> 00:07:44.639 align:start position:0%
+agent finished up some work. I'm going
+ 
+
+00:07:44.639 --> 00:07:45.909 align:start position:0%
+agent finished up some work. I'm going
+to<00:07:44.800><c> clear</c><00:07:44.960><c> that</c><00:07:45.199><c> out</c><00:07:45.360><c> because</c><00:07:45.599><c> I</c><00:07:45.759><c> don't</c>
+
+00:07:45.909 --> 00:07:45.919 align:start position:0%
+to clear that out because I don't
+ 
+
+00:07:45.919 --> 00:07:47.510 align:start position:0%
+to clear that out because I don't
+actually<00:07:46.240><c> want</c><00:07:46.400><c> that</c><00:07:46.639><c> work</c><00:07:46.800><c> to</c><00:07:46.960><c> be</c><00:07:47.039><c> done.</c><00:07:47.360><c> And</c>
+
+00:07:47.510 --> 00:07:47.520 align:start position:0%
+actually want that work to be done. And
+ 
+
+00:07:47.520 --> 00:07:49.029 align:start position:0%
+actually want that work to be done. And
+I'll<00:07:47.680><c> just</c><00:07:47.840><c> close</c><00:07:48.080><c> out</c><00:07:48.319><c> this</c><00:07:48.560><c> window.</c><00:07:48.880><c> And</c>
+
+00:07:49.029 --> 00:07:49.039 align:start position:0%
+I'll just close out this window. And
+ 
+
+00:07:49.039 --> 00:07:50.950 align:start position:0%
+I'll just close out this window. And
+then<00:07:49.520><c> over</c><00:07:49.759><c> here,</c><00:07:50.000><c> we</c><00:07:50.160><c> can</c><00:07:50.319><c> see</c><00:07:50.400><c> the</c><00:07:50.639><c> second</c>
+
+00:07:50.950 --> 00:07:50.960 align:start position:0%
+then over here, we can see the second
+ 
+
+00:07:50.960 --> 00:07:53.589 align:start position:0%
+then over here, we can see the second
+session<00:07:51.360><c> is</c><00:07:52.160><c> doing</c><00:07:52.479><c> that</c><00:07:52.720><c> same</c><00:07:53.039><c> step</c><00:07:53.360><c> three</c>
+
+00:07:53.589 --> 00:07:53.599 align:start position:0%
+session is doing that same step three
+ 
+
+00:07:53.599 --> 00:07:55.830 align:start position:0%
+session is doing that same step three
+pattern<00:07:54.000><c> of</c><00:07:54.400><c> using</c><00:07:54.639><c> a</c><00:07:54.879><c> scout</c><00:07:55.199><c> to</c><00:07:55.440><c> explore</c>
+
+00:07:55.830 --> 00:07:55.840 align:start position:0%
+pattern of using a scout to explore
+ 
+
+00:07:55.840 --> 00:07:57.830 align:start position:0%
+pattern of using a scout to explore
+things<00:07:56.160><c> first.</c><00:07:56.960><c> It's</c><00:07:57.199><c> going</c><00:07:57.280><c> to</c><00:07:57.440><c> come</c><00:07:57.520><c> back</c><00:07:57.680><c> to</c>
+
+00:07:57.830 --> 00:07:57.840 align:start position:0%
+things first. It's going to come back to
+ 
+
+00:07:57.840 --> 00:08:00.710 align:start position:0%
+things first. It's going to come back to
+me<00:07:58.000><c> with</c><00:07:58.240><c> questions,</c><00:07:59.199><c> so</c><00:07:59.440><c> on</c><00:07:59.599><c> and</c><00:07:59.759><c> so</c><00:07:59.919><c> forth.</c>
+
+00:08:00.710 --> 00:08:00.720 align:start position:0%
+me with questions, so on and so forth.
+ 
+
+00:08:00.720 --> 00:08:02.390 align:start position:0%
+me with questions, so on and so forth.
+Now,<00:08:00.960><c> we're</c><00:08:01.120><c> up</c><00:08:01.199><c> to</c><00:08:01.440><c> level</c><00:08:01.680><c> five.</c><00:08:01.919><c> And</c><00:08:02.080><c> level</c>
+
+00:08:02.390 --> 00:08:02.400 align:start position:0%
+Now, we're up to level five. And level
+ 
+
+00:08:02.400 --> 00:08:03.830 align:start position:0%
+Now, we're up to level five. And level
+five<00:08:02.560><c> is</c><00:08:02.720><c> where</c><00:08:02.960><c> things</c><00:08:03.199><c> get</c><00:08:03.520><c> really</c>
+
+00:08:03.830 --> 00:08:03.840 align:start position:0%
+five is where things get really
+ 
+
+00:08:03.840 --> 00:08:06.790 align:start position:0%
+five is where things get really
+interesting.<00:08:04.800><c> This</c><00:08:05.039><c> is</c><00:08:05.199><c> where</c><00:08:05.680><c> you,</c><00:08:06.319><c> as</c><00:08:06.560><c> the</c>
+
+00:08:06.790 --> 00:08:06.800 align:start position:0%
+interesting. This is where you, as the
+ 
+
+00:08:06.800 --> 00:08:08.390 align:start position:0%
+interesting. This is where you, as the
+developer,<00:08:07.280><c> move</c><00:08:07.520><c> further</c><00:08:07.840><c> and</c><00:08:08.080><c> further</c>
+
+00:08:08.390 --> 00:08:08.400 align:start position:0%
+developer, move further and further
+ 
+
+00:08:08.400 --> 00:08:10.869 align:start position:0%
+developer, move further and further
+outside<00:08:08.720><c> of</c><00:08:08.879><c> the</c><00:08:09.039><c> loop</c><00:08:09.360><c> of</c><00:08:09.520><c> your</c><00:08:09.759><c> agents.</c><00:08:10.639><c> So</c>
+
+00:08:10.869 --> 00:08:10.879 align:start position:0%
+outside of the loop of your agents. So
+ 
+
+00:08:10.879 --> 00:08:13.189 align:start position:0%
+outside of the loop of your agents. So
+instead<00:08:11.199><c> of</c><00:08:11.360><c> you</c><00:08:11.680><c> having</c><00:08:11.919><c> to</c><00:08:12.160><c> juggle</c><00:08:12.720><c> three,</c>
+
+00:08:13.189 --> 00:08:13.199 align:start position:0%
+instead of you having to juggle three,
+ 
+
+00:08:13.199 --> 00:08:16.390 align:start position:0%
+instead of you having to juggle three,
+four,<00:08:13.680><c> five</c><00:08:14.639><c> more</c><00:08:15.199><c> agent</c><00:08:15.599><c> sessions</c><00:08:15.919><c> at</c><00:08:16.080><c> a</c><00:08:16.319><c> time</c>
+
+00:08:16.390 --> 00:08:16.400 align:start position:0%
+four, five more agent sessions at a time
+ 
+
+00:08:16.400 --> 00:08:18.070 align:start position:0%
+four, five more agent sessions at a time
+and<00:08:16.720><c> understanding</c><00:08:17.199><c> what</c><00:08:17.440><c> each</c><00:08:17.680><c> agent</c>
+
+00:08:18.070 --> 00:08:18.080 align:start position:0%
+and understanding what each agent
+ 
+
+00:08:18.080 --> 00:08:20.869 align:start position:0%
+and understanding what each agent
+session<00:08:18.400><c> is</c><00:08:18.639><c> working</c><00:08:18.879><c> on,</c><00:08:19.680><c> you</c><00:08:20.000><c> delegate</c><00:08:20.479><c> that</c>
+
+00:08:20.869 --> 00:08:20.879 align:start position:0%
+session is working on, you delegate that
+ 
+
+00:08:20.879 --> 00:08:23.749 align:start position:0%
+session is working on, you delegate that
+cognitive<00:08:21.440><c> overload</c><00:08:22.160><c> to</c><00:08:22.800><c> another</c><00:08:23.199><c> agent.</c>
+
+00:08:23.749 --> 00:08:23.759 align:start position:0%
+cognitive overload to another agent.
+ 
+
+00:08:23.759 --> 00:08:26.070 align:start position:0%
+cognitive overload to another agent.
+Isolation<00:08:24.400><c> becomes</c><00:08:24.800><c> a</c><00:08:25.039><c> requirement</c><00:08:25.520><c> in</c><00:08:25.759><c> steps</c>
+
+00:08:26.070 --> 00:08:26.080 align:start position:0%
+Isolation becomes a requirement in steps
+ 
+
+00:08:26.080 --> 00:08:28.390 align:start position:0%
+Isolation becomes a requirement in steps
+like<00:08:26.240><c> this.</c><00:08:26.479><c> It</c><00:08:26.639><c> is</c><00:08:26.800><c> no</c><00:08:26.960><c> longer</c><00:08:27.280><c> a</c><00:08:27.440><c> suggestion.</c>
+
+00:08:28.390 --> 00:08:28.400 align:start position:0%
+like this. It is no longer a suggestion.
+ 
+
+00:08:28.400 --> 00:08:30.309 align:start position:0%
+like this. It is no longer a suggestion.
+When<00:08:28.639><c> you</c><00:08:28.879><c> are</c><00:08:29.039><c> having</c><00:08:29.199><c> a</c><00:08:29.440><c> system</c><00:08:29.759><c> orchestrate</c>
+
+00:08:30.309 --> 00:08:30.319 align:start position:0%
+When you are having a system orchestrate
+ 
+
+00:08:30.319 --> 00:08:32.709 align:start position:0%
+When you are having a system orchestrate
+itself,<00:08:30.800><c> orchestrate</c><00:08:31.440><c> a</c><00:08:31.680><c> dozen</c><00:08:32.000><c> plus</c><00:08:32.320><c> agents</c>
+
+00:08:32.709 --> 00:08:32.719 align:start position:0%
+itself, orchestrate a dozen plus agents
+ 
+
+00:08:32.719 --> 00:08:35.029 align:start position:0%
+itself, orchestrate a dozen plus agents
+at<00:08:32.880><c> a</c><00:08:33.039><c> time,</c><00:08:33.919><c> you</c><00:08:34.159><c> can't</c><00:08:34.399><c> have</c><00:08:34.560><c> all</c><00:08:34.719><c> of</c><00:08:34.880><c> those</c>
+
+00:08:35.029 --> 00:08:35.039 align:start position:0%
+at a time, you can't have all of those
+ 
+
+00:08:35.039 --> 00:08:37.350 align:start position:0%
+at a time, you can't have all of those
+agents<00:08:35.519><c> working</c><00:08:35.839><c> on</c><00:08:36.080><c> the</c><00:08:36.240><c> same</c><00:08:36.479><c> codebase.</c><00:08:37.120><c> You</c>
+
+00:08:37.350 --> 00:08:37.360 align:start position:0%
+agents working on the same codebase. You
+ 
+
+00:08:37.360 --> 00:08:38.709 align:start position:0%
+agents working on the same codebase. You
+have<00:08:37.440><c> to</c><00:08:37.599><c> have</c><00:08:37.760><c> them</c><00:08:37.919><c> in</c><00:08:38.080><c> isolated</c>
+
+00:08:38.709 --> 00:08:38.719 align:start position:0%
+have to have them in isolated
+ 
+
+00:08:38.719 --> 00:08:41.269 align:start position:0%
+have to have them in isolated
+environments<00:08:39.760><c> so</c><00:08:40.000><c> that</c><00:08:40.240><c> when</c><00:08:40.560><c> they</c><00:08:40.800><c> all</c><00:08:41.039><c> come</c>
+
+00:08:41.269 --> 00:08:41.279 align:start position:0%
+environments so that when they all come
+ 
+
+00:08:41.279 --> 00:08:43.670 align:start position:0%
+environments so that when they all come
+together<00:08:41.599><c> with</c><00:08:41.839><c> their</c><00:08:42.080><c> completed</c><00:08:42.560><c> tasks,</c><00:08:43.440><c> you</c>
+
+00:08:43.670 --> 00:08:43.680 align:start position:0%
+together with their completed tasks, you
+ 
+
+00:08:43.680 --> 00:08:46.070 align:start position:0%
+together with their completed tasks, you
+can<00:08:43.919><c> juggle</c><00:08:44.320><c> that</c><00:08:44.560><c> merging</c><00:08:45.120><c> correctly.</c><00:08:45.839><c> This</c>
+
+00:08:46.070 --> 00:08:46.080 align:start position:0%
+can juggle that merging correctly. This
+ 
+
+00:08:46.080 --> 00:08:48.310 align:start position:0%
+can juggle that merging correctly. This
+has<00:08:46.240><c> the</c><00:08:46.399><c> same</c><00:08:46.640><c> parallelization</c><00:08:47.519><c> of</c><00:08:47.920><c> level</c>
+
+00:08:48.310 --> 00:08:48.320 align:start position:0%
+has the same parallelization of level
+ 
+
+00:08:48.320 --> 00:08:50.150 align:start position:0%
+has the same parallelization of level
+four,<00:08:48.720><c> but</c><00:08:49.040><c> the</c><00:08:49.200><c> developer</c><00:08:49.600><c> isn't</c><00:08:49.920><c> watching</c>
+
+00:08:50.150 --> 00:08:50.160 align:start position:0%
+four, but the developer isn't watching
+ 
+
+00:08:50.160 --> 00:08:52.470 align:start position:0%
+four, but the developer isn't watching
+anymore.<00:08:50.640><c> The</c><00:08:50.800><c> developer</c><00:08:51.200><c> isn't</c><00:08:51.760><c> needed</c><00:08:52.160><c> as</c>
+
+00:08:52.470 --> 00:08:52.480 align:start position:0%
+anymore. The developer isn't needed as
+ 
+
+00:08:52.480 --> 00:08:55.190 align:start position:0%
+anymore. The developer isn't needed as
+much<00:08:52.720><c> in</c><00:08:53.040><c> this</c><00:08:53.519><c> specific</c><00:08:54.080><c> task.</c><00:08:54.880><c> So,</c><00:08:55.040><c> you</c><00:08:55.120><c> have</c>
+
+00:08:55.190 --> 00:08:55.200 align:start position:0%
+much in this specific task. So, you have
+ 
+
+00:08:55.200 --> 00:08:57.110 align:start position:0%
+much in this specific task. So, you have
+an<00:08:55.360><c> orchestration</c><00:08:55.920><c> agent</c><00:08:56.560><c> that</c><00:08:56.880><c> is</c>
+
+00:08:57.110 --> 00:08:57.120 align:start position:0%
+an orchestration agent that is
+ 
+
+00:08:57.120 --> 00:08:58.870 align:start position:0%
+an orchestration agent that is
+coordinating<00:08:57.680><c> all</c><00:08:57.920><c> of</c><00:08:58.080><c> the</c><00:08:58.240><c> different</c><00:08:58.560><c> tasks</c>
+
+00:08:58.870 --> 00:08:58.880 align:start position:0%
+coordinating all of the different tasks
+ 
+
+00:08:58.880 --> 00:09:00.710 align:start position:0%
+coordinating all of the different tasks
+that<00:08:59.120><c> you</c><00:08:59.279><c> want</c><00:08:59.360><c> to</c><00:08:59.519><c> work</c><00:08:59.680><c> on.</c><00:09:00.240><c> let</c><00:09:00.480><c> me</c><00:09:00.560><c> be</c>
+
+00:09:00.710 --> 00:09:00.720 align:start position:0%
+that you want to work on. let me be
+ 
+
+00:09:00.720 --> 00:09:03.030 align:start position:0%
+that you want to work on. let me be
+clear,<00:09:01.120><c> requires</c><00:09:01.519><c> a</c><00:09:01.839><c> very</c><00:09:02.240><c> high</c><00:09:02.560><c> amount</c><00:09:02.800><c> of</c>
+
+00:09:03.030 --> 00:09:03.040 align:start position:0%
+clear, requires a very high amount of
+ 
+
+00:09:03.040 --> 00:09:05.350 align:start position:0%
+clear, requires a very high amount of
+trust<00:09:03.360><c> in</c><00:09:03.600><c> your</c><00:09:03.839><c> system,</c><00:09:04.640><c> which</c><00:09:04.880><c> means</c><00:09:05.120><c> that</c>
+
+00:09:05.350 --> 00:09:05.360 align:start position:0%
+trust in your system, which means that
+ 
+
+00:09:05.360 --> 00:09:06.550 align:start position:0%
+trust in your system, which means that
+you<00:09:05.600><c> have</c><00:09:05.680><c> to</c><00:09:05.839><c> think</c><00:09:06.000><c> about</c><00:09:06.160><c> what</c><00:09:06.399><c> your</c>
+
+00:09:06.550 --> 00:09:06.560 align:start position:0%
+you have to think about what your
+ 
+
+00:09:06.560 --> 00:09:08.470 align:start position:0%
+you have to think about what your
+codebase<00:09:07.120><c> looks</c><00:09:07.360><c> like</c><00:09:07.519><c> and</c><00:09:07.760><c> how</c><00:09:08.080><c> you</c><00:09:08.320><c> can</c>
+
+00:09:08.470 --> 00:09:08.480 align:start position:0%
+codebase looks like and how you can
+ 
+
+00:09:08.480 --> 00:09:10.710 align:start position:0%
+codebase looks like and how you can
+place<00:09:08.800><c> more</c><00:09:09.040><c> trust</c><00:09:09.360><c> into</c><00:09:09.680><c> agents.</c><00:09:10.480><c> That's</c>
+
+00:09:10.710 --> 00:09:10.720 align:start position:0%
+place more trust into agents. That's
+ 
+
+00:09:10.720 --> 00:09:11.910 align:start position:0%
+place more trust into agents. That's
+going<00:09:10.800><c> to</c><00:09:10.959><c> look</c><00:09:11.120><c> different</c><00:09:11.360><c> for</c><00:09:11.600><c> every</c>
+
+00:09:11.910 --> 00:09:11.920 align:start position:0%
+going to look different for every
+ 
+
+00:09:11.920 --> 00:09:14.310 align:start position:0%
+going to look different for every
+codebase,<00:09:12.560><c> every</c><00:09:12.800><c> project,</c><00:09:13.360><c> every</c><00:09:13.600><c> team.</c><00:09:14.160><c> So,</c>
+
+00:09:14.310 --> 00:09:14.320 align:start position:0%
+codebase, every project, every team. So,
+ 
+
+00:09:14.320 --> 00:09:16.470 align:start position:0%
+codebase, every project, every team. So,
+there's<00:09:14.560><c> no</c><00:09:14.800><c> one-izefits-all</c><00:09:15.760><c> for</c><00:09:15.920><c> this.</c>
+
+00:09:16.470 --> 00:09:16.480 align:start position:0%
+there's no one-izefits-all for this.
+ 
+
+00:09:16.480 --> 00:09:18.150 align:start position:0%
+there's no one-izefits-all for this.
+There<00:09:16.640><c> are</c><00:09:16.880><c> systems</c><00:09:17.200><c> that</c><00:09:17.440><c> try</c><00:09:17.680><c> to</c><00:09:17.839><c> do</c><00:09:17.920><c> that,</c>
+
+00:09:18.150 --> 00:09:18.160 align:start position:0%
+There are systems that try to do that,
+ 
+
+00:09:18.160 --> 00:09:20.389 align:start position:0%
+There are systems that try to do that,
+but<00:09:18.480><c> at</c><00:09:18.640><c> the</c><00:09:18.800><c> end</c><00:09:18.880><c> of</c><00:09:18.959><c> the</c><00:09:19.120><c> day,</c><00:09:19.760><c> you</c><00:09:20.000><c> as</c><00:09:20.240><c> a</c>
+
+00:09:20.389 --> 00:09:20.399 align:start position:0%
+but at the end of the day, you as a
+ 
+
+00:09:20.399 --> 00:09:22.550 align:start position:0%
+but at the end of the day, you as a
+developer<00:09:20.959><c> have</c><00:09:21.120><c> to</c><00:09:21.279><c> decide</c><00:09:21.760><c> what</c><00:09:22.160><c> placing</c>
+
+00:09:22.550 --> 00:09:22.560 align:start position:0%
+developer have to decide what placing
+ 
+
+00:09:22.560 --> 00:09:24.150 align:start position:0%
+developer have to decide what placing
+trust<00:09:22.800><c> in</c><00:09:23.040><c> your</c><00:09:23.200><c> agents</c><00:09:23.600><c> actually</c><00:09:23.920><c> looks</c>
+
+00:09:24.150 --> 00:09:24.160 align:start position:0%
+trust in your agents actually looks
+ 
+
+00:09:24.160 --> 00:09:25.990 align:start position:0%
+trust in your agents actually looks
+like.<00:09:24.320><c> And</c><00:09:24.560><c> let's</c><00:09:24.800><c> be</c><00:09:24.880><c> very</c><00:09:25.120><c> clear</c><00:09:25.360><c> here.</c><00:09:25.839><c> If</c>
+
+00:09:25.990 --> 00:09:26.000 align:start position:0%
+like. And let's be very clear here. If
+ 
+
+00:09:26.000 --> 00:09:27.509 align:start position:0%
+like. And let's be very clear here. If
+you<00:09:26.160><c> don't</c><00:09:26.320><c> set</c><00:09:26.480><c> this</c><00:09:26.640><c> up</c><00:09:26.800><c> properly,</c><00:09:27.279><c> it's</c>
+
+00:09:27.509 --> 00:09:27.519 align:start position:0%
+you don't set this up properly, it's
+ 
+
+00:09:27.519 --> 00:09:29.430 align:start position:0%
+you don't set this up properly, it's
+very<00:09:27.839><c> easy</c><00:09:28.080><c> for</c><00:09:28.320><c> a</c><00:09:28.560><c> system</c><00:09:28.720><c> like</c><00:09:28.959><c> this</c><00:09:29.120><c> to</c><00:09:29.279><c> go</c>
+
+00:09:29.430 --> 00:09:29.440 align:start position:0%
+very easy for a system like this to go
+ 
+
+00:09:29.440 --> 00:09:32.150 align:start position:0%
+very easy for a system like this to go
+ary<00:09:30.160><c> and</c><00:09:30.399><c> for</c><00:09:30.640><c> you</c><00:09:30.800><c> to</c><00:09:31.040><c> lose</c><00:09:31.279><c> all</c><00:09:31.519><c> control</c><00:09:31.920><c> over</c>
+
+00:09:32.150 --> 00:09:32.160 align:start position:0%
+ary and for you to lose all control over
+ 
+
+00:09:32.160 --> 00:09:34.630 align:start position:0%
+ary and for you to lose all control over
+your<00:09:32.480><c> system.</c><00:09:33.600><c> Let's</c><00:09:33.839><c> take</c><00:09:34.000><c> a</c><00:09:34.160><c> look</c><00:09:34.240><c> at</c><00:09:34.399><c> what</c>
+
+00:09:34.630 --> 00:09:34.640 align:start position:0%
+your system. Let's take a look at what
+ 
+
+00:09:34.640 --> 00:09:36.949 align:start position:0%
+your system. Let's take a look at what
+this<00:09:34.800><c> looks</c><00:09:35.040><c> like</c><00:09:35.120><c> in</c><00:09:35.360><c> the</c><00:09:35.519><c> code.</c><00:09:36.320><c> So</c><00:09:36.640><c> here</c><00:09:36.800><c> I</c>
+
+00:09:36.949 --> 00:09:36.959 align:start position:0%
+this looks like in the code. So here I
+ 
+
+00:09:36.959 --> 00:09:38.790 align:start position:0%
+this looks like in the code. So here I
+am.<00:09:37.120><c> I</c><00:09:37.279><c> have</c><00:09:37.360><c> a</c><00:09:37.440><c> GitHub</c><00:09:37.839><c> issue</c><00:09:38.160><c> that</c><00:09:38.399><c> I</c><00:09:38.560><c> want</c><00:09:38.640><c> to</c>
+
+00:09:38.790 --> 00:09:38.800 align:start position:0%
+am. I have a GitHub issue that I want to
+ 
+
+00:09:38.800 --> 00:09:41.269 align:start position:0%
+am. I have a GitHub issue that I want to
+work<00:09:38.959><c> on.</c><00:09:39.519><c> It's</c><00:09:39.760><c> number</c><00:09:40.080><c> 86</c><00:09:40.720><c> here.</c><00:09:40.959><c> So</c><00:09:41.120><c> what</c>
+
+00:09:41.269 --> 00:09:41.279 align:start position:0%
+work on. It's number 86 here. So what
+ 
+
+00:09:41.279 --> 00:09:43.430 align:start position:0%
+work on. It's number 86 here. So what
+I'm<00:09:41.440><c> going</c><00:09:41.519><c> to</c><00:09:41.600><c> do</c><00:09:41.760><c> is</c><00:09:42.000><c> head</c><00:09:42.240><c> back</c><00:09:42.480><c> into</c><00:09:43.040><c> the</c>
+
+00:09:43.430 --> 00:09:43.440 align:start position:0%
+I'm going to do is head back into the
+ 
+
+00:09:43.440 --> 00:09:45.269 align:start position:0%
+I'm going to do is head back into the
+codebase.<00:09:44.080><c> This</c><00:09:44.240><c> is</c><00:09:44.320><c> the</c><00:09:44.480><c> same</c><00:09:44.640><c> codebase</c><00:09:45.120><c> that</c>
+
+00:09:45.269 --> 00:09:45.279 align:start position:0%
+codebase. This is the same codebase that
+ 
+
+00:09:45.279 --> 00:09:47.269 align:start position:0%
+codebase. This is the same codebase that
+I've<00:09:45.440><c> already</c><00:09:45.600><c> been</c><00:09:45.760><c> working</c><00:09:45.920><c> in.</c><00:09:46.640><c> This</c><00:09:46.880><c> is</c><00:09:47.040><c> a</c>
+
+00:09:47.269 --> 00:09:47.279 align:start position:0%
+I've already been working in. This is a
+ 
+
+00:09:47.279 --> 00:09:49.030 align:start position:0%
+I've already been working in. This is a
+different<00:09:47.680><c> task</c><00:09:48.000><c> that</c><00:09:48.240><c> I'm</c><00:09:48.480><c> passing</c><00:09:48.720><c> off</c><00:09:48.880><c> to</c>
+
+00:09:49.030 --> 00:09:49.040 align:start position:0%
+different task that I'm passing off to
+ 
+
+00:09:49.040 --> 00:09:51.430 align:start position:0%
+different task that I'm passing off to
+the<00:09:49.120><c> agent.</c><00:09:50.000><c> And</c><00:09:50.480><c> this</c><00:09:50.720><c> is</c><00:09:50.959><c> going</c><00:09:51.040><c> to</c><00:09:51.200><c> look</c>
+
+00:09:51.430 --> 00:09:51.440 align:start position:0%
+the agent. And this is going to look
+ 
+
+00:09:51.440 --> 00:09:53.910 align:start position:0%
+the agent. And this is going to look
+different<00:09:51.760><c> than</c><00:09:52.160><c> a</c><00:09:52.480><c> typical</c><00:09:53.279><c> cloud</c><00:09:53.600><c> code</c>
+
+00:09:53.910 --> 00:09:53.920 align:start position:0%
+different than a typical cloud code
+ 
+
+00:09:53.920 --> 00:09:56.310 align:start position:0%
+different than a typical cloud code
+session<00:09:54.560><c> because</c><00:09:54.880><c> right</c><00:09:55.120><c> away</c><00:09:55.440><c> I'm</c><00:09:55.760><c> using</c><00:09:56.000><c> a</c>
+
+00:09:56.310 --> 00:09:56.320 align:start position:0%
+session because right away I'm using a
+ 
+
+00:09:56.320 --> 00:09:58.790 align:start position:0%
+session because right away I'm using a
+custom<00:09:56.800><c> orchestration</c><00:09:57.600><c> system.</c><00:09:58.399><c> The</c><00:09:58.640><c> system</c>
+
+00:09:58.790 --> 00:09:58.800 align:start position:0%
+custom orchestration system. The system
+ 
+
+00:09:58.800 --> 00:10:00.630 align:start position:0%
+custom orchestration system. The system
+I'm<00:09:59.040><c> using</c><00:09:59.279><c> right</c><00:09:59.440><c> now</c><00:09:59.519><c> is</c><00:09:59.839><c> Overstory.</c><00:10:00.480><c> If</c>
+
+00:10:00.630 --> 00:10:00.640 align:start position:0%
+I'm using right now is Overstory. If
+ 
+
+00:10:00.640 --> 00:10:02.310 align:start position:0%
+I'm using right now is Overstory. If
+you're<00:10:00.800><c> not</c><00:10:00.959><c> familiar</c><00:10:01.200><c> with</c><00:10:01.360><c> Overstory,</c><00:10:02.240><c> it's</c>
+
+00:10:02.310 --> 00:10:02.320 align:start position:0%
+you're not familiar with Overstory, it's
+ 
+
+00:10:02.320 --> 00:10:04.070 align:start position:0%
+you're not familiar with Overstory, it's
+a<00:10:02.560><c> project</c><00:10:02.800><c> I</c><00:10:03.040><c> built.</c><00:10:03.360><c> I'll</c><00:10:03.519><c> link</c><00:10:03.680><c> it</c><00:10:03.839><c> down</c>
+
+00:10:04.070 --> 00:10:04.080 align:start position:0%
+a project I built. I'll link it down
+ 
+
+00:10:04.080 --> 00:10:06.150 align:start position:0%
+a project I built. I'll link it down
+below,<00:10:04.640><c> but</c><00:10:04.880><c> it's</c><00:10:05.040><c> an</c><00:10:05.200><c> agent</c><00:10:05.519><c> orchestration</c>
+
+00:10:06.150 --> 00:10:06.160 align:start position:0%
+below, but it's an agent orchestration
+ 
+
+00:10:06.160 --> 00:10:09.110 align:start position:0%
+below, but it's an agent orchestration
+system.<00:10:06.800><c> So,</c><00:10:07.279><c> what</c><00:10:07.519><c> I'm</c><00:10:07.680><c> going</c><00:10:07.760><c> to</c><00:10:07.920><c> do</c><00:10:08.640><c> is</c><00:10:08.800><c> I'll</c>
+
+00:10:09.110 --> 00:10:09.120 align:start position:0%
+system. So, what I'm going to do is I'll
+ 
+
+00:10:09.120 --> 00:10:11.030 align:start position:0%
+system. So, what I'm going to do is I'll
+run<00:10:09.360><c> this</c><00:10:09.600><c> Overstory</c><00:10:10.240><c> coordinator</c><00:10:10.800><c> start</c>
+
+00:10:11.030 --> 00:10:11.040 align:start position:0%
+run this Overstory coordinator start
+ 
+
+00:10:11.040 --> 00:10:13.269 align:start position:0%
+run this Overstory coordinator start
+command.<00:10:12.320><c> And</c><00:10:12.480><c> what's</c><00:10:12.720><c> going</c><00:10:12.880><c> to</c><00:10:12.959><c> happen</c><00:10:13.120><c> is</c>
+
+00:10:13.269 --> 00:10:13.279 align:start position:0%
+command. And what's going to happen is
+ 
+
+00:10:13.279 --> 00:10:15.030 align:start position:0%
+command. And what's going to happen is
+we're<00:10:13.440><c> going</c><00:10:13.440><c> to</c><00:10:13.600><c> get</c><00:10:13.680><c> a</c><00:10:13.760><c> cloud</c><00:10:14.079><c> code</c><00:10:14.320><c> session</c>
+
+00:10:15.030 --> 00:10:15.040 align:start position:0%
+we're going to get a cloud code session
+ 
+
+00:10:15.040 --> 00:10:16.550 align:start position:0%
+we're going to get a cloud code session
+that<00:10:15.279><c> looks</c><00:10:15.519><c> very</c><00:10:15.760><c> similar</c><00:10:16.000><c> to</c><00:10:16.240><c> any</c><00:10:16.399><c> other</c>
+
+00:10:16.550 --> 00:10:16.560 align:start position:0%
+that looks very similar to any other
+ 
+
+00:10:16.560 --> 00:10:18.069 align:start position:0%
+that looks very similar to any other
+cloud<00:10:16.880><c> code</c><00:10:17.040><c> session</c><00:10:17.279><c> you're</c><00:10:17.519><c> running.</c>
+
+00:10:18.069 --> 00:10:18.079 align:start position:0%
+cloud code session you're running.
+ 
+
+00:10:18.079 --> 00:10:20.230 align:start position:0%
+cloud code session you're running.
+However,<00:10:18.480><c> this</c><00:10:18.640><c> cloud</c><00:10:18.959><c> code</c><00:10:19.200><c> session</c><00:10:19.680><c> acts</c><00:10:20.000><c> as</c>
+
+00:10:20.230 --> 00:10:20.240 align:start position:0%
+However, this cloud code session acts as
+ 
+
+00:10:20.240 --> 00:10:22.790 align:start position:0%
+However, this cloud code session acts as
+the<00:10:20.720><c> coordinator</c><00:10:21.360><c> or</c><00:10:21.680><c> the</c><00:10:21.920><c> orchestrator</c><00:10:22.480><c> in</c>
+
+00:10:22.790 --> 00:10:22.800 align:start position:0%
+the coordinator or the orchestrator in
+ 
+
+00:10:22.800 --> 00:10:25.190 align:start position:0%
+the coordinator or the orchestrator in
+my<00:10:22.959><c> case.</c><00:10:23.839><c> And</c><00:10:24.000><c> what</c><00:10:24.160><c> I'll</c><00:10:24.399><c> do</c><00:10:24.560><c> here</c><00:10:24.720><c> is</c><00:10:24.959><c> I'm</c>
+
+00:10:25.190 --> 00:10:25.200 align:start position:0%
+my case. And what I'll do here is I'm
+ 
+
+00:10:25.200 --> 00:10:27.190 align:start position:0%
+my case. And what I'll do here is I'm
+just<00:10:25.440><c> going</c><00:10:25.519><c> to</c><00:10:25.760><c> pass</c><00:10:26.079><c> this</c><00:10:26.560><c> orchestration</c>
+
+00:10:27.190 --> 00:10:27.200 align:start position:0%
+just going to pass this orchestration
+ 
+
+00:10:27.200 --> 00:10:30.389 align:start position:0%
+just going to pass this orchestration
+system,<00:10:27.600><c> the</c><00:10:27.920><c> GitHub</c><00:10:28.320><c> issue</c><00:10:28.640><c> number</c><00:10:28.959><c> 86.</c><00:10:30.000><c> And</c>
+
+00:10:30.389 --> 00:10:30.399 align:start position:0%
+system, the GitHub issue number 86. And
+ 
+
+00:10:30.399 --> 00:10:31.990 align:start position:0%
+system, the GitHub issue number 86. And
+the<00:10:30.640><c> coordinator</c><00:10:31.120><c> is</c><00:10:31.279><c> going</c><00:10:31.360><c> to</c><00:10:31.519><c> take</c><00:10:31.680><c> it</c><00:10:31.839><c> from</c>
+
+00:10:31.990 --> 00:10:32.000 align:start position:0%
+the coordinator is going to take it from
+ 
+
+00:10:32.000 --> 00:10:34.949 align:start position:0%
+the coordinator is going to take it from
+there.<00:10:32.640><c> I</c><00:10:33.040><c> no</c><00:10:33.360><c> longer</c><00:10:34.079><c> have</c><00:10:34.240><c> to</c><00:10:34.399><c> be</c><00:10:34.560><c> in</c><00:10:34.720><c> the</c>
+
+00:10:34.949 --> 00:10:34.959 align:start position:0%
+there. I no longer have to be in the
+ 
+
+00:10:34.959 --> 00:10:37.910 align:start position:0%
+there. I no longer have to be in the
+loop<00:10:35.200><c> for</c><00:10:35.519><c> this</c><00:10:35.760><c> entire</c><00:10:36.160><c> system</c><00:10:36.640><c> to</c><00:10:36.959><c> go</c><00:10:37.519><c> end</c><00:10:37.760><c> to</c>
+
+00:10:37.910 --> 00:10:37.920 align:start position:0%
+loop for this entire system to go end to
+ 
+
+00:10:37.920 --> 00:10:41.190 align:start position:0%
+loop for this entire system to go end to
+end<00:10:38.240><c> on</c><00:10:38.560><c> fixing</c><00:10:38.959><c> this</c><00:10:39.279><c> problem.</c><00:10:40.480><c> So</c><00:10:40.959><c> to</c>
+
+00:10:41.190 --> 00:10:41.200 align:start position:0%
+end on fixing this problem. So to
+ 
+
+00:10:41.200 --> 00:10:43.190 align:start position:0%
+end on fixing this problem. So to
+monitor<00:10:41.600><c> this,</c><00:10:42.000><c> what</c><00:10:42.160><c> I</c><00:10:42.320><c> can</c><00:10:42.399><c> do</c><00:10:42.560><c> is</c><00:10:42.720><c> open</c><00:10:42.959><c> up</c>
+
+00:10:43.190 --> 00:10:43.200 align:start position:0%
+monitor this, what I can do is open up
+ 
+
+00:10:43.200 --> 00:10:44.949 align:start position:0%
+monitor this, what I can do is open up
+Overstories<00:10:43.920><c> dashboard.</c><00:10:44.399><c> So</c><00:10:44.640><c> we</c><00:10:44.800><c> can</c><00:10:44.880><c> see</c>
+
+00:10:44.949 --> 00:10:44.959 align:start position:0%
+Overstories dashboard. So we can see
+ 
+
+00:10:44.959 --> 00:10:47.030 align:start position:0%
+Overstories dashboard. So we can see
+there's<00:10:45.279><c> already</c><00:10:45.440><c> a</c><00:10:45.600><c> lead</c><00:10:45.920><c> getting</c><00:10:46.160><c> to</c><00:10:46.399><c> work</c>
+
+00:10:47.030 --> 00:10:47.040 align:start position:0%
+there's already a lead getting to work
+ 
+
+00:10:47.040 --> 00:10:50.710 align:start position:0%
+there's already a lead getting to work
+on<00:10:47.440><c> this</c><00:10:47.760><c> specific</c><00:10:48.240><c> issue</c><00:10:49.360><c> and</c><00:10:50.480><c> this</c>
+
+00:10:50.710 --> 00:10:50.720 align:start position:0%
+on this specific issue and this
+ 
+
+00:10:50.720 --> 00:10:53.030 align:start position:0%
+on this specific issue and this
+delegation<00:10:51.360><c> is</c><00:10:51.600><c> still</c><00:10:51.839><c> happening.</c><00:10:52.560><c> The</c>
+
+00:10:53.030 --> 00:10:53.040 align:start position:0%
+delegation is still happening. The
+ 
+
+00:10:53.040 --> 00:10:54.870 align:start position:0%
+delegation is still happening. The
+building<00:10:53.440><c> is</c><00:10:53.680><c> still</c><00:10:53.920><c> happening.</c><00:10:54.480><c> All</c><00:10:54.640><c> of</c><00:10:54.720><c> the</c>
+
+00:10:54.870 --> 00:10:54.880 align:start position:0%
+building is still happening. All of the
+ 
+
+00:10:54.880 --> 00:10:56.949 align:start position:0%
+building is still happening. All of the
+steps<00:10:55.200><c> I've</c><00:10:55.440><c> talked</c><00:10:55.680><c> about</c><00:10:55.839><c> in</c><00:10:56.240><c> previous</c>
+
+00:10:56.949 --> 00:10:56.959 align:start position:0%
+steps I've talked about in previous
+ 
+
+00:10:56.959 --> 00:10:59.110 align:start position:0%
+steps I've talked about in previous
+steps<00:10:57.279><c> of</c><00:10:57.360><c> the</c><00:10:57.519><c> ladder,</c><00:10:58.240><c> those</c><00:10:58.480><c> still</c><00:10:58.720><c> exist</c>
+
+00:10:59.110 --> 00:10:59.120 align:start position:0%
+steps of the ladder, those still exist
+ 
+
+00:10:59.120 --> 00:11:01.509 align:start position:0%
+steps of the ladder, those still exist
+here.<00:10:59.760><c> It's</c><00:10:59.920><c> just</c><00:11:00.160><c> now</c><00:11:00.480><c> there</c><00:11:00.720><c> is</c><00:11:00.880><c> a</c><00:11:01.200><c> much</c>
+
+00:11:01.509 --> 00:11:01.519 align:start position:0%
+here. It's just now there is a much
+ 
+
+00:11:01.519 --> 00:11:03.910 align:start position:0%
+here. It's just now there is a much
+higher<00:11:02.000><c> degree</c><00:11:02.320><c> of</c><00:11:02.560><c> coordination</c><00:11:03.120><c> happening.</c>
+
+00:11:03.910 --> 00:11:03.920 align:start position:0%
+higher degree of coordination happening.
+ 
+
+00:11:03.920 --> 00:11:05.350 align:start position:0%
+higher degree of coordination happening.
+If<00:11:04.160><c> you're</c><00:11:04.399><c> interested</c><00:11:04.640><c> in</c><00:11:04.800><c> what</c><00:11:05.040><c> this</c><00:11:05.200><c> looks</c>
+
+00:11:05.350 --> 00:11:05.360 align:start position:0%
+If you're interested in what this looks
+ 
+
+00:11:05.360 --> 00:11:07.269 align:start position:0%
+If you're interested in what this looks
+like<00:11:05.519><c> in</c><00:11:05.839><c> actual</c><00:11:06.240><c> code,</c><00:11:06.640><c> I'll</c><00:11:06.880><c> give</c><00:11:06.959><c> you</c><00:11:07.120><c> a</c>
+
+00:11:07.269 --> 00:11:07.279 align:start position:0%
+like in actual code, I'll give you a
+ 
+
+00:11:07.279 --> 00:11:09.190 align:start position:0%
+like in actual code, I'll give you a
+quick<00:11:07.600><c> overview</c><00:11:08.000><c> here.</c><00:11:08.480><c> But</c><00:11:08.640><c> really,</c><00:11:08.880><c> at</c><00:11:09.120><c> the</c>
+
+00:11:09.190 --> 00:11:09.200 align:start position:0%
+quick overview here. But really, at the
+ 
+
+00:11:09.200 --> 00:11:10.230 align:start position:0%
+quick overview here. But really, at the
+end<00:11:09.279><c> of</c><00:11:09.360><c> the</c><00:11:09.440><c> day,</c><00:11:09.680><c> you're</c><00:11:09.839><c> going</c><00:11:09.920><c> to</c><00:11:10.000><c> have</c><00:11:10.079><c> to</c>
+
+00:11:10.230 --> 00:11:10.240 align:start position:0%
+end of the day, you're going to have to
+ 
+
+00:11:10.240 --> 00:11:12.150 align:start position:0%
+end of the day, you're going to have to
+go<00:11:10.399><c> and</c><00:11:10.800><c> look</c><00:11:10.959><c> at</c><00:11:11.120><c> this</c><00:11:11.360><c> project</c><00:11:11.760><c> yourself</c>
+
+00:11:12.150 --> 00:11:12.160 align:start position:0%
+go and look at this project yourself
+ 
+
+00:11:12.160 --> 00:11:14.790 align:start position:0%
+go and look at this project yourself
+because<00:11:12.959><c> it's</c><00:11:13.279><c> so</c><00:11:13.600><c> much</c><00:11:13.920><c> happening</c><00:11:14.320><c> that</c><00:11:14.560><c> it's</c>
+
+00:11:14.790 --> 00:11:14.800 align:start position:0%
+because it's so much happening that it's
+ 
+
+00:11:14.800 --> 00:11:16.790 align:start position:0%
+because it's so much happening that it's
+hard<00:11:14.959><c> to</c><00:11:15.279><c> cover</c><00:11:15.519><c> in</c><00:11:15.680><c> a</c><00:11:15.920><c> single</c><00:11:16.160><c> video.</c><00:11:16.560><c> But</c>
+
+00:11:16.790 --> 00:11:16.800 align:start position:0%
+hard to cover in a single video. But
+ 
+
+00:11:16.800 --> 00:11:18.550 align:start position:0%
+hard to cover in a single video. But
+essentially,<00:11:17.120><c> Overstory</c><00:11:17.839><c> operates</c><00:11:18.320><c> with</c>
+
+00:11:18.550 --> 00:11:18.560 align:start position:0%
+essentially, Overstory operates with
+ 
+
+00:11:18.560 --> 00:11:21.350 align:start position:0%
+essentially, Overstory operates with
+isolated<00:11:19.120><c> work</c><00:11:19.360><c> trees.</c><00:11:19.680><c> So,</c><00:11:19.839><c> we</c><00:11:20.000><c> can</c><00:11:20.160><c> see</c><00:11:20.399><c> this</c>
+
+00:11:21.350 --> 00:11:21.360 align:start position:0%
+isolated work trees. So, we can see this
+ 
+
+00:11:21.360 --> 00:11:22.870 align:start position:0%
+isolated work trees. So, we can see this
+lead<00:11:21.600><c> agent</c><00:11:21.920><c> here,</c><00:11:22.079><c> which</c><00:11:22.320><c> is</c><00:11:22.399><c> like</c><00:11:22.480><c> a</c><00:11:22.640><c> sub</c>
+
+00:11:22.870 --> 00:11:22.880 align:start position:0%
+lead agent here, which is like a sub
+ 
+
+00:11:22.880 --> 00:11:24.790 align:start position:0%
+lead agent here, which is like a sub
+agent,<00:11:23.200><c> is</c><00:11:23.440><c> now</c><00:11:23.600><c> working</c><00:11:23.839><c> in</c><00:11:24.000><c> an</c><00:11:24.240><c> isolated</c>
+
+00:11:24.790 --> 00:11:24.800 align:start position:0%
+agent, is now working in an isolated
+ 
+
+00:11:24.800 --> 00:11:27.269 align:start position:0%
+agent, is now working in an isolated
+version<00:11:25.120><c> of</c><00:11:25.279><c> the</c><00:11:25.519><c> codebase.</c><00:11:26.720><c> And</c>
+
+00:11:27.269 --> 00:11:27.279 align:start position:0%
+version of the codebase. And
+ 
+
+00:11:27.279 --> 00:11:29.670 align:start position:0%
+version of the codebase. And
+additionally,<00:11:27.839><c> we</c><00:11:28.079><c> have</c><00:11:28.800><c> a</c><00:11:29.040><c> whole</c><00:11:29.279><c> bunch</c><00:11:29.440><c> of</c>
+
+00:11:29.670 --> 00:11:29.680 align:start position:0%
+additionally, we have a whole bunch of
+ 
+
+00:11:29.680 --> 00:11:32.949 align:start position:0%
+additionally, we have a whole bunch of
+hooks<00:11:30.160><c> set</c><00:11:30.399><c> up</c><00:11:30.560><c> so</c><00:11:30.720><c> that</c><00:11:30.880><c> agents</c><00:11:31.440><c> are</c><00:11:32.560><c> very</c>
+
+00:11:32.949 --> 00:11:32.959 align:start position:0%
+hooks set up so that agents are very
+ 
+
+00:11:32.959 --> 00:11:35.670 align:start position:0%
+hooks set up so that agents are very
+clearly<00:11:33.600><c> using</c><00:11:34.000><c> the</c><00:11:34.560><c> patterns</c><00:11:35.040><c> that</c><00:11:35.279><c> we</c><00:11:35.519><c> want</c>
+
+00:11:35.670 --> 00:11:35.680 align:start position:0%
+clearly using the patterns that we want
+ 
+
+00:11:35.680 --> 00:11:37.750 align:start position:0%
+clearly using the patterns that we want
+them<00:11:35.839><c> to</c><00:11:36.000><c> be</c><00:11:36.240><c> using.</c><00:11:36.800><c> There</c><00:11:36.959><c> are</c><00:11:37.200><c> a</c><00:11:37.440><c> ton</c><00:11:37.600><c> of</c>
+
+00:11:37.750 --> 00:11:37.760 align:start position:0%
+them to be using. There are a ton of
+ 
+
+00:11:37.760 --> 00:11:39.590 align:start position:0%
+them to be using. There are a ton of
+guard<00:11:38.079><c> rails</c><00:11:38.399><c> set</c><00:11:38.480><c> up.</c><00:11:38.720><c> So,</c><00:11:38.959><c> not</c><00:11:39.120><c> only</c><00:11:39.279><c> do</c><00:11:39.440><c> we</c>
+
+00:11:39.590 --> 00:11:39.600 align:start position:0%
+guard rails set up. So, not only do we
+ 
+
+00:11:39.600 --> 00:11:41.829 align:start position:0%
+guard rails set up. So, not only do we
+have<00:11:39.680><c> these</c><00:11:40.000><c> custom</c><00:11:40.320><c> overstory</c><00:11:40.959><c> hooks,</c><00:11:41.680><c> we</c>
+
+00:11:41.829 --> 00:11:41.839 align:start position:0%
+have these custom overstory hooks, we
+ 
+
+00:11:41.839 --> 00:11:44.150 align:start position:0%
+have these custom overstory hooks, we
+also<00:11:42.079><c> have</c><00:11:42.320><c> several</c><00:11:42.800><c> cloud</c><00:11:43.200><c> code</c><00:11:43.360><c> hooks.</c><00:11:43.920><c> So,</c>
+
+00:11:44.150 --> 00:11:44.160 align:start position:0%
+also have several cloud code hooks. So,
+ 
+
+00:11:44.160 --> 00:11:46.870 align:start position:0%
+also have several cloud code hooks. So,
+we<00:11:44.399><c> can</c><00:11:44.480><c> see</c><00:11:44.720><c> there's</c><00:11:44.959><c> a</c><00:11:45.120><c> ton</c><00:11:45.360><c> of</c><00:11:45.600><c> different</c>
+
+00:11:46.870 --> 00:11:46.880 align:start position:0%
+we can see there's a ton of different
+ 
+
+00:11:46.880 --> 00:11:49.350 align:start position:0%
+we can see there's a ton of different
+hooks<00:11:47.279><c> that</c><00:11:47.440><c> will</c><00:11:47.680><c> block</c><00:11:48.000><c> commands</c><00:11:48.959><c> that</c><00:11:49.120><c> will</c>
+
+00:11:49.350 --> 00:11:49.360 align:start position:0%
+hooks that will block commands that will
+ 
+
+00:11:49.360 --> 00:11:51.670 align:start position:0%
+hooks that will block commands that will
+inform<00:11:50.160><c> agents</c><00:11:50.560><c> of</c><00:11:50.720><c> how</c><00:11:50.880><c> to</c><00:11:51.040><c> use</c><00:11:51.279><c> specific</c>
+
+00:11:51.670 --> 00:11:51.680 align:start position:0%
+inform agents of how to use specific
+ 
+
+00:11:51.680 --> 00:11:54.470 align:start position:0%
+inform agents of how to use specific
+commands.<00:11:52.800><c> And</c><00:11:52.959><c> this</c><00:11:53.200><c> is</c><00:11:53.360><c> all</c><00:11:53.680><c> by</c><00:11:54.000><c> design,</c>
+
+00:11:54.470 --> 00:11:54.480 align:start position:0%
+commands. And this is all by design,
+ 
+
+00:11:54.480 --> 00:11:56.870 align:start position:0%
+commands. And this is all by design,
+right?<00:11:54.720><c> We</c><00:11:54.959><c> want</c><00:11:55.120><c> to</c><00:11:55.279><c> make</c><00:11:55.440><c> sure</c><00:11:55.680><c> that</c><00:11:55.920><c> this</c>
+
+00:11:56.870 --> 00:11:56.880 align:start position:0%
+right? We want to make sure that this
+ 
+
+00:11:56.880 --> 00:11:59.190 align:start position:0%
+right? We want to make sure that this
+orchestration<00:11:57.519><c> agent</c><00:11:58.000><c> is</c><00:11:58.640><c> coordinating</c>
+
+00:11:59.190 --> 00:11:59.200 align:start position:0%
+orchestration agent is coordinating
+ 
+
+00:11:59.200 --> 00:12:01.110 align:start position:0%
+orchestration agent is coordinating
+everything<00:11:59.600><c> effectively</c><00:12:00.160><c> how</c><00:12:00.399><c> we</c><00:12:00.640><c> expect</c><00:12:00.880><c> it</c>
+
+00:12:01.110 --> 00:12:01.120 align:start position:0%
+everything effectively how we expect it
+ 
+
+00:12:01.120 --> 00:12:03.350 align:start position:0%
+everything effectively how we expect it
+to<00:12:01.279><c> be</c><00:12:01.360><c> coordinated.</c><00:12:02.320><c> Now,</c><00:12:02.480><c> as</c><00:12:02.720><c> these</c><00:12:02.959><c> agents</c>
+
+00:12:03.350 --> 00:12:03.360 align:start position:0%
+to be coordinated. Now, as these agents
+ 
+
+00:12:03.360 --> 00:12:05.269 align:start position:0%
+to be coordinated. Now, as these agents
+are<00:12:03.519><c> working,</c><00:12:03.839><c> I'll</c><00:12:04.160><c> try</c><00:12:04.320><c> and</c><00:12:04.640><c> highlight</c><00:12:05.040><c> a</c>
+
+00:12:05.269 --> 00:12:05.279 align:start position:0%
+are working, I'll try and highlight a
+ 
+
+00:12:05.279 --> 00:12:06.710 align:start position:0%
+are working, I'll try and highlight a
+bit<00:12:05.360><c> of</c><00:12:05.519><c> what's</c><00:12:05.920><c> happening</c><00:12:06.240><c> behind</c><00:12:06.560><c> the</c>
+
+00:12:06.710 --> 00:12:06.720 align:start position:0%
+bit of what's happening behind the
+ 
+
+00:12:06.720 --> 00:12:08.629 align:start position:0%
+bit of what's happening behind the
+scenes<00:12:06.959><c> for</c><00:12:07.200><c> these</c><00:12:07.440><c> agents.</c><00:12:08.079><c> So,</c><00:12:08.240><c> we</c><00:12:08.399><c> can</c><00:12:08.480><c> see</c>
+
+00:12:08.629 --> 00:12:08.639 align:start position:0%
+scenes for these agents. So, we can see
+ 
+
+00:12:08.639 --> 00:12:10.389 align:start position:0%
+scenes for these agents. So, we can see
+they<00:12:08.880><c> are</c><00:12:09.040><c> sending</c><00:12:09.440><c> mail</c><00:12:09.680><c> to</c><00:12:09.839><c> one</c><00:12:10.079><c> another.</c>
+
+00:12:10.389 --> 00:12:10.399 align:start position:0%
+they are sending mail to one another.
+ 
+
+00:12:10.399 --> 00:12:11.910 align:start position:0%
+they are sending mail to one another.
+So,<00:12:10.560><c> they're</c><00:12:10.880><c> having</c><00:12:11.200><c> inter</c><00:12:11.519><c> agent</c>
+
+00:12:11.910 --> 00:12:11.920 align:start position:0%
+So, they're having inter agent
+ 
+
+00:12:11.920 --> 00:12:14.550 align:start position:0%
+So, they're having inter agent
+communication.<00:12:13.040><c> Again,</c><00:12:13.519><c> I</c><00:12:13.760><c> have</c><00:12:14.000><c> only</c><00:12:14.320><c> sent</c>
+
+00:12:14.550 --> 00:12:14.560 align:start position:0%
+communication. Again, I have only sent
+ 
+
+00:12:14.560 --> 00:12:18.230 align:start position:0%
+communication. Again, I have only sent
+that<00:12:14.800><c> initial</c><00:12:15.200><c> prompt.</c><00:12:16.639><c> And</c><00:12:16.880><c> now</c><00:12:17.040><c> we</c><00:12:17.360><c> have</c><00:12:18.000><c> a</c>
+
+00:12:18.230 --> 00:12:18.240 align:start position:0%
+that initial prompt. And now we have a
+ 
+
+00:12:18.240 --> 00:12:19.430 align:start position:0%
+that initial prompt. And now we have a
+builder<00:12:18.560><c> agent</c><00:12:18.880><c> who's</c><00:12:19.200><c> actually</c>
+
+00:12:19.430 --> 00:12:19.440 align:start position:0%
+builder agent who's actually
+ 
+
+00:12:19.440 --> 00:12:21.509 align:start position:0%
+builder agent who's actually
+implementing<00:12:19.920><c> the</c><00:12:20.160><c> fix</c><00:12:20.639><c> after</c><00:12:20.959><c> this</c><00:12:21.200><c> lead</c>
+
+00:12:21.509 --> 00:12:21.519 align:start position:0%
+implementing the fix after this lead
+ 
+
+00:12:21.519 --> 00:12:24.150 align:start position:0%
+implementing the fix after this lead
+agent<00:12:21.920><c> scouted</c><00:12:22.399><c> it</c><00:12:22.560><c> out</c><00:12:22.800><c> and</c><00:12:23.120><c> planned</c><00:12:23.519><c> the</c><00:12:23.839><c> fix</c>
+
+00:12:24.150 --> 00:12:24.160 align:start position:0%
+agent scouted it out and planned the fix
+ 
+
+00:12:24.160 --> 00:12:26.629 align:start position:0%
+agent scouted it out and planned the fix
+that<00:12:24.399><c> the</c><00:12:24.560><c> builder</c><00:12:24.880><c> needs</c><00:12:25.120><c> to</c><00:12:25.279><c> implement.</c><00:12:26.320><c> We</c>
+
+00:12:26.629 --> 00:12:26.639 align:start position:0%
+that the builder needs to implement. We
+ 
+
+00:12:26.639 --> 00:12:29.750 align:start position:0%
+that the builder needs to implement. We
+have<00:12:27.519><c> begun</c><00:12:28.160><c> allowing</c><00:12:28.639><c> the</c><00:12:29.279><c> coordinator</c>
+
+00:12:29.750 --> 00:12:29.760 align:start position:0%
+have begun allowing the coordinator
+ 
+
+00:12:29.760 --> 00:12:32.389 align:start position:0%
+have begun allowing the coordinator
+agent<00:12:30.160><c> here</c><00:12:30.399><c> to</c><00:12:31.040><c> fully</c><00:12:31.360><c> go</c><00:12:31.600><c> endto-end</c><00:12:32.079><c> on</c><00:12:32.240><c> this</c>
+
+00:12:32.389 --> 00:12:32.399 align:start position:0%
+agent here to fully go endto-end on this
+ 
+
+00:12:32.399 --> 00:12:34.310 align:start position:0%
+agent here to fully go endto-end on this
+issue.<00:12:32.720><c> I</c><00:12:32.959><c> no</c><00:12:33.120><c> longer</c><00:12:33.360><c> have</c><00:12:33.519><c> to</c><00:12:33.680><c> look</c><00:12:33.920><c> at</c><00:12:34.079><c> the</c>
+
+00:12:34.310 --> 00:12:34.320 align:start position:0%
+issue. I no longer have to look at the
+ 
+
+00:12:34.320 --> 00:12:36.470 align:start position:0%
+issue. I no longer have to look at the
+code<00:12:34.560><c> in</c><00:12:34.800><c> the</c><00:12:34.959><c> files.</c><00:12:35.760><c> I</c><00:12:36.000><c> don't</c><00:12:36.079><c> have</c><00:12:36.240><c> to</c><00:12:36.399><c> do</c>
+
+00:12:36.470 --> 00:12:36.480 align:start position:0%
+code in the files. I don't have to do
+ 
+
+00:12:36.480 --> 00:12:38.870 align:start position:0%
+code in the files. I don't have to do
+any<00:12:36.639><c> of</c><00:12:36.800><c> that</c><00:12:37.040><c> as</c><00:12:37.279><c> the</c><00:12:37.440><c> developer</c><00:12:38.320><c> because</c><00:12:38.560><c> I</c>
+
+00:12:38.870 --> 00:12:38.880 align:start position:0%
+any of that as the developer because I
+ 
+
+00:12:38.880 --> 00:12:41.509 align:start position:0%
+any of that as the developer because I
+have<00:12:39.120><c> enough</c><00:12:39.440><c> trust</c><00:12:39.760><c> in</c><00:12:40.000><c> this</c><00:12:40.240><c> system</c><00:12:41.279><c> to</c>
+
+00:12:41.509 --> 00:12:41.519 align:start position:0%
+have enough trust in this system to
+ 
+
+00:12:41.519 --> 00:12:43.670 align:start position:0%
+have enough trust in this system to
+build<00:12:41.839><c> itself.</c><00:12:42.320><c> Now</c><00:12:42.560><c> let</c><00:12:42.639><c> me</c><00:12:42.800><c> be</c><00:12:42.959><c> clear.</c><00:12:43.519><c> This</c>
+
+00:12:43.670 --> 00:12:43.680 align:start position:0%
+build itself. Now let me be clear. This
+ 
+
+00:12:43.680 --> 00:12:45.670 align:start position:0%
+build itself. Now let me be clear. This
+is<00:12:43.839><c> overstory</c><00:12:44.399><c> dog</c><00:12:44.720><c> fooding</c><00:12:45.040><c> overstory,</c>
+
+00:12:45.670 --> 00:12:45.680 align:start position:0%
+is overstory dog fooding overstory,
+ 
+
+00:12:45.680 --> 00:12:47.990 align:start position:0%
+is overstory dog fooding overstory,
+right?<00:12:45.839><c> It's</c><00:12:46.079><c> working</c><00:12:46.320><c> on</c><00:12:46.480><c> its</c><00:12:46.639><c> own</c><00:12:46.800><c> codebase.</c>
+
+00:12:47.990 --> 00:12:48.000 align:start position:0%
+right? It's working on its own codebase.
+ 
+
+00:12:48.000 --> 00:12:50.949 align:start position:0%
+right? It's working on its own codebase.
+This<00:12:48.399><c> is</c><00:12:48.800><c> a</c><00:12:49.200><c> process</c><00:12:49.600><c> that</c><00:12:49.920><c> has</c><00:12:50.160><c> taken</c><00:12:50.560><c> quite</c><00:12:50.800><c> a</c>
+
+00:12:50.949 --> 00:12:50.959 align:start position:0%
+This is a process that has taken quite a
+ 
+
+00:12:50.959 --> 00:12:54.310 align:start position:0%
+This is a process that has taken quite a
+long<00:12:51.200><c> time</c><00:12:51.440><c> to</c><00:12:51.920><c> build</c><00:12:52.160><c> up.</c><00:12:52.959><c> So</c><00:12:53.760><c> you</c><00:12:54.000><c> can</c><00:12:54.079><c> think</c>
+
+00:12:54.310 --> 00:12:54.320 align:start position:0%
+long time to build up. So you can think
+ 
+
+00:12:54.320 --> 00:12:56.790 align:start position:0%
+long time to build up. So you can think
+that<00:12:54.639><c> every</c><00:12:54.959><c> agent</c><00:12:55.360><c> in</c><00:12:55.600><c> this</c><00:12:56.000><c> workflow</c><00:12:56.560><c> has</c>
+
+00:12:56.790 --> 00:12:56.800 align:start position:0%
+that every agent in this workflow has
+ 
+
+00:12:56.800 --> 00:12:59.269 align:start position:0%
+that every agent in this workflow has
+access<00:12:57.200><c> to</c><00:12:57.440><c> mulch</c><00:12:58.160><c> like</c><00:12:58.399><c> all</c><00:12:58.560><c> of</c><00:12:58.639><c> that</c><00:12:58.880><c> stored</c>
+
+00:12:59.269 --> 00:12:59.279 align:start position:0%
+access to mulch like all of that stored
+ 
+
+00:12:59.279 --> 00:13:01.590 align:start position:0%
+access to mulch like all of that stored
+expertise.<00:13:00.160><c> There's</c><00:13:00.720><c> specific</c><00:13:01.200><c> issue</c>
+
+00:13:01.590 --> 00:13:01.600 align:start position:0%
+expertise. There's specific issue
+ 
+
+00:13:01.600 --> 00:13:04.310 align:start position:0%
+expertise. There's specific issue
+tracking.<00:13:02.320><c> So</c><00:13:02.639><c> every</c><00:13:03.279><c> issue</c><00:13:03.600><c> that</c><00:13:03.760><c> the</c><00:13:03.920><c> agents</c>
+
+00:13:04.310 --> 00:13:04.320 align:start position:0%
+tracking. So every issue that the agents
+ 
+
+00:13:04.320 --> 00:13:06.230 align:start position:0%
+tracking. So every issue that the agents
+are<00:13:04.480><c> working</c><00:13:04.639><c> on</c><00:13:04.880><c> is</c><00:13:05.120><c> tracked.</c><00:13:05.760><c> We</c><00:13:06.000><c> can</c><00:13:06.160><c> see</c>
+
+00:13:06.230 --> 00:13:06.240 align:start position:0%
+are working on is tracked. We can see
+ 
+
+00:13:06.240 --> 00:13:08.389 align:start position:0%
+are working on is tracked. We can see
+the<00:13:06.480><c> coordinator</c><00:13:07.040><c> here</c><00:13:07.279><c> is</c><00:13:07.680><c> checking</c><00:13:08.000><c> on</c><00:13:08.160><c> the</c>
+
+00:13:08.389 --> 00:13:08.399 align:start position:0%
+the coordinator here is checking on the
+ 
+
+00:13:08.399 --> 00:13:11.110 align:start position:0%
+the coordinator here is checking on the
+status<00:13:08.639><c> of</c><00:13:08.880><c> the</c><00:13:09.040><c> rest</c><00:13:09.200><c> of</c><00:13:09.360><c> the</c><00:13:09.440><c> agents.</c><00:13:10.240><c> So,</c><00:13:10.880><c> as</c>
+
+00:13:11.110 --> 00:13:11.120 align:start position:0%
+status of the rest of the agents. So, as
+ 
+
+00:13:11.120 --> 00:13:13.350 align:start position:0%
+status of the rest of the agents. So, as
+it's<00:13:11.360><c> going,</c><00:13:11.839><c> it's</c><00:13:12.240><c> monitoring</c><00:13:12.800><c> to</c><00:13:13.120><c> make</c><00:13:13.200><c> sure</c>
+
+00:13:13.350 --> 00:13:13.360 align:start position:0%
+it's going, it's monitoring to make sure
+ 
+
+00:13:13.360 --> 00:13:15.269 align:start position:0%
+it's going, it's monitoring to make sure
+that<00:13:13.600><c> every</c><00:13:13.839><c> agent</c><00:13:14.240><c> is</c><00:13:14.399><c> aligned</c><00:13:14.800><c> with</c><00:13:15.040><c> what</c>
+
+00:13:15.269 --> 00:13:15.279 align:start position:0%
+that every agent is aligned with what
+ 
+
+00:13:15.279 --> 00:13:18.069 align:start position:0%
+that every agent is aligned with what
+I'm<00:13:15.519><c> expecting</c><00:13:15.920><c> it</c><00:13:16.160><c> to</c><00:13:16.320><c> be</c><00:13:16.480><c> doing.</c><00:13:17.040><c> And</c><00:13:17.680><c> like</c><00:13:17.920><c> I</c>
+
+00:13:18.069 --> 00:13:18.079 align:start position:0%
+I'm expecting it to be doing. And like I
+ 
+
+00:13:18.079 --> 00:13:19.750 align:start position:0%
+I'm expecting it to be doing. And like I
+said,<00:13:18.320><c> this</c><00:13:18.560><c> takes</c><00:13:18.800><c> a</c><00:13:18.959><c> tremendous</c><00:13:19.360><c> amount</c><00:13:19.600><c> of</c>
+
+00:13:19.750 --> 00:13:19.760 align:start position:0%
+said, this takes a tremendous amount of
+ 
+
+00:13:19.760 --> 00:13:22.069 align:start position:0%
+said, this takes a tremendous amount of
+trust.<00:13:20.480><c> This</c><00:13:20.720><c> is</c><00:13:20.959><c> Overstory</c><00:13:21.600><c> working</c><00:13:21.760><c> on</c><00:13:21.920><c> its</c>
+
+00:13:22.069 --> 00:13:22.079 align:start position:0%
+trust. This is Overstory working on its
+ 
+
+00:13:22.079 --> 00:13:23.829 align:start position:0%
+trust. This is Overstory working on its
+own<00:13:22.240><c> codebase.</c><00:13:22.720><c> So,</c><00:13:22.880><c> I've</c><00:13:23.200><c> set</c><00:13:23.360><c> this</c><00:13:23.600><c> system</c>
+
+00:13:23.829 --> 00:13:23.839 align:start position:0%
+own codebase. So, I've set this system
+ 
+
+00:13:23.839 --> 00:13:27.110 align:start position:0%
+own codebase. So, I've set this system
+up<00:13:24.079><c> to</c><00:13:24.480><c> be</c><00:13:24.720><c> very</c><00:13:25.120><c> good</c><00:13:25.279><c> at</c><00:13:25.600><c> working</c><00:13:25.839><c> on</c><00:13:26.079><c> itself.</c>
+
+00:13:27.110 --> 00:13:27.120 align:start position:0%
+up to be very good at working on itself.
+ 
+
+00:13:27.120 --> 00:13:28.870 align:start position:0%
+up to be very good at working on itself.
+The<00:13:27.360><c> thing</c><00:13:27.519><c> is,</c><00:13:27.839><c> if</c><00:13:28.079><c> you</c><00:13:28.240><c> are</c><00:13:28.399><c> building</c><00:13:28.639><c> a</c>
+
+00:13:28.870 --> 00:13:28.880 align:start position:0%
+The thing is, if you are building a
+ 
+
+00:13:28.880 --> 00:13:31.269 align:start position:0%
+The thing is, if you are building a
+system<00:13:29.120><c> like</c><00:13:29.360><c> this</c><00:13:29.680><c> in</c><00:13:29.920><c> your</c><00:13:30.160><c> codebase</c><00:13:30.800><c> or</c>
+
+00:13:31.269 --> 00:13:31.279 align:start position:0%
+system like this in your codebase or
+ 
+
+00:13:31.279 --> 00:13:32.629 align:start position:0%
+system like this in your codebase or
+using<00:13:31.600><c> a</c><00:13:31.760><c> system</c><00:13:32.000><c> like</c><00:13:32.160><c> this</c><00:13:32.320><c> in</c><00:13:32.480><c> your</c>
+
+00:13:32.629 --> 00:13:32.639 align:start position:0%
+using a system like this in your
+ 
+
+00:13:32.639 --> 00:13:34.949 align:start position:0%
+using a system like this in your
+codebase,<00:13:33.519><c> you</c><00:13:33.760><c> as</c><00:13:34.000><c> the</c><00:13:34.160><c> developer</c><00:13:34.639><c> have</c><00:13:34.800><c> to</c>
+
+00:13:34.949 --> 00:13:34.959 align:start position:0%
+codebase, you as the developer have to
+ 
+
+00:13:34.959 --> 00:13:36.629 align:start position:0%
+codebase, you as the developer have to
+really<00:13:35.279><c> understand</c><00:13:35.839><c> deeply</c><00:13:36.320><c> what's</c>
+
+00:13:36.629 --> 00:13:36.639 align:start position:0%
+really understand deeply what's
+ 
+
+00:13:36.639 --> 00:13:38.310 align:start position:0%
+really understand deeply what's
+happening<00:13:36.959><c> behind</c><00:13:37.200><c> the</c><00:13:37.440><c> scenes</c><00:13:37.680><c> here.</c>
+
+00:13:38.310 --> 00:13:38.320 align:start position:0%
+happening behind the scenes here.
+ 
+
+00:13:38.320 --> 00:13:40.470 align:start position:0%
+happening behind the scenes here.
+Without<00:13:38.639><c> that</c><00:13:38.880><c> deep</c><00:13:39.279><c> understanding,</c><00:13:40.160><c> you</c>
+
+00:13:40.470 --> 00:13:40.480 align:start position:0%
+Without that deep understanding, you
+ 
+
+00:13:40.480 --> 00:13:43.990 align:start position:0%
+Without that deep understanding, you
+cannot<00:13:41.040><c> place</c><00:13:41.360><c> trust</c><00:13:41.839><c> in</c><00:13:42.160><c> your</c><00:13:42.399><c> agents.</c><00:13:43.680><c> I</c>
+
+00:13:43.990 --> 00:13:44.000 align:start position:0%
+cannot place trust in your agents. I
+ 
+
+00:13:44.000 --> 00:13:46.150 align:start position:0%
+cannot place trust in your agents. I
+know<00:13:44.160><c> that</c><00:13:44.480><c> the</c><00:13:44.720><c> agents</c><00:13:45.120><c> that</c><00:13:45.360><c> I</c><00:13:45.600><c> have</c><00:13:45.760><c> set</c><00:13:45.920><c> up</c>
+
+00:13:46.150 --> 00:13:46.160 align:start position:0%
+know that the agents that I have set up
+ 
+
+00:13:46.160 --> 00:13:48.389 align:start position:0%
+know that the agents that I have set up
+here<00:13:46.480><c> that</c><00:13:46.720><c> the</c><00:13:47.279><c> system</c><00:13:47.519><c> that</c><00:13:47.760><c> I</c><00:13:47.920><c> have</c><00:13:48.079><c> set</c><00:13:48.240><c> up</c>
+
+00:13:48.389 --> 00:13:48.399 align:start position:0%
+here that the system that I have set up
+ 
+
+00:13:48.399 --> 00:13:50.710 align:start position:0%
+here that the system that I have set up
+here<00:13:48.880><c> will</c><00:13:49.279><c> 10</c><00:13:49.519><c> out</c><00:13:49.680><c> of</c><00:13:49.839><c> 10</c><00:13:50.079><c> times</c><00:13:50.399><c> write</c>
+
+00:13:50.710 --> 00:13:50.720 align:start position:0%
+here will 10 out of 10 times write
+ 
+
+00:13:50.720 --> 00:13:52.790 align:start position:0%
+here will 10 out of 10 times write
+better<00:13:50.959><c> code</c><00:13:51.200><c> than</c><00:13:51.440><c> I</c><00:13:51.600><c> ever</c><00:13:51.920><c> could.</c><00:13:52.399><c> And</c><00:13:52.560><c> it's</c>
+
+00:13:52.790 --> 00:13:52.800 align:start position:0%
+better code than I ever could. And it's
+ 
+
+00:13:52.800 --> 00:13:54.870 align:start position:0%
+better code than I ever could. And it's
+going<00:13:52.959><c> to</c><00:13:53.120><c> write</c><00:13:53.279><c> it</c><00:13:53.519><c> at</c><00:13:53.920><c> a</c><00:13:54.160><c> thousand</c><00:13:54.560><c> times</c>
+
+00:13:54.870 --> 00:13:54.880 align:start position:0%
+going to write it at a thousand times
+ 
+
+00:13:54.880 --> 00:13:57.350 align:start position:0%
+going to write it at a thousand times
+faster<00:13:55.279><c> than</c><00:13:55.519><c> I</c><00:13:55.680><c> ever</c><00:13:55.920><c> could.</c><00:13:56.560><c> This</c><00:13:56.800><c> is</c><00:13:56.959><c> where</c>
+
+00:13:57.350 --> 00:13:57.360 align:start position:0%
+faster than I ever could. This is where
+ 
+
+00:13:57.360 --> 00:13:59.110 align:start position:0%
+faster than I ever could. This is where
+top<00:13:57.600><c> performing</c><00:13:58.160><c> engineers</c><00:13:58.639><c> are</c><00:13:58.800><c> operating</c>
+
+00:13:59.110 --> 00:13:59.120 align:start position:0%
+top performing engineers are operating
+ 
+
+00:13:59.120 --> 00:14:01.269 align:start position:0%
+top performing engineers are operating
+at.<00:13:59.440><c> This</c><00:13:59.519><c> is</c><00:13:59.600><c> what</c><00:13:59.839><c> teams</c><00:14:00.240><c> of</c><00:14:00.480><c> engineers</c><00:14:01.040><c> are</c>
+
+00:14:01.269 --> 00:14:01.279 align:start position:0%
+at. This is what teams of engineers are
+ 
+
+00:14:01.279 --> 00:14:04.949 align:start position:0%
+at. This is what teams of engineers are
+using<00:14:01.839><c> to</c><00:14:02.880><c> delegate,</c><00:14:03.600><c> orchestrate,</c><00:14:04.399><c> and</c>
+
+00:14:04.949 --> 00:14:04.959 align:start position:0%
+using to delegate, orchestrate, and
+ 
+
+00:14:04.959 --> 00:14:07.189 align:start position:0%
+using to delegate, orchestrate, and
+really<00:14:05.440><c> accelerate</c><00:14:06.000><c> the</c><00:14:06.480><c> process</c><00:14:06.880><c> of</c>
+
+00:14:07.189 --> 00:14:07.199 align:start position:0%
+really accelerate the process of
+ 
+
+00:14:07.199 --> 00:14:09.430 align:start position:0%
+really accelerate the process of
+development.<00:14:07.760><c> when</c><00:14:08.079><c> it</c><00:14:08.240><c> comes</c><00:14:08.399><c> to</c><00:14:09.040><c> working</c><00:14:09.279><c> on</c>
+
+00:14:09.430 --> 00:14:09.440 align:start position:0%
+development. when it comes to working on
+ 
+
+00:14:09.440 --> 00:14:11.829 align:start position:0%
+development. when it comes to working on
+a<00:14:09.600><c> codebase.</c><00:14:10.480><c> All</c><00:14:10.560><c> right,</c><00:14:10.959><c> welcome</c><00:14:11.279><c> to</c><00:14:11.519><c> level</c>
+
+00:14:11.829 --> 00:14:11.839 align:start position:0%
+a codebase. All right, welcome to level
+ 
+
+00:14:11.839 --> 00:14:14.710 align:start position:0%
+a codebase. All right, welcome to level
+six,<00:14:12.560><c> which</c><00:14:12.880><c> is</c><00:14:13.199><c> the</c><00:14:13.440><c> cutting</c><00:14:13.760><c> edge,</c><00:14:14.240><c> I</c><00:14:14.560><c> think,</c>
+
+00:14:14.710 --> 00:14:14.720 align:start position:0%
+six, which is the cutting edge, I think,
+ 
+
+00:14:14.720 --> 00:14:17.189 align:start position:0%
+six, which is the cutting edge, I think,
+of<00:14:14.880><c> where</c><00:14:15.279><c> everything</c><00:14:15.680><c> is</c><00:14:15.920><c> going</c><00:14:16.240><c> right</c><00:14:16.480><c> now.</c>
+
+00:14:17.189 --> 00:14:17.199 align:start position:0%
+of where everything is going right now.
+ 
+
+00:14:17.199 --> 00:14:19.910 align:start position:0%
+of where everything is going right now.
+And<00:14:17.360><c> this</c><00:14:17.600><c> is</c><00:14:17.760><c> where</c><00:14:18.079><c> I</c><00:14:18.399><c> am</c><00:14:18.560><c> heading</c><00:14:19.040><c> with</c><00:14:19.440><c> my</c>
+
+00:14:19.910 --> 00:14:19.920 align:start position:0%
+And this is where I am heading with my
+ 
+
+00:14:19.920 --> 00:14:22.389 align:start position:0%
+And this is where I am heading with my
+open<00:14:20.240><c> source</c><00:14:20.560><c> maintenance,</c><00:14:21.360><c> especially</c><00:14:22.160><c> a</c>
+
+00:14:22.389 --> 00:14:22.399 align:start position:0%
+open source maintenance, especially a
+ 
+
+00:14:22.399 --> 00:14:24.389 align:start position:0%
+open source maintenance, especially a
+project<00:14:22.560><c> like</c><00:14:22.800><c> Overstory.</c><00:14:23.440><c> We</c><00:14:23.600><c> have</c><00:14:23.920><c> 700</c>
+
+00:14:24.389 --> 00:14:24.399 align:start position:0%
+project like Overstory. We have 700
+ 
+
+00:14:24.399 --> 00:14:26.069 align:start position:0%
+project like Overstory. We have 700
+stars<00:14:24.720><c> on</c><00:14:24.800><c> it</c><00:14:24.959><c> now.</c><00:14:25.199><c> And</c><00:14:25.360><c> there's</c><00:14:25.600><c> a</c><00:14:25.760><c> ton</c><00:14:25.920><c> of</c>
+
+00:14:26.069 --> 00:14:26.079 align:start position:0%
+stars on it now. And there's a ton of
+ 
+
+00:14:26.079 --> 00:14:29.350 align:start position:0%
+stars on it now. And there's a ton of
+issues<00:14:26.399><c> opening</c><00:14:26.720><c> up</c><00:14:26.880><c> every</c><00:14:27.199><c> day.</c><00:14:28.160><c> So,</c><00:14:29.120><c> what</c>
+
+00:14:29.350 --> 00:14:29.360 align:start position:0%
+issues opening up every day. So, what
+ 
+
+00:14:29.360 --> 00:14:32.230 align:start position:0%
+issues opening up every day. So, what
+I'm<00:14:29.600><c> doing</c><00:14:29.760><c> is</c><00:14:30.000><c> I'm</c><00:14:30.959><c> more</c><00:14:31.199><c> or</c><00:14:31.360><c> less</c><00:14:31.760><c> completely</c>
+
+00:14:32.230 --> 00:14:32.240 align:start position:0%
+I'm doing is I'm more or less completely
+ 
+
+00:14:32.240 --> 00:14:34.310 align:start position:0%
+I'm doing is I'm more or less completely
+moving,<00:14:33.040><c> removing</c><00:14:33.440><c> myself</c><00:14:33.760><c> from</c><00:14:33.920><c> the</c><00:14:34.079><c> loop</c>
+
+00:14:34.310 --> 00:14:34.320 align:start position:0%
+moving, removing myself from the loop
+ 
+
+00:14:34.320 --> 00:14:35.990 align:start position:0%
+moving, removing myself from the loop
+here.<00:14:34.639><c> Let's</c><00:14:34.880><c> take</c><00:14:34.959><c> a</c><00:14:35.199><c> look</c><00:14:35.279><c> at</c><00:14:35.440><c> what</c><00:14:35.680><c> this</c>
+
+00:14:35.990 --> 00:14:36.000 align:start position:0%
+here. Let's take a look at what this
+ 
+
+00:14:36.000 --> 00:14:37.590 align:start position:0%
+here. Let's take a look at what this
+actually<00:14:36.240><c> looks</c><00:14:36.560><c> like.</c>
+
+00:14:37.590 --> 00:14:37.600 align:start position:0%
+actually looks like.
+ 
+
+00:14:37.600 --> 00:14:39.910 align:start position:0%
+actually looks like.
+And<00:14:37.920><c> let</c><00:14:38.160><c> me</c><00:14:38.240><c> be</c><00:14:38.399><c> clear</c><00:14:38.639><c> that</c><00:14:38.880><c> this</c><00:14:39.120><c> is</c><00:14:39.440><c> mostly</c>
+
+00:14:39.910 --> 00:14:39.920 align:start position:0%
+And let me be clear that this is mostly
+ 
+
+00:14:39.920 --> 00:14:42.150 align:start position:0%
+And let me be clear that this is mostly
+theory<00:14:40.320><c> at</c><00:14:40.560><c> this</c><00:14:40.800><c> point.</c><00:14:41.360><c> I</c><00:14:41.600><c> have</c><00:14:41.680><c> a</c><00:14:41.920><c> working</c>
+
+00:14:42.150 --> 00:14:42.160 align:start position:0%
+theory at this point. I have a working
+ 
+
+00:14:42.160 --> 00:14:44.550 align:start position:0%
+theory at this point. I have a working
+implementation<00:14:42.800><c> that</c><00:14:43.040><c> I</c><00:14:43.199><c> will</c><00:14:43.360><c> show</c><00:14:43.519><c> you,</c><00:14:44.240><c> but</c>
+
+00:14:44.550 --> 00:14:44.560 align:start position:0%
+implementation that I will show you, but
+ 
+
+00:14:44.560 --> 00:14:46.069 align:start position:0%
+implementation that I will show you, but
+it's<00:14:44.959><c> definitely</c><00:14:45.360><c> not</c><00:14:45.600><c> a</c><00:14:45.839><c> working</c>
+
+00:14:46.069 --> 00:14:46.079 align:start position:0%
+it's definitely not a working
+ 
+
+00:14:46.079 --> 00:14:47.590 align:start position:0%
+it's definitely not a working
+implementation<00:14:46.639><c> that</c><00:14:46.880><c> I</c><00:14:47.040><c> would</c><00:14:47.199><c> recommend</c>
+
+00:14:47.590 --> 00:14:47.600 align:start position:0%
+implementation that I would recommend
+ 
+
+00:14:47.600 --> 00:14:49.990 align:start position:0%
+implementation that I would recommend
+other<00:14:47.839><c> people</c><00:14:48.160><c> start</c><00:14:48.399><c> using.</c><00:14:49.519><c> So</c><00:14:49.760><c> the</c>
+
+00:14:49.990 --> 00:14:50.000 align:start position:0%
+other people start using. So the
+ 
+
+00:14:50.000 --> 00:14:52.150 align:start position:0%
+other people start using. So the
+developer<00:14:50.560><c> is</c><00:14:50.880><c> no</c><00:14:51.040><c> longer</c><00:14:51.360><c> needed.</c><00:14:51.920><c> That's</c>
+
+00:14:52.150 --> 00:14:52.160 align:start position:0%
+developer is no longer needed. That's
+ 
+
+00:14:52.160 --> 00:14:54.629 align:start position:0%
+developer is no longer needed. That's
+what<00:14:52.320><c> level</c><00:14:52.639><c> six</c><00:14:52.880><c> is.</c><00:14:53.680><c> We</c><00:14:53.920><c> automate</c><00:14:54.320><c> the</c>
+
+00:14:54.629 --> 00:14:54.639 align:start position:0%
+what level six is. We automate the
+ 
+
+00:14:54.639 --> 00:14:57.189 align:start position:0%
+what level six is. We automate the
+entire<00:14:55.440><c> endto-end</c><00:14:56.079><c> process</c><00:14:56.480><c> of</c><00:14:56.720><c> development</c>
+
+00:14:57.189 --> 00:14:57.199 align:start position:0%
+entire endto-end process of development
+ 
+
+00:14:57.199 --> 00:14:59.590 align:start position:0%
+entire endto-end process of development
+in<00:14:57.440><c> your</c><00:14:57.600><c> project.</c><00:14:58.480><c> So</c><00:14:58.720><c> agents</c><00:14:59.199><c> are</c><00:14:59.360><c> now</c>
+
+00:14:59.590 --> 00:14:59.600 align:start position:0%
+in your project. So agents are now
+ 
+
+00:14:59.600 --> 00:15:01.910 align:start position:0%
+in your project. So agents are now
+triaging,<00:15:00.560><c> coordinating,</c><00:15:01.040><c> and</c><00:15:01.279><c> delegating</c>
+
+00:15:01.910 --> 00:15:01.920 align:start position:0%
+triaging, coordinating, and delegating
+ 
+
+00:15:01.920 --> 00:15:04.470 align:start position:0%
+triaging, coordinating, and delegating
+vast<00:15:02.320><c> quantities</c><00:15:02.800><c> of</c><00:15:03.040><c> work,</c><00:15:03.680><c> all</c><00:15:03.920><c> without</c><00:15:04.240><c> me</c>
+
+00:15:04.470 --> 00:15:04.480 align:start position:0%
+vast quantities of work, all without me
+ 
+
+00:15:04.480 --> 00:15:06.790 align:start position:0%
+vast quantities of work, all without me
+as<00:15:04.720><c> a</c><00:15:04.880><c> human</c><00:15:05.279><c> ever</c><00:15:05.680><c> having</c><00:15:05.920><c> to</c><00:15:06.160><c> step</c><00:15:06.399><c> into</c><00:15:06.639><c> the</c>
+
+00:15:06.790 --> 00:15:06.800 align:start position:0%
+as a human ever having to step into the
+ 
+
+00:15:06.800 --> 00:15:08.629 align:start position:0%
+as a human ever having to step into the
+system.<00:15:07.199><c> So</c><00:15:07.360><c> the</c><00:15:07.519><c> human</c><00:15:07.760><c> developer</c><00:15:08.240><c> can</c><00:15:08.399><c> still</c>
+
+00:15:08.629 --> 00:15:08.639 align:start position:0%
+system. So the human developer can still
+ 
+
+00:15:08.639 --> 00:15:11.030 align:start position:0%
+system. So the human developer can still
+review,<00:15:09.440><c> but</c><00:15:09.839><c> to</c><00:15:10.079><c> be</c><00:15:10.160><c> honest</c><00:15:10.399><c> with</c><00:15:10.560><c> you,</c><00:15:10.800><c> I</c>
+
+00:15:11.030 --> 00:15:11.040 align:start position:0%
+review, but to be honest with you, I
+ 
+
+00:15:11.040 --> 00:15:12.870 align:start position:0%
+review, but to be honest with you, I
+think<00:15:11.120><c> that</c><00:15:11.440><c> is</c><00:15:11.680><c> going</c><00:15:11.839><c> to</c><00:15:11.920><c> be</c><00:15:12.079><c> automated</c><00:15:12.560><c> very</c>
+
+00:15:12.870 --> 00:15:12.880 align:start position:0%
+think that is going to be automated very
+ 
+
+00:15:12.880 --> 00:15:14.710 align:start position:0%
+think that is going to be automated very
+quickly<00:15:13.199><c> as</c><00:15:13.440><c> well</c><00:15:13.600><c> because</c><00:15:14.000><c> reviewing</c><00:15:14.480><c> at</c>
+
+00:15:14.710 --> 00:15:14.720 align:start position:0%
+quickly as well because reviewing at
+ 
+
+00:15:14.720 --> 00:15:17.030 align:start position:0%
+quickly as well because reviewing at
+this<00:15:14.880><c> point</c><00:15:15.040><c> is</c><00:15:15.360><c> just</c><00:15:15.760><c> redundant.</c><00:15:16.399><c> It's</c><00:15:16.639><c> it's</c>
+
+00:15:17.030 --> 00:15:17.040 align:start position:0%
+this point is just redundant. It's it's
+ 
+
+00:15:17.040 --> 00:15:18.629 align:start position:0%
+this point is just redundant. It's it's
+not<00:15:17.279><c> really</c><00:15:17.519><c> needed.</c><00:15:17.920><c> If</c><00:15:18.079><c> you</c><00:15:18.240><c> have</c><00:15:18.399><c> set</c><00:15:18.480><c> up</c>
+
+00:15:18.629 --> 00:15:18.639 align:start position:0%
+not really needed. If you have set up
+ 
+
+00:15:18.639 --> 00:15:20.470 align:start position:0%
+not really needed. If you have set up
+the<00:15:18.800><c> guardrails,</c><00:15:19.600><c> you</c><00:15:19.839><c> can</c><00:15:19.920><c> ensure</c><00:15:20.240><c> that</c>
+
+00:15:20.470 --> 00:15:20.480 align:start position:0%
+the guardrails, you can ensure that
+ 
+
+00:15:20.480 --> 00:15:22.790 align:start position:0%
+the guardrails, you can ensure that
+agents<00:15:20.800><c> are</c><00:15:20.959><c> writing</c><00:15:21.279><c> high</c><00:15:21.519><c> quality</c><00:15:21.920><c> code.</c><00:15:22.560><c> In</c>
+
+00:15:22.790 --> 00:15:22.800 align:start position:0%
+agents are writing high quality code. In
+ 
+
+00:15:22.800 --> 00:15:24.150 align:start position:0%
+agents are writing high quality code. In
+this<00:15:22.959><c> level</c><00:15:23.199><c> six,</c><00:15:23.680><c> essentially</c><00:15:23.920><c> what's</c>
+
+00:15:24.150 --> 00:15:24.160 align:start position:0%
+this level six, essentially what's
+ 
+
+00:15:24.160 --> 00:15:26.629 align:start position:0%
+this level six, essentially what's
+happening<00:15:24.399><c> is</c><00:15:24.720><c> agents</c><00:15:25.120><c> are</c><00:15:25.839><c> watching</c><00:15:26.160><c> for</c><00:15:26.399><c> new</c>
+
+00:15:26.629 --> 00:15:26.639 align:start position:0%
+happening is agents are watching for new
+ 
+
+00:15:26.639 --> 00:15:28.629 align:start position:0%
+happening is agents are watching for new
+issues,<00:15:27.440><c> planning</c><00:15:27.760><c> and</c><00:15:28.000><c> implementing</c><00:15:28.399><c> the</c>
+
+00:15:28.629 --> 00:15:28.639 align:start position:0%
+issues, planning and implementing the
+ 
+
+00:15:28.639 --> 00:15:30.389 align:start position:0%
+issues, planning and implementing the
+fixes,<00:15:29.120><c> and</c><00:15:29.279><c> then</c><00:15:29.440><c> deploying</c><00:15:29.839><c> that</c><00:15:30.079><c> without</c>
+
+00:15:30.389 --> 00:15:30.399 align:start position:0%
+fixes, and then deploying that without
+ 
+
+00:15:30.399 --> 00:15:32.710 align:start position:0%
+fixes, and then deploying that without
+any<00:15:30.639><c> human</c><00:15:30.959><c> intervention.</c><00:15:31.920><c> This</c><00:15:32.079><c> is</c><00:15:32.160><c> where</c><00:15:32.399><c> my</c>
+
+00:15:32.710 --> 00:15:32.720 align:start position:0%
+any human intervention. This is where my
+ 
+
+00:15:32.720 --> 00:15:34.230 align:start position:0%
+any human intervention. This is where my
+open<00:15:33.040><c> source</c><00:15:33.279><c> maintenance</c><00:15:33.680><c> is</c><00:15:33.839><c> going.</c><00:15:34.079><c> And</c>
+
+00:15:34.230 --> 00:15:34.240 align:start position:0%
+open source maintenance is going. And
+ 
+
+00:15:34.240 --> 00:15:35.430 align:start position:0%
+open source maintenance is going. And
+I'm<00:15:34.399><c> going</c><00:15:34.480><c> to</c><00:15:34.560><c> show</c><00:15:34.639><c> you</c><00:15:34.800><c> a</c><00:15:34.959><c> little</c><00:15:35.120><c> sneak</c>
+
+00:15:35.430 --> 00:15:35.440 align:start position:0%
+I'm going to show you a little sneak
+ 
+
+00:15:35.440 --> 00:15:37.509 align:start position:0%
+I'm going to show you a little sneak
+peek<00:15:35.760><c> what</c><00:15:36.000><c> that</c><00:15:36.240><c> looks</c><00:15:36.480><c> like</c><00:15:36.720><c> right</c><00:15:36.959><c> now</c><00:15:37.199><c> for</c>
+
+00:15:37.509 --> 00:15:37.519 align:start position:0%
+peek what that looks like right now for
+ 
+
+00:15:37.519 --> 00:15:39.670 align:start position:0%
+peek what that looks like right now for
+me.<00:15:38.240><c> This</c><00:15:38.399><c> is</c><00:15:38.480><c> a</c><00:15:38.639><c> project</c><00:15:38.880><c> I</c><00:15:39.120><c> have</c><00:15:39.279><c> called</c>
+
+00:15:39.670 --> 00:15:39.680 align:start position:0%
+me. This is a project I have called
+ 
+
+00:15:39.680 --> 00:15:42.150 align:start position:0%
+me. This is a project I have called
+greenhouse.<00:15:40.480><c> And</c><00:15:40.720><c> greenhouse</c><00:15:41.279><c> is</c><00:15:41.440><c> the</c><00:15:41.680><c> final</c>
+
+00:15:42.150 --> 00:15:42.160 align:start position:0%
+greenhouse. And greenhouse is the final
+ 
+
+00:15:42.160 --> 00:15:44.230 align:start position:0%
+greenhouse. And greenhouse is the final
+layer<00:15:42.320><c> in</c><00:15:42.480><c> this</c><00:15:42.720><c> overstory</c><00:15:43.279><c> ecosystem</c><00:15:43.839><c> that</c><00:15:44.079><c> I</c>
+
+00:15:44.230 --> 00:15:44.240 align:start position:0%
+layer in this overstory ecosystem that I
+ 
+
+00:15:44.240 --> 00:15:46.230 align:start position:0%
+layer in this overstory ecosystem that I
+have<00:15:44.399><c> been</c><00:15:44.560><c> building.</c><00:15:45.360><c> And</c><00:15:45.680><c> what</c><00:15:45.920><c> we</c><00:15:46.079><c> have</c>
+
+00:15:46.230 --> 00:15:46.240 align:start position:0%
+have been building. And what we have
+ 
+
+00:15:46.240 --> 00:15:48.949 align:start position:0%
+have been building. And what we have
+here<00:15:46.639><c> is</c><00:15:47.040><c> this</c><00:15:47.279><c> is</c><00:15:47.440><c> a</c><00:15:47.760><c> brand</c><00:15:48.000><c> new</c><00:15:48.240><c> repository,</c>
+
+00:15:48.949 --> 00:15:48.959 align:start position:0%
+here is this is a brand new repository,
+ 
+
+00:15:48.959 --> 00:15:51.350 align:start position:0%
+here is this is a brand new repository,
+but<00:15:49.279><c> we</c><00:15:49.600><c> have</c><00:15:49.759><c> a</c><00:15:50.079><c> issue</c><00:15:50.399><c> here</c><00:15:50.880><c> and</c><00:15:51.120><c> it's</c>
+
+00:15:51.350 --> 00:15:51.360 align:start position:0%
+but we have a issue here and it's
+ 
+
+00:15:51.360 --> 00:15:53.670 align:start position:0%
+but we have a issue here and it's
+labeled<00:15:51.680><c> with</c><00:15:51.839><c> this</c><00:15:52.079><c> agent</c><00:15:52.480><c> ready.</c><00:15:53.199><c> So</c><00:15:53.519><c> you</c>
+
+00:15:53.670 --> 00:15:53.680 align:start position:0%
+labeled with this agent ready. So you
+ 
+
+00:15:53.680 --> 00:15:55.269 align:start position:0%
+labeled with this agent ready. So you
+can<00:15:53.839><c> see</c><00:15:53.920><c> if</c><00:15:54.079><c> I</c><00:15:54.240><c> hover</c><00:15:54.480><c> over</c><00:15:54.639><c> this,</c><00:15:54.800><c> it</c><00:15:55.040><c> says</c>
+
+00:15:55.269 --> 00:15:55.279 align:start position:0%
+can see if I hover over this, it says
+ 
+
+00:15:55.279 --> 00:15:57.590 align:start position:0%
+can see if I hover over this, it says
+ready<00:15:55.519><c> for</c><00:15:55.759><c> automated</c><00:15:56.240><c> agent</c><00:15:56.639><c> pickup.</c><00:15:57.360><c> Now</c>
+
+00:15:57.590 --> 00:15:57.600 align:start position:0%
+ready for automated agent pickup. Now
+ 
+
+00:15:57.600 --> 00:15:59.189 align:start position:0%
+ready for automated agent pickup. Now
+let's<00:15:57.839><c> take</c><00:15:57.920><c> a</c><00:15:58.079><c> look</c><00:15:58.240><c> at</c><00:15:58.399><c> what</c><00:15:58.560><c> this</c><00:15:58.800><c> actually</c>
+
+00:15:59.189 --> 00:15:59.199 align:start position:0%
+let's take a look at what this actually
+ 
+
+00:15:59.199 --> 00:16:02.150 align:start position:0%
+let's take a look at what this actually
+does.<00:16:00.240><c> Here</c><00:16:00.399><c> I</c><00:16:00.639><c> am</c><00:16:00.800><c> in</c><00:16:01.040><c> the</c><00:16:01.279><c> greenhouse</c>
+
+00:16:02.150 --> 00:16:02.160 align:start position:0%
+does. Here I am in the greenhouse
+ 
+
+00:16:02.160 --> 00:16:04.710 align:start position:0%
+does. Here I am in the greenhouse
+project<00:16:02.639><c> within</c><00:16:03.040><c> VS</c><00:16:03.440><c> Code.</c><00:16:04.079><c> And</c><00:16:04.240><c> what</c><00:16:04.399><c> I</c><00:16:04.560><c> have</c>
+
+00:16:04.710 --> 00:16:04.720 align:start position:0%
+project within VS Code. And what I have
+ 
+
+00:16:04.720 --> 00:16:07.030 align:start position:0%
+project within VS Code. And what I have
+set<00:16:04.880><c> up</c><00:16:05.040><c> here</c><00:16:05.199><c> is</c><00:16:05.440><c> I</c><00:16:05.680><c> can</c><00:16:05.920><c> essentially</c><00:16:06.320><c> run</c>
+
+00:16:07.030 --> 00:16:07.040 align:start position:0%
+set up here is I can essentially run
+ 
+
+00:16:07.040 --> 00:16:09.509 align:start position:0%
+set up here is I can essentially run
+greenhouse<00:16:07.920><c> start.</c><00:16:08.639><c> And</c><00:16:08.800><c> this</c><00:16:08.959><c> is</c><00:16:09.199><c> going</c><00:16:09.279><c> to</c>
+
+00:16:09.509 --> 00:16:09.519 align:start position:0%
+greenhouse start. And this is going to
+ 
+
+00:16:09.519 --> 00:16:12.710 align:start position:0%
+greenhouse start. And this is going to
+boot<00:16:09.839><c> a</c><00:16:10.480><c> longived</c><00:16:11.199><c> process</c><00:16:11.600><c> on</c><00:16:11.839><c> my</c><00:16:12.079><c> machine.</c>
+
+00:16:12.710 --> 00:16:12.720 align:start position:0%
+boot a longived process on my machine.
+ 
+
+00:16:12.720 --> 00:16:14.550 align:start position:0%
+boot a longived process on my machine.
+And<00:16:12.880><c> we</c><00:16:13.040><c> can</c><00:16:13.199><c> see</c><00:16:13.360><c> it</c><00:16:13.600><c> found</c><00:16:13.839><c> that</c><00:16:14.079><c> issue</c><00:16:14.399><c> that</c>
+
+00:16:14.550 --> 00:16:14.560 align:start position:0%
+And we can see it found that issue that
+ 
+
+00:16:14.560 --> 00:16:17.189 align:start position:0%
+And we can see it found that issue that
+was<00:16:14.720><c> open</c><00:16:14.880><c> in</c><00:16:15.120><c> GitHub.</c><00:16:16.000><c> It</c><00:16:16.240><c> has</c><00:16:16.480><c> ingested</c><00:16:16.959><c> that</c>
+
+00:16:17.189 --> 00:16:17.199 align:start position:0%
+was open in GitHub. It has ingested that
+ 
+
+00:16:17.199 --> 00:16:20.069 align:start position:0%
+was open in GitHub. It has ingested that
+issue<00:16:17.839><c> and</c><00:16:18.160><c> now</c><00:16:18.320><c> it</c><00:16:18.560><c> is</c><00:16:18.800><c> forming</c><00:16:19.199><c> a</c><00:16:19.360><c> seeds</c><00:16:19.759><c> ID</c>
+
+00:16:20.069 --> 00:16:20.079 align:start position:0%
+issue and now it is forming a seeds ID
+ 
+
+00:16:20.079 --> 00:16:21.990 align:start position:0%
+issue and now it is forming a seeds ID
+for<00:16:20.240><c> that.</c><00:16:20.800><c> And</c><00:16:20.959><c> if</c><00:16:21.120><c> I</c><00:16:21.279><c> go</c><00:16:21.440><c> over</c><00:16:21.680><c> into</c>
+
+00:16:21.990 --> 00:16:22.000 align:start position:0%
+for that. And if I go over into
+ 
+
+00:16:22.000 --> 00:16:24.550 align:start position:0%
+for that. And if I go over into
+Overstory<00:16:22.639><c> dashboard,</c><00:16:23.680><c> what</c><00:16:23.839><c> we</c><00:16:24.079><c> can</c><00:16:24.160><c> see</c><00:16:24.320><c> is</c>
+
+00:16:24.550 --> 00:16:24.560 align:start position:0%
+Overstory dashboard, what we can see is
+ 
+
+00:16:24.560 --> 00:16:26.870 align:start position:0%
+Overstory dashboard, what we can see is
+that<00:16:24.880><c> Overstory</c><00:16:25.680><c> automatically</c><00:16:26.320><c> booted</c><00:16:26.639><c> up.</c>
+
+00:16:26.870 --> 00:16:26.880 align:start position:0%
+that Overstory automatically booted up.
+ 
+
+00:16:26.880 --> 00:16:28.389 align:start position:0%
+that Overstory automatically booted up.
+So<00:16:27.040><c> I</c><00:16:27.279><c> haven't</c><00:16:27.440><c> done</c><00:16:27.680><c> anything.</c><00:16:28.000><c> I</c><00:16:28.240><c> haven't</c>
+
+00:16:28.389 --> 00:16:28.399 align:start position:0%
+So I haven't done anything. I haven't
+ 
+
+00:16:28.399 --> 00:16:30.230 align:start position:0%
+So I haven't done anything. I haven't
+run<00:16:28.560><c> any</c><00:16:28.800><c> Overstory</c><00:16:29.360><c> commands.</c><00:16:29.839><c> All</c><00:16:30.000><c> I've</c>
+
+00:16:30.230 --> 00:16:30.240 align:start position:0%
+run any Overstory commands. All I've
+ 
+
+00:16:30.240 --> 00:16:31.749 align:start position:0%
+run any Overstory commands. All I've
+done<00:16:30.399><c> is</c><00:16:30.560><c> run</c><00:16:30.800><c> this</c><00:16:30.959><c> greenhouse</c><00:16:31.519><c> start</c>
+
+00:16:31.749 --> 00:16:31.759 align:start position:0%
+done is run this greenhouse start
+ 
+
+00:16:31.759 --> 00:16:33.509 align:start position:0%
+done is run this greenhouse start
+command<00:16:32.160><c> and</c><00:16:32.399><c> it</c><00:16:32.560><c> found</c><00:16:32.800><c> that</c><00:16:32.959><c> open</c><00:16:33.279><c> issue</c>
+
+00:16:33.509 --> 00:16:33.519 align:start position:0%
+command and it found that open issue
+ 
+
+00:16:33.519 --> 00:16:35.670 align:start position:0%
+command and it found that open issue
+that<00:16:33.759><c> was</c><00:16:33.920><c> tagged</c><00:16:34.240><c> with</c><00:16:34.399><c> agents</c><00:16:34.800><c> ready.</c><00:16:35.519><c> And</c>
+
+00:16:35.670 --> 00:16:35.680 align:start position:0%
+that was tagged with agents ready. And
+ 
+
+00:16:35.680 --> 00:16:37.430 align:start position:0%
+that was tagged with agents ready. And
+now<00:16:35.839><c> we</c><00:16:36.000><c> have</c><00:16:36.079><c> a</c><00:16:36.320><c> coordinator</c><00:16:36.880><c> getting</c><00:16:37.199><c> to</c>
+
+00:16:37.430 --> 00:16:37.440 align:start position:0%
+now we have a coordinator getting to
+ 
+
+00:16:37.440 --> 00:16:39.430 align:start position:0%
+now we have a coordinator getting to
+work<00:16:37.680><c> on</c><00:16:38.000><c> fixing</c><00:16:38.320><c> that</c><00:16:38.560><c> issue.</c><00:16:38.959><c> So</c><00:16:39.120><c> I</c><00:16:39.360><c> have</c>
+
+00:16:39.430 --> 00:16:39.440 align:start position:0%
+work on fixing that issue. So I have
+ 
+
+00:16:39.440 --> 00:16:40.870 align:start position:0%
+work on fixing that issue. So I have
+trust<00:16:39.680><c> in</c><00:16:39.920><c> this</c><00:16:40.079><c> system</c><00:16:40.320><c> that</c><00:16:40.560><c> it's</c><00:16:40.720><c> going</c><00:16:40.800><c> to</c>
+
+00:16:40.870 --> 00:16:40.880 align:start position:0%
+trust in this system that it's going to
+ 
+
+00:16:40.880 --> 00:16:42.470 align:start position:0%
+trust in this system that it's going to
+complete<00:16:41.120><c> this</c><00:16:41.360><c> issue</c><00:16:41.600><c> end</c><00:16:41.759><c> to</c><00:16:42.000><c> end</c><00:16:42.240><c> without</c>
+
+00:16:42.470 --> 00:16:42.480 align:start position:0%
+complete this issue end to end without
+ 
+
+00:16:42.480 --> 00:16:45.030 align:start position:0%
+complete this issue end to end without
+any<00:16:42.800><c> problems.</c><00:16:43.839><c> And</c><00:16:44.399><c> what</c><00:16:44.639><c> we're</c><00:16:44.800><c> going</c><00:16:44.880><c> to</c>
+
+00:16:45.030 --> 00:16:45.040 align:start position:0%
+any problems. And what we're going to
+ 
+
+00:16:45.040 --> 00:16:47.590 align:start position:0%
+any problems. And what we're going to
+have<00:16:45.279><c> happen</c><00:16:45.680><c> is</c><00:16:46.399><c> at</c><00:16:46.639><c> the</c><00:16:46.800><c> end</c><00:16:47.040><c> of</c><00:16:47.279><c> this</c>
+
+00:16:47.590 --> 00:16:47.600 align:start position:0%
+have happen is at the end of this
+ 
+
+00:16:47.600 --> 00:16:49.350 align:start position:0%
+have happen is at the end of this
+workflow,<00:16:48.160><c> we're</c><00:16:48.320><c> going</c><00:16:48.399><c> to</c><00:16:48.480><c> have</c><00:16:48.560><c> a</c><00:16:48.720><c> PR</c><00:16:49.120><c> be</c>
+
+00:16:49.350 --> 00:16:49.360 align:start position:0%
+workflow, we're going to have a PR be
+ 
+
+00:16:49.360 --> 00:16:51.829 align:start position:0%
+workflow, we're going to have a PR be
+opened<00:16:49.680><c> up.</c><00:16:50.320><c> This,</c><00:16:50.720><c> like</c><00:16:50.880><c> I</c><00:16:51.120><c> said,</c><00:16:51.279><c> is</c><00:16:51.519><c> very</c>
+
+00:16:51.829 --> 00:16:51.839 align:start position:0%
+opened up. This, like I said, is very
+ 
+
+00:16:51.839 --> 00:16:53.670 align:start position:0%
+opened up. This, like I said, is very
+early<00:16:52.079><c> stages,</c><00:16:52.480><c> but</c><00:16:52.720><c> what</c><00:16:52.959><c> we</c><00:16:53.120><c> have</c><00:16:53.279><c> is</c><00:16:53.440><c> a</c>
+
+00:16:53.670 --> 00:16:53.680 align:start position:0%
+early stages, but what we have is a
+ 
+
+00:16:53.680 --> 00:16:55.749 align:start position:0%
+early stages, but what we have is a
+system<00:16:53.920><c> that</c><00:16:54.240><c> I</c><00:16:54.480><c> have</c><00:16:54.720><c> automated</c><00:16:55.199><c> the</c><00:16:55.440><c> entire</c>
+
+00:16:55.749 --> 00:16:55.759 align:start position:0%
+system that I have automated the entire
+ 
+
+00:16:55.759 --> 00:16:57.910 align:start position:0%
+system that I have automated the entire
+development<00:16:56.160><c> process</c><00:16:56.560><c> for.</c><00:16:57.279><c> So</c><00:16:57.519><c> this</c><00:16:57.680><c> will</c>
+
+00:16:57.910 --> 00:16:57.920 align:start position:0%
+development process for. So this will
+ 
+
+00:16:57.920 --> 00:17:01.509 align:start position:0%
+development process for. So this will
+still<00:16:58.160><c> open</c><00:16:58.399><c> up</c><00:16:58.560><c> a</c><00:16:58.880><c> GitHub</c><00:16:59.519><c> PR</c><00:17:00.000><c> for</c><00:17:00.240><c> this,</c><00:17:01.040><c> but</c>
+
+00:17:01.509 --> 00:17:01.519 align:start position:0%
+still open up a GitHub PR for this, but
+ 
+
+00:17:01.519 --> 00:17:03.590 align:start position:0%
+still open up a GitHub PR for this, but
+that's<00:17:01.839><c> not</c><00:17:02.000><c> even</c><00:17:02.160><c> needed</c><00:17:02.480><c> at</c><00:17:02.720><c> this</c><00:17:03.120><c> honestly.</c>
+
+00:17:03.590 --> 00:17:03.600 align:start position:0%
+that's not even needed at this honestly.
+ 
+
+00:17:03.600 --> 00:17:06.230 align:start position:0%
+that's not even needed at this honestly.
+I<00:17:03.920><c> think</c><00:17:04.079><c> if</c><00:17:04.400><c> you</c><00:17:04.559><c> just</c><00:17:04.880><c> are</c><00:17:05.199><c> triaging</c><00:17:05.839><c> issues</c>
+
+00:17:06.230 --> 00:17:06.240 align:start position:0%
+I think if you just are triaging issues
+ 
+
+00:17:06.240 --> 00:17:08.630 align:start position:0%
+I think if you just are triaging issues
+as<00:17:06.480><c> a</c><00:17:06.640><c> human,</c><00:17:07.280><c> sort</c><00:17:07.439><c> of</c><00:17:07.839><c> deciding</c><00:17:08.240><c> what</c><00:17:08.480><c> your</c>
+
+00:17:08.630 --> 00:17:08.640 align:start position:0%
+as a human, sort of deciding what your
+ 
+
+00:17:08.640 --> 00:17:10.789 align:start position:0%
+as a human, sort of deciding what your
+agent<00:17:08.959><c> works</c><00:17:09.199><c> on,</c><00:17:09.839><c> you</c><00:17:10.000><c> can</c><00:17:10.160><c> basically</c><00:17:10.559><c> set</c>
+
+00:17:10.789 --> 00:17:10.799 align:start position:0%
+agent works on, you can basically set
+ 
+
+00:17:10.799 --> 00:17:13.350 align:start position:0%
+agent works on, you can basically set
+this<00:17:10.959><c> up</c><00:17:11.199><c> to</c><00:17:11.520><c> fully</c><00:17:11.839><c> automate</c><00:17:12.240><c> end</c><00:17:12.400><c> to</c><00:17:12.640><c> end</c><00:17:13.039><c> the</c>
+
+00:17:13.350 --> 00:17:13.360 align:start position:0%
+this up to fully automate end to end the
+ 
+
+00:17:13.360 --> 00:17:14.870 align:start position:0%
+this up to fully automate end to end the
+entire<00:17:13.679><c> development</c><00:17:14.079><c> process</c><00:17:14.480><c> of</c><00:17:14.720><c> your</c>
+
+00:17:14.870 --> 00:17:14.880 align:start position:0%
+entire development process of your
+ 
+
+00:17:14.880 --> 00:17:17.110 align:start position:0%
+entire development process of your
+codebase.<00:17:15.919><c> Meaning</c><00:17:16.400><c> what</c><00:17:16.559><c> I'm</c><00:17:16.720><c> going</c><00:17:16.799><c> to</c><00:17:16.959><c> do</c>
+
+00:17:17.110 --> 00:17:17.120 align:start position:0%
+codebase. Meaning what I'm going to do
+ 
+
+00:17:17.120 --> 00:17:19.350 align:start position:0%
+codebase. Meaning what I'm going to do
+for<00:17:17.360><c> my</c><00:17:17.520><c> open</c><00:17:17.760><c> source</c><00:17:18.160><c> projects</c><00:17:18.880><c> is</c>
+
+00:17:19.350 --> 00:17:19.360 align:start position:0%
+for my open source projects is
+ 
+
+00:17:19.360 --> 00:17:21.189 align:start position:0%
+for my open source projects is
+essentially<00:17:19.679><c> automate</c><00:17:20.160><c> them</c><00:17:20.400><c> so</c><00:17:20.559><c> that</c>
+
+00:17:21.189 --> 00:17:21.199 align:start position:0%
+essentially automate them so that
+ 
+
+00:17:21.199 --> 00:17:23.029 align:start position:0%
+essentially automate them so that
+anytime<00:17:21.760><c> somebody</c><00:17:22.079><c> opens</c><00:17:22.319><c> an</c><00:17:22.480><c> issue</c><00:17:22.720><c> that</c><00:17:22.880><c> I</c>
+
+00:17:23.029 --> 00:17:23.039 align:start position:0%
+anytime somebody opens an issue that I
+ 
+
+00:17:23.039 --> 00:17:24.630 align:start position:0%
+anytime somebody opens an issue that I
+think<00:17:23.120><c> is</c><00:17:23.360><c> important,</c><00:17:23.760><c> I</c><00:17:23.919><c> just</c><00:17:24.079><c> tag</c><00:17:24.319><c> it</c><00:17:24.480><c> with</c>
+
+00:17:24.630 --> 00:17:24.640 align:start position:0%
+think is important, I just tag it with
+ 
+
+00:17:24.640 --> 00:17:26.789 align:start position:0%
+think is important, I just tag it with
+that<00:17:24.799><c> agent</c><00:17:25.120><c> ready</c><00:17:25.439><c> label</c><00:17:26.160><c> and</c><00:17:26.319><c> then</c><00:17:26.480><c> I</c><00:17:26.720><c> can</c>
+
+00:17:26.789 --> 00:17:26.799 align:start position:0%
+that agent ready label and then I can
+ 
+
+00:17:26.799 --> 00:17:28.870 align:start position:0%
+that agent ready label and then I can
+just<00:17:27.039><c> be</c><00:17:27.520><c> sure</c><00:17:27.760><c> that</c><00:17:28.160><c> the</c><00:17:28.400><c> server</c><00:17:28.559><c> is</c><00:17:28.720><c> going</c><00:17:28.799><c> to</c>
+
+00:17:28.870 --> 00:17:28.880 align:start position:0%
+just be sure that the server is going to
+ 
+
+00:17:28.880 --> 00:17:29.990 align:start position:0%
+just be sure that the server is going to
+pick<00:17:29.039><c> it</c><00:17:29.120><c> up</c><00:17:29.200><c> and</c><00:17:29.440><c> it's</c><00:17:29.600><c> going</c><00:17:29.679><c> to</c><00:17:29.760><c> implement</c>
+
+00:17:29.990 --> 00:17:30.000 align:start position:0%
+pick it up and it's going to implement
+ 
+
+00:17:30.000 --> 00:17:31.270 align:start position:0%
+pick it up and it's going to implement
+it<00:17:30.160><c> and</c><00:17:30.320><c> it'll</c><00:17:30.480><c> get</c><00:17:30.640><c> pushed</c><00:17:30.799><c> to</c><00:17:31.039><c> the</c><00:17:31.200><c> next</c>
+
+00:17:31.270 --> 00:17:31.280 align:start position:0%
+it and it'll get pushed to the next
+ 
+
+00:17:31.280 --> 00:17:34.070 align:start position:0%
+it and it'll get pushed to the next
+version.<00:17:31.840><c> No</c><00:17:32.080><c> problem.</c><00:17:32.720><c> I</c><00:17:32.960><c> was</c><00:17:33.280><c> totally</c><00:17:33.679><c> hands</c>
+
+00:17:34.070 --> 00:17:34.080 align:start position:0%
+version. No problem. I was totally hands
+ 
+
+00:17:34.080 --> 00:17:35.990 align:start position:0%
+version. No problem. I was totally hands
+off<00:17:34.240><c> for</c><00:17:34.480><c> that</c><00:17:34.640><c> whole</c><00:17:34.880><c> process.</c><00:17:35.600><c> I</c><00:17:35.760><c> want</c><00:17:35.840><c> to</c>
+
+00:17:35.990 --> 00:17:36.000 align:start position:0%
+off for that whole process. I want to
+ 
+
+00:17:36.000 --> 00:17:37.590 align:start position:0%
+off for that whole process. I want to
+chime<00:17:36.160><c> in</c><00:17:36.320><c> here</c><00:17:36.480><c> and</c><00:17:36.640><c> say</c><00:17:36.720><c> that</c><00:17:36.880><c> the</c><00:17:37.039><c> PR</c><00:17:37.440><c> did</c>
+
+00:17:37.590 --> 00:17:37.600 align:start position:0%
+chime in here and say that the PR did
+ 
+
+00:17:37.600 --> 00:17:40.230 align:start position:0%
+chime in here and say that the PR did
+get<00:17:37.760><c> opened.</c><00:17:38.480><c> So,</c><00:17:38.880><c> we</c><00:17:39.200><c> have</c><00:17:39.440><c> a</c><00:17:39.679><c> endto-end</c>
+
+00:17:40.230 --> 00:17:40.240 align:start position:0%
+get opened. So, we have a endto-end
+ 
+
+00:17:40.240 --> 00:17:43.190 align:start position:0%
+get opened. So, we have a endto-end
+system<00:17:40.559><c> working</c><00:17:40.960><c> from</c><00:17:41.600><c> issue</c><00:17:42.000><c> to</c><00:17:42.320><c> PR</c><00:17:42.880><c> without</c>
+
+00:17:43.190 --> 00:17:43.200 align:start position:0%
+system working from issue to PR without
+ 
+
+00:17:43.200 --> 00:17:44.789 align:start position:0%
+system working from issue to PR without
+me<00:17:43.440><c> ever</c><00:17:43.679><c> having</c><00:17:43.840><c> to</c><00:17:44.000><c> step</c><00:17:44.160><c> into</c><00:17:44.400><c> the</c><00:17:44.559><c> loop.</c>
+
+00:17:44.789 --> 00:17:44.799 align:start position:0%
+me ever having to step into the loop.
+ 
+
+00:17:44.799 --> 00:17:46.549 align:start position:0%
+me ever having to step into the loop.
+And<00:17:44.960><c> like</c><00:17:45.039><c> I</c><00:17:45.200><c> said,</c><00:17:45.520><c> opening</c><00:17:45.760><c> the</c><00:17:45.919><c> PR</c><00:17:46.240><c> at</c><00:17:46.400><c> this</c>
+
+00:17:46.549 --> 00:17:46.559 align:start position:0%
+And like I said, opening the PR at this
+ 
+
+00:17:46.559 --> 00:17:48.070 align:start position:0%
+And like I said, opening the PR at this
+point<00:17:46.640><c> is</c><00:17:46.799><c> just</c><00:17:46.960><c> a</c><00:17:47.120><c> formality.</c><00:17:47.600><c> It's</c><00:17:47.760><c> not</c><00:17:47.919><c> even</c>
+
+00:17:48.070 --> 00:17:48.080 align:start position:0%
+point is just a formality. It's not even
+ 
+
+00:17:48.080 --> 00:17:50.150 align:start position:0%
+point is just a formality. It's not even
+really<00:17:48.240><c> needed.</c><00:17:48.640><c> So,</c><00:17:48.960><c> hopefully</c><00:17:49.440><c> you</c><00:17:49.679><c> found</c>
+
+00:17:50.150 --> 00:17:50.160 align:start position:0%
+really needed. So, hopefully you found
+ 
+
+00:17:50.160 --> 00:17:52.470 align:start position:0%
+really needed. So, hopefully you found
+this<00:17:50.640><c> video</c><00:17:50.880><c> to</c><00:17:51.120><c> be</c><00:17:51.280><c> helpful.</c><00:17:51.840><c> I</c><00:17:52.080><c> know</c><00:17:52.240><c> I</c>
+
+00:17:52.470 --> 00:17:52.480 align:start position:0%
+this video to be helpful. I know I
+ 
+
+00:17:52.480 --> 00:17:54.549 align:start position:0%
+this video to be helpful. I know I
+didn't<00:17:52.720><c> dig</c><00:17:52.960><c> super</c><00:17:53.280><c> deep</c><00:17:53.520><c> into</c><00:17:53.840><c> what</c><00:17:54.240><c> every</c>
+
+00:17:54.549 --> 00:17:54.559 align:start position:0%
+didn't dig super deep into what every
+ 
+
+00:17:54.559 --> 00:17:56.390 align:start position:0%
+didn't dig super deep into what every
+single<00:17:55.120><c> layer</c><00:17:55.200><c> of</c><00:17:55.360><c> this</c><00:17:55.600><c> looks</c><00:17:55.840><c> like</c><00:17:56.000><c> in</c>
+
+00:17:56.390 --> 00:17:56.400 align:start position:0%
+single layer of this looks like in
+ 
+
+00:17:56.400 --> 00:17:58.870 align:start position:0%
+single layer of this looks like in
+actual<00:17:56.880><c> code,</c><00:17:57.520><c> but</c><00:17:57.760><c> at</c><00:17:57.919><c> the</c><00:17:58.000><c> end</c><00:17:58.080><c> of</c><00:17:58.160><c> the</c><00:17:58.320><c> day,</c>
+
+00:17:58.870 --> 00:17:58.880 align:start position:0%
+actual code, but at the end of the day,
+ 
+
+00:17:58.880 --> 00:18:00.230 align:start position:0%
+actual code, but at the end of the day,
+your<00:17:59.200><c> code</c><00:17:59.440><c> base</c><00:17:59.679><c> is</c><00:17:59.840><c> going</c><00:17:59.919><c> to</c><00:18:00.000><c> look</c>
+
+00:18:00.230 --> 00:18:00.240 align:start position:0%
+your code base is going to look
+ 
+
+00:18:00.240 --> 00:18:02.470 align:start position:0%
+your code base is going to look
+drastically<00:18:00.799><c> different</c><00:18:01.039><c> than</c><00:18:01.280><c> mine.</c><00:18:02.000><c> And</c><00:18:02.240><c> so</c>
+
+00:18:02.470 --> 00:18:02.480 align:start position:0%
+drastically different than mine. And so
+ 
+
+00:18:02.480 --> 00:18:04.549 align:start position:0%
+drastically different than mine. And so
+you<00:18:02.799><c> as</c><00:18:03.039><c> an</c><00:18:03.200><c> engineer,</c><00:18:03.679><c> as</c><00:18:03.840><c> a</c><00:18:04.000><c> developer</c><00:18:04.320><c> who</c>
+
+00:18:04.549 --> 00:18:04.559 align:start position:0%
+you as an engineer, as a developer who
+ 
+
+00:18:04.559 --> 00:18:06.630 align:start position:0%
+you as an engineer, as a developer who
+wants<00:18:04.799><c> to</c><00:18:04.960><c> stay</c><00:18:05.200><c> ahead</c><00:18:05.440><c> of</c><00:18:05.600><c> the</c><00:18:05.840><c> curve,</c><00:18:06.400><c> you</c>
+
+00:18:06.630 --> 00:18:06.640 align:start position:0%
+wants to stay ahead of the curve, you
+ 
+
+00:18:06.640 --> 00:18:08.390 align:start position:0%
+wants to stay ahead of the curve, you
+have<00:18:06.799><c> to</c><00:18:06.960><c> decide</c><00:18:07.200><c> what</c><00:18:07.440><c> each</c><00:18:07.600><c> of</c><00:18:07.760><c> these</c><00:18:08.000><c> levels</c>
+
+00:18:08.390 --> 00:18:08.400 align:start position:0%
+have to decide what each of these levels
+ 
+
+00:18:08.400 --> 00:18:11.350 align:start position:0%
+have to decide what each of these levels
+look<00:18:08.640><c> like</c><00:18:08.960><c> in</c><00:18:09.280><c> your</c><00:18:09.520><c> codebase</c><00:18:10.160><c> specifically.</c>
+
+00:18:11.350 --> 00:18:11.360 align:start position:0%
+look like in your codebase specifically.
+ 
+
+00:18:11.360 --> 00:18:13.270 align:start position:0%
+look like in your codebase specifically.
+So<00:18:11.600><c> if</c><00:18:11.840><c> you</c><00:18:11.919><c> would</c><00:18:12.080><c> like</c><00:18:12.320><c> help</c><00:18:12.559><c> with</c><00:18:12.880><c> any</c><00:18:13.120><c> of</c>
+
+00:18:13.270 --> 00:18:13.280 align:start position:0%
+So if you would like help with any of
+ 
+
+00:18:13.280 --> 00:18:15.029 align:start position:0%
+So if you would like help with any of
+the<00:18:13.520><c> concepts</c><00:18:13.919><c> I</c><00:18:14.080><c> just</c><00:18:14.240><c> talked</c><00:18:14.480><c> about</c><00:18:14.720><c> here,</c>
+
+00:18:15.029 --> 00:18:15.039 align:start position:0%
+the concepts I just talked about here,
+ 
+
+00:18:15.039 --> 00:18:17.029 align:start position:0%
+the concepts I just talked about here,
+if<00:18:15.280><c> you're</c><00:18:15.440><c> curious</c><00:18:15.679><c> to</c><00:18:15.919><c> see</c><00:18:16.160><c> the</c><00:18:16.640><c> projects</c>
+
+00:18:17.029 --> 00:18:17.039 align:start position:0%
+if you're curious to see the projects
+ 
+
+00:18:17.039 --> 00:18:19.190 align:start position:0%
+if you're curious to see the projects
+I'm<00:18:17.280><c> working</c><00:18:17.440><c> on,</c><00:18:17.919><c> I'll</c><00:18:18.160><c> link</c><00:18:18.320><c> my</c><00:18:18.559><c> GitHub</c><00:18:18.960><c> down</c>
+
+00:18:19.190 --> 00:18:19.200 align:start position:0%
+I'm working on, I'll link my GitHub down
+ 
+
+00:18:19.200 --> 00:18:20.710 align:start position:0%
+I'm working on, I'll link my GitHub down
+below.<00:18:19.520><c> That's</c><00:18:19.679><c> where</c><00:18:19.840><c> you</c><00:18:20.000><c> can</c><00:18:20.160><c> find</c><00:18:20.400><c> all</c><00:18:20.640><c> of</c>
+
+00:18:20.710 --> 00:18:20.720 align:start position:0%
+below. That's where you can find all of
+ 
+
+00:18:20.720 --> 00:18:22.230 align:start position:0%
+below. That's where you can find all of
+the<00:18:20.960><c> code</c><00:18:21.120><c> that</c><00:18:21.280><c> I</c><00:18:21.440><c> was</c><00:18:21.600><c> showing</c><00:18:21.840><c> in</c><00:18:22.000><c> this</c>
+
+00:18:22.230 --> 00:18:22.240 align:start position:0%
+the code that I was showing in this
+ 
+
+00:18:22.240 --> 00:18:24.789 align:start position:0%
+the code that I was showing in this
+video.<00:18:22.880><c> Also,</c><00:18:23.280><c> you</c><00:18:23.520><c> can</c><00:18:23.600><c> go</c><00:18:23.840><c> join</c><00:18:24.240><c> my</c><00:18:24.480><c> free</c>
+
+00:18:24.789 --> 00:18:24.799 align:start position:0%
+video. Also, you can go join my free
+ 
+
+00:18:24.799 --> 00:18:26.789 align:start position:0%
+video. Also, you can go join my free
+school<00:18:25.120><c> community.</c><00:18:25.520><c> It's</c><00:18:25.679><c> Prompt</c><00:18:25.919><c> to</c><00:18:26.160><c> prod.</c>
+
+00:18:26.789 --> 00:18:26.799 align:start position:0%
+school community. It's Prompt to prod.
+ 
+
+00:18:26.799 --> 00:18:28.390 align:start position:0%
+school community. It's Prompt to prod.
+This<00:18:26.960><c> is</c><00:18:27.039><c> a</c><00:18:27.280><c> great</c><00:18:27.440><c> community.</c><00:18:27.840><c> We</c><00:18:28.000><c> have</c><00:18:28.080><c> a</c><00:18:28.240><c> lot</c>
+
+00:18:28.390 --> 00:18:28.400 align:start position:0%
+This is a great community. We have a lot
+ 
+
+00:18:28.400 --> 00:18:30.710 align:start position:0%
+This is a great community. We have a lot
+of<00:18:28.559><c> active</c><00:18:29.520><c> conversations</c><00:18:30.160><c> happening</c><00:18:30.480><c> in</c>
+
+00:18:30.710 --> 00:18:30.720 align:start position:0%
+of active conversations happening in
+ 
+
+00:18:30.720 --> 00:18:32.549 align:start position:0%
+of active conversations happening in
+here<00:18:31.120><c> and</c><00:18:31.520><c> you</c><00:18:31.760><c> can</c><00:18:31.919><c> also</c><00:18:32.240><c> if</c><00:18:32.400><c> you're</c>
+
+00:18:32.549 --> 00:18:32.559 align:start position:0%
+here and you can also if you're
+ 
+
+00:18:32.559 --> 00:18:33.909 align:start position:0%
+here and you can also if you're
+interested<00:18:32.799><c> in</c><00:18:33.039><c> working</c><00:18:33.200><c> with</c><00:18:33.360><c> me</c><00:18:33.679><c> check</c><00:18:33.840><c> out</c>
+
+00:18:33.909 --> 00:18:33.919 align:start position:0%
+interested in working with me check out
+ 
+
+00:18:33.919 --> 00:18:35.510 align:start position:0%
+interested in working with me check out
+my<00:18:34.160><c> consulting</c><00:18:34.559><c> website</c><00:18:34.880><c> which</c><00:18:35.120><c> I'll</c><00:18:35.360><c> link</c>
+
+00:18:35.510 --> 00:18:35.520 align:start position:0%
+my consulting website which I'll link
+ 
+
+00:18:35.520 --> 00:18:37.750 align:start position:0%
+my consulting website which I'll link
+down<00:18:35.760><c> below.</c><00:18:36.480><c> So</c><00:18:36.880><c> thank</c><00:18:37.039><c> you</c><00:18:37.200><c> so</c><00:18:37.440><c> much</c><00:18:37.520><c> for</c>
+
+00:18:37.750 --> 00:18:37.760 align:start position:0%
+down below. So thank you so much for
+ 
+
+00:18:37.760 --> 00:18:39.909 align:start position:0%
+down below. So thank you so much for
+watching.<00:18:38.160><c> This</c><00:18:38.320><c> is</c><00:18:38.400><c> a</c><00:18:38.559><c> longer</c><00:18:38.960><c> video</c><00:18:39.360><c> but</c><00:18:39.679><c> I</c>
+
+00:18:39.909 --> 00:18:39.919 align:start position:0%
+watching. This is a longer video but I
+ 
+
+00:18:39.919 --> 00:18:41.350 align:start position:0%
+watching. This is a longer video but I
+hope<00:18:40.000><c> you</c><00:18:40.240><c> found</c><00:18:40.320><c> this</c><00:18:40.559><c> valuable</c><00:18:40.880><c> and</c><00:18:41.039><c> I</c><00:18:41.280><c> hope</c>
+
+00:18:41.350 --> 00:18:41.360 align:start position:0%
+hope you found this valuable and I hope
+ 
+
+00:18:41.360 --> 00:18:43.669 align:start position:0%
+hope you found this valuable and I hope
+that<00:18:41.600><c> this</c><00:18:41.840><c> is</c><00:18:42.320><c> something</c><00:18:42.640><c> that</c><00:18:42.960><c> you</c><00:18:43.200><c> and</c><00:18:43.440><c> your</c>
+
+00:18:43.669 --> 00:18:43.679 align:start position:0%
+that this is something that you and your
+ 
+
+00:18:43.679 --> 00:18:47.190 align:start position:0%
+that this is something that you and your
+team<00:18:44.000><c> can</c><00:18:44.240><c> go</c><00:18:44.880><c> apply</c><00:18:45.360><c> to</c><00:18:45.600><c> your</c><00:18:46.240><c> code</c><00:18:46.559><c> bases.</c><00:18:47.039><c> I</c>
+
+00:18:47.190 --> 00:18:47.200 align:start position:0%
+team can go apply to your code bases. I
+ 
+
+00:18:47.200 --> 00:18:50.640 align:start position:0%
+team can go apply to your code bases. I
+will<00:18:47.360><c> see</c><00:18:47.520><c> you</c><00:18:47.600><c> guys</c><00:18:47.840><c> in</c><00:18:48.000><c> the</c><00:18:48.160><c> next</c><00:18:48.320><c> one.</c>
+

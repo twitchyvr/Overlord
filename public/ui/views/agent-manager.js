@@ -21,6 +21,12 @@ import { Component, OverlordUI, h } from '../engine.js';
 import { Modal }  from '../components/modal.js';
 import { Toast }  from '../components/toast.js';
 
+// Re-export from modular files for backward compatibility
+export { AgentDetailView, buildAgentDetailView, validateAgentForm, setSecurityRoles, getSecurityRoles, AGENT_DETAIL_FIELD_IDS } from './agent-detail-view.js';
+export { AgentCard, buildAgentCard, buildAgentRow, renderAgentList, buildAgentChip, getAgentColor, getAgentInitials } from './agent-card.js';
+export { AgentForm, buildAgentForm, getFormValues, validateForm, toKebabCase, validateAgentName, COMMON_LANGUAGES, AGENT_FORM_FIELDS } from './agent-form.js';
+export { AgentPermissions, buildCapabilityManager, renderToolPermissions, getSelectedTools, getSelectedPermissions, buildCategoryFilter, buildCapabilitySummary, getToolStatus, DEFAULT_CAPABILITY_CATEGORIES } from './agent-permissions.js';
+
 const MODAL_ID = 'agent-manager';
 // Fallback roles — replaced at runtime by server-provided roles via get_security_roles
 let SECURITY_ROLES_MAP = {
@@ -30,6 +36,30 @@ let SECURITY_ROLES_MAP = {
     'reviewer':     { label: 'Reviewer',       description: 'Read and analyze only' },
     'coordinator':  { label: 'Coordinator',    description: 'Read + orchestration — no implementation' },
     'observer':     { label: 'Observer',       description: 'Read-only access' }
+};
+// Complete tool categories — mirrors server-side TOOL_CATEGORIES in agent-manager-module.js.
+// Replaced at runtime by server-provided categories via get_available_tools socket event.
+const DEFAULT_TOOL_CATEGORIES = {
+    shell:   ['bash', 'powershell', 'cmd', 'execute_command'],
+    files:   ['read_file', 'read_file_lines', 'write_file', 'patch_file', 'edit_file',
+              'append_file', 'list_dir', 'list_directory', 'search_files',
+              'delete_file', 'delete_directory', 'file_tree', 'project_info', 'git_diff'],
+    ai:      ['web_search', 'understand_image', 'fetch_webpage', 'save_webpage_to_vault',
+              'generate_image', 'speak', 'take_screenshot'],
+    system:  ['system_info', 'get_working_dir', 'set_working_dir', 'set_thinking_level'],
+    agents:  ['list_agents', 'get_agent_info', 'assign_task', 'delegate_to_agent',
+              'delegate_to_team', 'message_agent', 'handoff_to_orchestrator',
+              'create_task', 'recommend_task', 'request_tool_exception', 'close_milestone'],
+    qa:      ['qa_run_tests', 'qa_check_lint', 'qa_check_types', 'qa_check_coverage', 'qa_audit_deps'],
+    github:  ['github', 'git_commit', 'git_push', 'deploy'],
+    memory:  ['record_note', 'recall_notes', 'session_note', 'save_session_note',
+              'recall_session_notes', 'agent_remember', 'agent_recall'],
+    skills:  ['list_skills', 'get_skill', 'activate_skill', 'deactivate_skill'],
+    ui:      ['ui_action', 'show_chart', 'ask_user', 'socket_push'],
+    kv:      ['kv_set', 'kv_get', 'kv_list', 'kv_delete'],
+    tasks:   ['add_todo', 'toggle_todo'],
+    vault:   ['vault_list_notes', 'vault_read_note', 'vault_write_note', 'vault_search'],
+    minimax: ['minimax_upload_file', 'minimax_list_files', 'minimax_delete_file'],
 };
 const FILLABLE_FIELDS = ['name', 'role', 'description', 'instructions', 'securityRole', 'group', 'tools'];
 const FIELD_IDS = { name: 'am-name', role: 'am-role', description: 'am-description', instructions: 'am-instructions', securityRole: 'am-security-role', group: 'am-group' };
@@ -44,7 +74,7 @@ export class AgentManagerView extends Component {
         this._groups          = [];
         this._currentAgentId  = null;
         this._dirty           = false;
-        this._toolCategories  = {};
+        this._toolCategories  = DEFAULT_TOOL_CATEGORIES;
         this._lockedFields    = new Set();
         this._fieldPreviews   = {};
         this._aiPanelOpen     = false;
@@ -76,14 +106,21 @@ export class AgentManagerView extends Component {
             className: 'agent-manager-modal',
             onClose: () => { this._dirty = false; this._currentAgentId = null; this._clearPreview(); }
         });
-        // Fetch dynamic tool categories + security roles, then load data
+        // Load agent list + groups immediately (using default tool categories)
+        this._loadAgentList();
+        this._loadGroups();
+        // Try to fetch dynamic tool categories + security roles from server
         if (this._socket) {
             this._socket.emit('get_available_tools', (cats) => {
-                this._toolCategories = cats || {};
-                this._loadAgentList();
-                this._loadGroups();
+                if (cats && typeof cats === 'object' && Object.keys(cats).length > 0) {
+                    this._toolCategories = cats;
+                    // Re-render tool perms if an agent is currently being edited
+                    if (this._currentAgentId) {
+                        const agent = this._agents.find(a => a.id === this._currentAgentId || a.name === this._currentAgentId);
+                        if (agent) this._renderToolPerms(agent.tools || []);
+                    }
+                }
             });
-            // Fetch server-side security role definitions
             this._socket.emit('get_security_roles', (roles) => {
                 if (roles && typeof roles === 'object' && Object.keys(roles).length > 0) {
                     SECURITY_ROLES_MAP = roles;

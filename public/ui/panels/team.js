@@ -460,14 +460,14 @@ export class TeamPanel extends PanelComponent {
             class: 'agent-card-btn',
             title: `Chat with ${agent.name}`,
             dataset: { action: 'agent-chat', agent: agent.name }
-        }, '��'));
+        }, '💬'));
 
         // Start Room button (opens a multi-agent room with this agent)
         header.appendChild(h('button', {
             class: 'agent-card-btn',
             title: `Start a room with ${agent.name}`,
             dataset: { action: 'start-room', agent: agent.name }
-        }, '��'));
+        }, '🚪'));
 
         // Pause/resume button
         const pauseIcon = ses.paused ? '▶' : '⏸';

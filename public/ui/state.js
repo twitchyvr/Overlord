@@ -400,6 +400,10 @@ export function createStore() {
     store.persist('settings.longRunning',  'overlord_long_running',       'off');
     store.persist('settings.notifications','overlord_notifications',      'on');
     store.persist('ui.theme',              'theme',                       'dark');
+    store.persist('ui.workingDir',         'overlord_working_dir',        '');
+
+    // ── Persisted conversation state ──
+    store.persist('conversations.current',   'overlord_current_conv',       null);
 
     // ── Non-persisted initial state ──
     store.set('team.agents',                 [],    { silent: true });
@@ -409,7 +413,6 @@ export function createStore() {
     store.set('orchestration.recommendations', [],  { silent: true });
     store.set('backchannel.messages',        [],    { silent: true });
     store.set('conversations.list',          [],    { silent: true });
-    store.set('conversations.current',       null,  { silent: true });
     store.set('agents.sessions',             {},    { silent: true });
     store.set('agents.messages',             {},    { silent: true });
     store.set('ui.processing',               false, { silent: true });

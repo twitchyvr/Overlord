@@ -15,17 +15,29 @@ let HUB = null;
 let CONFIG = null;
 let db = null;
 
-// Default tool categories
+// Complete tool categories — every canonical + dynamic tool in the system.
+// This is the authoritative list rendered in the Agent Manager UI.
 const TOOL_CATEGORIES = {
-    shell: ['bash', 'powershell', 'cmd'],
-    files: ['read_file', 'read_file_lines', 'write_file', 'patch_file', 'append_file', 'list_dir'],
-    ai: ['web_search', 'understand_image', 'fetch_webpage', 'save_webpage_to_vault'],
-    system: ['system_info', 'get_working_dir', 'set_working_dir', 'set_thinking_level'],
-    agents: ['list_agents', 'get_agent_info', 'assign_task'],
-    qa: ['qa_run_tests', 'qa_check_lint', 'qa_check_types', 'qa_check_coverage', 'qa_audit_deps'],
-    github: ['github'],
-    notes: ['record_note', 'recall_notes'],
-    skills: ['list_skills', 'get_skill', 'activate_skill', 'deactivate_skill']
+    shell:        ['bash', 'powershell', 'cmd', 'execute_command'],
+    files:        ['read_file', 'read_file_lines', 'write_file', 'patch_file', 'edit_file',
+                   'append_file', 'list_dir', 'list_directory', 'search_files',
+                   'delete_file', 'delete_directory', 'file_tree', 'project_info', 'git_diff'],
+    ai:           ['web_search', 'understand_image', 'fetch_webpage', 'save_webpage_to_vault',
+                   'generate_image', 'speak', 'take_screenshot'],
+    system:       ['system_info', 'get_working_dir', 'set_working_dir', 'set_thinking_level'],
+    agents:       ['list_agents', 'get_agent_info', 'assign_task', 'delegate_to_agent',
+                   'delegate_to_team', 'message_agent', 'handoff_to_orchestrator',
+                   'create_task', 'recommend_task', 'request_tool_exception', 'close_milestone'],
+    qa:           ['qa_run_tests', 'qa_check_lint', 'qa_check_types', 'qa_check_coverage', 'qa_audit_deps'],
+    github:       ['github', 'git_commit', 'git_push', 'deploy'],
+    memory:       ['record_note', 'recall_notes', 'session_note', 'save_session_note',
+                   'recall_session_notes', 'agent_remember', 'agent_recall'],
+    skills:       ['list_skills', 'get_skill', 'activate_skill', 'deactivate_skill'],
+    ui:           ['ui_action', 'show_chart', 'ask_user', 'socket_push'],
+    kv:           ['kv_set', 'kv_get', 'kv_list', 'kv_delete'],
+    tasks:        ['add_todo', 'toggle_todo'],
+    vault:        ['vault_list_notes', 'vault_read_note', 'vault_write_note', 'vault_search'],
+    minimax:      ['minimax_upload_file', 'minimax_list_files', 'minimax_delete_file'],
 };
 
 // Programming languages

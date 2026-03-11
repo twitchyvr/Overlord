@@ -1,0 +1,1082 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Overlord v2 Architecture Report — Rev 2</title>
+<style>
+/* ═══════════════════ DESIGN TOKENS ═══════════════════ */
+:root {
+  --bg-0: #0a0a12;
+  --bg-1: #12121e;
+  --bg-2: #1a1a2e;
+  --bg-3: #222240;
+  --bg-card: #16162a;
+  --bg-card-hover: #1e1e38;
+  --border: rgba(100,100,200,0.15);
+  --border-glow: rgba(56,189,248,0.3);
+  --text-0: #e8e8f0;
+  --text-1: #b0b0c8;
+  --text-2: #7878a0;
+  --accent-cyan: #38bdf8;
+  --accent-green: #4ade80;
+  --accent-yellow: #facc15;
+  --accent-red: #f87171;
+  --accent-purple: #a855f7;
+  --accent-magenta: #e879f9;
+  --accent-orange: #fb923c;
+  --electric: #00d4ff;
+  --plasma: #a855f7;
+  --neon: #00ff88;
+  --glass: rgba(20,20,40,0.7);
+  --glass-border: rgba(100,100,200,0.12);
+  --radius: 12px;
+  --radius-sm: 8px;
+  --radius-xs: 4px;
+  --shadow: 0 4px 32px rgba(0,0,0,0.4);
+  --shadow-glow: 0 0 40px rgba(56,189,248,0.08);
+  --font: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+  --transition: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body { font-family: var(--font); background: var(--bg-0); color: var(--text-0); line-height: 1.6; min-height: 100vh; overflow-x: hidden; }
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--accent-cyan); }
+
+.container { max-width: 1400px; margin: 0 auto; padding: 0 24px; }
+
+/* ═══════════════════ HERO ═══════════════════ */
+.hero { position: relative; padding: 80px 0 60px; text-align: center; overflow: hidden; }
+.hero::before { content: ''; position: absolute; inset: 0; background: radial-gradient(ellipse 800px 400px at 50% 0%, rgba(56,189,248,0.08) 0%, transparent 70%), radial-gradient(ellipse 600px 300px at 30% 100%, rgba(168,85,247,0.06) 0%, transparent 70%), radial-gradient(ellipse 600px 300px at 70% 100%, rgba(0,255,136,0.04) 0%, transparent 70%); pointer-events: none; }
+.hero-badge { display: inline-block; padding: 6px 16px; background: rgba(56,189,248,0.1); border: 1px solid rgba(56,189,248,0.25); border-radius: 20px; font-size: 13px; color: var(--accent-cyan); letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 20px; }
+.hero h1 { font-size: clamp(2rem, 5vw, 3.5rem); font-weight: 800; background: linear-gradient(135deg, var(--accent-cyan) 0%, var(--accent-purple) 50%, var(--neon) 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; margin-bottom: 16px; }
+.hero p { font-size: 18px; color: var(--text-1); max-width: 700px; margin: 0 auto 32px; }
+.hero-stats { display: flex; gap: 32px; justify-content: center; flex-wrap: wrap; }
+.hero-stat { text-align: center; }
+.hero-stat .num { font-size: 32px; font-weight: 800; font-family: var(--font-mono); }
+.hero-stat .num.cyan { color: var(--accent-cyan); }
+.hero-stat .num.green { color: var(--accent-green); }
+.hero-stat .num.purple { color: var(--accent-purple); }
+.hero-stat .num.orange { color: var(--accent-orange); }
+.hero-stat .label { font-size: 12px; color: var(--text-2); text-transform: uppercase; letter-spacing: 1px; margin-top: 4px; }
+
+/* ═══════════════════ NAV ═══════════════════ */
+.nav { position: sticky; top: 0; z-index: 100; background: rgba(10,10,18,0.85); backdrop-filter: blur(20px); border-bottom: 1px solid var(--border); padding: 0 24px; }
+.nav-inner { max-width: 1400px; margin: 0 auto; display: flex; gap: 4px; overflow-x: auto; scrollbar-width: none; padding: 8px 0; }
+.nav-inner::-webkit-scrollbar { display: none; }
+.nav-link { padding: 8px 16px; color: var(--text-2); text-decoration: none; font-size: 13px; font-weight: 500; border-radius: var(--radius-sm); white-space: nowrap; transition: var(--transition); }
+.nav-link:hover { color: var(--text-0); background: var(--bg-2); }
+.nav-link.active { color: var(--accent-cyan); background: rgba(56,189,248,0.1); }
+
+/* ═══════════════════ SECTION ═══════════════════ */
+.section { padding: 60px 0; border-bottom: 1px solid var(--border); }
+.section:last-child { border-bottom: none; }
+.section-label { font-size: 11px; text-transform: uppercase; letter-spacing: 2px; color: var(--accent-cyan); margin-bottom: 8px; }
+.section h2 { font-size: 28px; font-weight: 700; margin-bottom: 8px; }
+.section .subtitle { color: var(--text-1); font-size: 16px; margin-bottom: 32px; max-width: 700px; }
+
+/* ═══════════════════ CARDS ═══════════════════ */
+.card { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); padding: 24px; transition: var(--transition); }
+.card:hover { border-color: var(--border-glow); box-shadow: var(--shadow-glow); background: var(--bg-card-hover); }
+.card-grid { display: grid; gap: 16px; }
+.card-grid.cols-2 { grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); }
+.card-grid.cols-3 { grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); }
+.card-grid.cols-4 { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+.card h3 { font-size: 16px; font-weight: 600; margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
+.card p { color: var(--text-1); font-size: 14px; }
+
+.tag { display: inline-block; padding: 2px 10px; border-radius: 12px; font-size: 11px; font-weight: 600; letter-spacing: 0.3px; }
+.tag.cyan { background: rgba(56,189,248,0.15); color: var(--accent-cyan); }
+.tag.green { background: rgba(74,222,128,0.15); color: var(--accent-green); }
+.tag.purple { background: rgba(168,85,247,0.15); color: var(--accent-purple); }
+.tag.red { background: rgba(248,113,113,0.15); color: var(--accent-red); }
+.tag.yellow { background: rgba(250,204,21,0.15); color: var(--accent-yellow); }
+.tag.orange { background: rgba(251,146,60,0.15); color: var(--accent-orange); }
+
+/* ═══════════════════ COMPARISON ═══════════════════ */
+.comparison { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+@media (max-width: 768px) { .comparison { grid-template-columns: 1fr; } }
+.comp-side { border-radius: var(--radius); padding: 24px; border: 1px solid var(--border); }
+.comp-side.old { background: linear-gradient(135deg, rgba(248,113,113,0.05) 0%, var(--bg-card) 100%); border-color: rgba(248,113,113,0.2); }
+.comp-side.new { background: linear-gradient(135deg, rgba(74,222,128,0.05) 0%, var(--bg-card) 100%); border-color: rgba(74,222,128,0.2); }
+.comp-side h4 { font-size: 14px; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+.comp-side.old h4 { color: var(--accent-red); }
+.comp-side.new h4 { color: var(--accent-green); }
+.comp-side ul { list-style: none; display: flex; flex-direction: column; gap: 8px; }
+.comp-side li { font-size: 14px; color: var(--text-1); padding-left: 20px; position: relative; }
+.comp-side.old li::before { content: '\2717'; position: absolute; left: 0; color: var(--accent-red); }
+.comp-side.new li::before { content: '\2713'; position: absolute; left: 0; color: var(--accent-green); }
+
+/* ═══════════════════ DIAGRAM ═══════════════════ */
+.diagram-container { background: var(--bg-1); border: 1px solid var(--border); border-radius: var(--radius); padding: 32px; overflow-x: auto; margin: 24px 0; }
+.diagram { font-family: var(--font-mono); font-size: 13px; line-height: 1.5; color: var(--text-1); white-space: pre; min-width: fit-content; }
+.diagram .hl-cyan { color: var(--accent-cyan); }
+.diagram .hl-green { color: var(--accent-green); }
+.diagram .hl-purple { color: var(--accent-purple); }
+.diagram .hl-yellow { color: var(--accent-yellow); }
+.diagram .hl-red { color: var(--accent-red); }
+.diagram .hl-orange { color: var(--accent-orange); }
+.diagram .dim { color: var(--text-2); }
+
+/* ═══════════════════ TABS ═══════════════════ */
+.tabs { display: flex; gap: 4px; padding: 4px; background: var(--bg-2); border-radius: var(--radius-sm); margin-bottom: 24px; overflow-x: auto; scrollbar-width: none; }
+.tabs::-webkit-scrollbar { display: none; }
+.tab-btn { padding: 8px 20px; background: transparent; border: none; color: var(--text-2); font-size: 13px; font-weight: 500; border-radius: 6px; cursor: pointer; transition: var(--transition); white-space: nowrap; font-family: var(--font); }
+.tab-btn:hover { color: var(--text-0); }
+.tab-btn.active { background: var(--bg-card); color: var(--accent-cyan); box-shadow: 0 2px 8px rgba(0,0,0,0.3); }
+.tab-content { display: none; }
+.tab-content.active { display: block; }
+
+/* ═══════════════════ TABLE ═══════════════════ */
+.data-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+.data-table th { text-align: left; padding: 12px 16px; background: var(--bg-2); color: var(--text-2); font-size: 11px; text-transform: uppercase; letter-spacing: 1px; border-bottom: 1px solid var(--border); }
+.data-table td { padding: 12px 16px; border-bottom: 1px solid var(--border); color: var(--text-1); }
+.data-table tr:hover td { background: var(--bg-2); }
+.data-table .arrow { color: var(--accent-cyan); font-weight: 600; text-align: center; }
+
+/* ═══════════════════ ACCORDION ═══════════════════ */
+.accordion { display: flex; flex-direction: column; gap: 8px; }
+.acc-item { border: 1px solid var(--border); border-radius: var(--radius-sm); overflow: hidden; }
+.acc-header { display: flex; align-items: center; gap: 12px; padding: 16px 20px; background: var(--bg-card); cursor: pointer; user-select: none; transition: var(--transition); }
+.acc-header:hover { background: var(--bg-card-hover); }
+.acc-chevron { font-size: 12px; color: var(--text-2); transition: transform 0.2s; flex-shrink: 0; }
+.acc-item.open .acc-chevron { transform: rotate(90deg); }
+.acc-header h4 { font-size: 15px; font-weight: 600; flex: 1; }
+.acc-body { padding: 0 20px; max-height: 0; overflow: hidden; transition: max-height 0.35s ease, padding 0.35s ease; background: var(--bg-1); }
+.acc-item.open .acc-body { max-height: 3000px; padding: 20px; }
+.acc-body p, .acc-body li { font-size: 14px; color: var(--text-1); }
+.acc-body ul { padding-left: 20px; margin: 8px 0; }
+.acc-body li { margin-bottom: 6px; }
+.acc-body code { font-family: var(--font-mono); font-size: 12px; background: var(--bg-2); padding: 2px 6px; border-radius: 3px; color: var(--accent-cyan); }
+
+/* ═══════════════════ CODE BLOCK ═══════════════════ */
+.code-block { background: var(--bg-1); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 20px; font-family: var(--font-mono); font-size: 13px; line-height: 1.7; color: var(--text-1); overflow-x: auto; margin: 16px 0; }
+.code-block .comment { color: var(--text-2); }
+.code-block .keyword { color: var(--accent-purple); }
+.code-block .string { color: var(--accent-green); }
+.code-block .type { color: var(--accent-cyan); }
+.code-block .fn { color: var(--accent-yellow); }
+
+/* ═══════════════════ PROGRESS BAR ═══════════════════ */
+.progress-row { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+.progress-label { font-size: 13px; color: var(--text-1); min-width: 140px; }
+.progress-bar { flex: 1; height: 8px; background: var(--bg-2); border-radius: 4px; overflow: hidden; }
+.progress-fill { height: 100%; border-radius: 4px; transition: width 1s ease; }
+.progress-fill.cyan { background: var(--accent-cyan); }
+.progress-fill.green { background: var(--accent-green); }
+.progress-fill.purple { background: var(--accent-purple); }
+.progress-fill.red { background: var(--accent-red); }
+.progress-fill.yellow { background: var(--accent-yellow); }
+.progress-pct { font-size: 12px; font-family: var(--font-mono); color: var(--text-2); min-width: 40px; text-align: right; }
+
+/* ═══════════════════ BUILDING VIZ ═══════════════════ */
+.building { display: grid; grid-template-columns: 1fr; gap: 12px; max-width: 900px; margin: 24px auto; }
+.floor { border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; transition: var(--transition); cursor: pointer; }
+.floor:hover { border-color: var(--border-glow); transform: translateY(-2px); box-shadow: var(--shadow-glow); }
+.floor-header { padding: 12px 20px; display: flex; align-items: center; gap: 12px; font-weight: 600; font-size: 14px; }
+.floor-rooms { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 8px; padding: 0 20px; max-height: 0; overflow: hidden; transition: max-height 0.4s ease, padding 0.4s ease; }
+.floor.open .floor-rooms { max-height: 600px; padding: 12px 20px 16px; }
+.room-card { padding: 12px 16px; background: var(--bg-2); border-radius: var(--radius-sm); border: 1px solid var(--border); }
+.room-card h5 { font-size: 13px; margin-bottom: 4px; }
+.room-card p { font-size: 11px; color: var(--text-2); }
+.floor-chevron { margin-left: auto; font-size: 12px; color: var(--text-2); transition: transform 0.2s; }
+.floor.open .floor-chevron { transform: rotate(90deg); }
+.floor-badge { font-size: 10px; padding: 2px 8px; border-radius: 10px; font-weight: 600; }
+
+.floor.f-strat { background: rgba(232,121,249,0.05); }
+.floor.f-strat .floor-header { color: var(--accent-magenta); }
+.floor.f-exec { background: rgba(56,189,248,0.05); }
+.floor.f-exec .floor-header { color: var(--accent-cyan); }
+.floor.f-collab { background: rgba(168,85,247,0.05); }
+.floor.f-collab .floor-header { color: var(--accent-purple); }
+.floor.f-ops { background: rgba(74,222,128,0.05); }
+.floor.f-ops .floor-header { color: var(--accent-green); }
+.floor.f-gov { background: rgba(250,204,21,0.05); }
+.floor.f-gov .floor-header { color: var(--accent-yellow); }
+.floor.f-integ { background: rgba(248,113,113,0.05); }
+.floor.f-integ .floor-header { color: var(--accent-red); }
+.floor.f-lobby { background: rgba(251,146,60,0.05); }
+.floor.f-lobby .floor-header { color: var(--accent-orange); }
+
+/* ═══════════════════ TIMELINE ═══════════════════ */
+.timeline { position: relative; padding-left: 32px; }
+.timeline::before { content: ''; position: absolute; left: 11px; top: 0; bottom: 0; width: 2px; background: var(--border); }
+.tl-item { position: relative; margin-bottom: 32px; }
+.tl-dot { position: absolute; left: -32px; top: 4px; width: 12px; height: 12px; border-radius: 50%; border: 2px solid; }
+.tl-dot.cyan { border-color: var(--accent-cyan); background: rgba(56,189,248,0.2); }
+.tl-dot.green { border-color: var(--accent-green); background: rgba(74,222,128,0.2); }
+.tl-dot.purple { border-color: var(--accent-purple); background: rgba(168,85,247,0.2); }
+.tl-dot.yellow { border-color: var(--accent-yellow); background: rgba(250,204,21,0.2); }
+.tl-dot.magenta { border-color: var(--accent-magenta); background: rgba(232,121,249,0.2); }
+.tl-dot.orange { border-color: var(--accent-orange); background: rgba(251,146,60,0.2); }
+.tl-phase { font-size: 12px; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px; }
+.tl-item h4 { font-size: 16px; margin-bottom: 6px; }
+.tl-item p { font-size: 14px; color: var(--text-1); }
+
+/* ═══════════════════ CALLOUT ═══════════════════ */
+.callout { border-radius: var(--radius); padding: 24px 28px; margin: 24px 0; font-size: 15px; }
+.callout.cyan { background: rgba(56,189,248,0.06); border: 1px solid rgba(56,189,248,0.2); border-left: 3px solid var(--accent-cyan); }
+.callout.green { background: rgba(74,222,128,0.06); border: 1px solid rgba(74,222,128,0.2); border-left: 3px solid var(--accent-green); }
+.callout.purple { background: rgba(168,85,247,0.06); border: 1px solid rgba(168,85,247,0.2); border-left: 3px solid var(--accent-purple); }
+.callout.yellow { background: rgba(250,204,21,0.06); border: 1px solid rgba(250,204,21,0.2); border-left: 3px solid var(--accent-yellow); }
+.callout.orange { background: rgba(251,146,60,0.06); border: 1px solid rgba(251,146,60,0.2); border-left: 3px solid var(--accent-orange); }
+.callout.magenta { background: rgba(232,121,249,0.06); border: 1px solid rgba(232,121,249,0.2); border-left: 3px solid var(--accent-magenta); }
+.callout strong { color: var(--text-0); }
+
+/* ═══════════════════ SEARCH ═══════════════════ */
+.search-bar { width: 100%; max-width: 500px; padding: 10px 16px; background: var(--bg-2); border: 1px solid var(--border); border-radius: var(--radius-sm); color: var(--text-0); font-size: 14px; font-family: var(--font); outline: none; transition: var(--transition); }
+.search-bar:focus { border-color: var(--accent-cyan); }
+.search-bar::placeholder { color: var(--text-2); }
+
+.footer { padding: 40px 0; text-align: center; color: var(--text-2); font-size: 13px; }
+
+@keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+.animate { animation: fadeInUp 0.5s ease forwards; opacity: 0; }
+
+@media (max-width: 768px) {
+  .hero { padding: 40px 0 30px; }
+  .hero h1 { font-size: 1.8rem; }
+  .section { padding: 40px 0; }
+  .comparison { grid-template-columns: 1fr; }
+  .container { padding: 0 16px; }
+}
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════ HERO ═══════════════════ -->
+<div class="hero">
+  <div class="container">
+    <div class="hero-badge">Architecture Report &mdash; Rev 2</div>
+    <h1>Overlord v2: The Rebuild</h1>
+    <p>Building / Room / Table framework for a scriptable, scalable agentic platform. Now with Phase Zero, exit protocols, RAID logging, plugin architecture, and mid-stream scope handling.</p>
+    <div class="hero-stats">
+      <div class="hero-stat animate"><div class="num cyan">18.5K</div><div class="label">v1 Backend LOC</div></div>
+      <div class="hero-stat animate"><div class="num green">8.2K</div><div class="label">v1 Frontend LOC</div></div>
+      <div class="hero-stat animate"><div class="num purple">~20</div><div class="label">v2 Modules</div></div>
+      <div class="hero-stat animate"><div class="num orange">7</div><div class="label">Floors</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════ NAV ═══════════════════ -->
+<nav class="nav" id="nav">
+  <div class="nav-inner">
+    <a href="#philosophy" class="nav-link">Philosophy</a>
+    <a href="#terminology" class="nav-link">Terminology</a>
+    <a href="#building" class="nav-link">Building</a>
+    <a href="#phase-zero" class="nav-link">Phase Zero</a>
+    <a href="#phases" class="nav-link">Phases & Gates</a>
+    <a href="#exit-docs" class="nav-link">Exit Docs</a>
+    <a href="#scope-change" class="nav-link">Scope Changes</a>
+    <a href="#architecture" class="nav-link">Architecture</a>
+    <a href="#plugins" class="nav-link">Plugins</a>
+    <a href="#io" class="nav-link">I/O Contracts</a>
+    <a href="#agents" class="nav-link">Agents</a>
+    <a href="#commands" class="nav-link">Commands</a>
+    <a href="#providers" class="nav-link">AI Providers</a>
+    <a href="#migration" class="nav-link">Migration</a>
+    <a href="#timeline" class="nav-link">Timeline</a>
+    <a href="#lessons" class="nav-link">Lessons</a>
+  </div>
+</nav>
+
+<!-- ═══════════════════ PHILOSOPHY ═══════════════════ -->
+<section class="section" id="philosophy">
+  <div class="container">
+    <div class="section-label">Core Principle</div>
+    <h2>Don't Change the Agent &mdash; Change the Framework</h2>
+    <p class="subtitle">The single architectural decision that makes everything else possible.</p>
+
+    <div class="callout cyan">
+      <strong>Rooms define behavior, not agents.</strong> When an agent enters a room, the room's rules, tools, and output templates merge into their context. Change the testing room rules once &mdash; every agent that enters inherits them. Add a new agent? It just works in existing rooms.
+    </div>
+
+    <div class="card-grid cols-3">
+      <div class="card">
+        <h3><span class="tag red">v1</span> Agent-Centric</h3>
+        <p>Each agent carries 200+ line system prompts with behavioral rules. 15 agents = 15 places to maintain rules. Change one, miss the others.</p>
+      </div>
+      <div class="card">
+        <h3><span class="tag green">v2</span> Framework-Centric</h3>
+        <p>Agents are 10-line identity cards (name, capabilities, room access). Rooms own the rules. One change propagates to every agent that enters.</p>
+      </div>
+      <div class="card">
+        <h3><span class="tag purple">v2+</span> Scriptable</h3>
+        <p>Rooms, floors, tables are plugins &mdash; scriptable modules (Lua or JS). Even built-in features are implemented as plugins, not monolith. Users can create custom room types for use cases we haven't imagined.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════ TERMINOLOGY ═══════════════════ -->
+<section class="section" id="terminology">
+  <div class="container">
+    <div class="section-label">Language</div>
+    <h2>Terminology Guide</h2>
+    <p class="subtitle">Words matter. These terms are chosen because AI models respond to them predictably.</p>
+
+    <table class="data-table">
+      <thead><tr><th>Term</th><th>Meaning</th><th>Why this word</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Building</strong></td><td>The entire Overlord instance for a project</td><td>Spatial metaphor that contains everything</td></tr>
+        <tr><td><strong>Floor</strong></td><td>A category of rooms (Governance, Execution, etc.)</td><td>Modular &mdash; can add/remove floors like a tycoon game</td></tr>
+        <tr><td><strong>Room</strong></td><td>A bounded workspace with rules, tools, access control</td><td>Matches socket.io "rooms", Discord channels, real offices</td></tr>
+        <tr><td><strong>Table</strong></td><td>A work mode within a room (focus, collab, review)</td><td>You sit at a table to do a specific type of work</td></tr>
+        <tr><td><strong>Chair</strong></td><td>An agent slot at a table (capacity limit)</td><td>Visual: filled chair = active agent. Need more? Get a boardroom.</td></tr>
+        <tr><td><strong>Todo</strong></td><td>A single discrete unit of work for one agent</td><td>AI understands "todo" natively &mdash; auto-creates checklists, marks them off</td></tr>
+        <tr><td><strong>Task</strong></td><td>A milestone-level item (may have many todos)</td><td>"Task" implies bigger scope &mdash; AI treats them differently than "todo"</td></tr>
+        <tr><td><strong>Phase</strong></td><td>A project stage (discovery, architecture, execution...)</td><td>Standard PM terminology, maps to floor activation</td></tr>
+        <tr><td><strong>Gate</strong></td><td>A go/no-go checkpoint between phases</td><td>Forces structured sign-off, prevents premature advancement</td></tr>
+        <tr><td><strong>Exit Document</strong></td><td>Structured output required to leave a room</td><td>Audit trail &mdash; "what was decided, by whom, with what evidence"</td></tr>
+        <tr><td><strong>RAID Log</strong></td><td>Risks, Assumptions, Issues, Decisions database</td><td>Standard PM tool. Searchable history for agent reference.</td></tr>
+        <tr><td><strong>Strategist</strong></td><td>Phase Zero agent that helps set up the building</td><td>Consultative &mdash; asks what success looks like before building anything</td></tr>
+        <tr><td><strong>Lobby</strong></td><td>Permanent ground floor: user interface, dashboard, routing</td><td>Always there, can be upgraded but never changed to another floor type</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ═══════════════════ BUILDING ═══════════════════ -->
+<section class="section" id="building">
+  <div class="container">
+    <div class="section-label">Spatial Architecture</div>
+    <h2>The Building</h2>
+    <p class="subtitle">Click each floor to explore its rooms. Buildings scale per project &mdash; 2 floors for a doc project, 7 for a full build. Multiple buildings can form a "city" for enterprise integration.</p>
+
+    <div class="building" id="building-viz">
+
+      <div class="floor f-gov" onclick="toggleFloor(this)">
+        <div class="floor-header">
+          <span style="font-size:18px">&#127970;</span>
+          Governance Floor
+          <span class="floor-badge" style="background:rgba(250,204,21,0.15);color:var(--accent-yellow)">GATES</span>
+          <span class="floor-chevron">&#9654;</span>
+        </div>
+        <div class="floor-rooms">
+          <div class="room-card"><h5 style="color:var(--accent-yellow)">Review Room</h5><p>Go/no-go decisions. Risk questionnaire with independent analysis &mdash; not just yes/no. Produces: exit document with citations.</p><p style="margin-top:6px"><span class="tag yellow">Gate</span> <span class="tag purple">PM</span> <span class="tag cyan">Architect</span></p></div>
+          <div class="room-card"><h5 style="color:var(--accent-yellow)">Audit Room</h5><p>Security review, compliance checks. Read-only tools. Must cite specific evidence in structured report.</p><p style="margin-top:6px"><span class="tag red">Security</span> <span class="tag yellow">Read-only</span></p></div>
+          <div class="room-card"><h5 style="color:var(--accent-yellow)">Release Lounge</h5><p>Pre-release checklist, deployment readiness, rollback plan. The "whiteboard" &mdash; are we ready to ship?</p><p style="margin-top:6px"><span class="tag green">DevOps</span> <span class="tag cyan">Architect</span></p></div>
+        </div>
+      </div>
+
+      <div class="floor f-exec" onclick="toggleFloor(this)">
+        <div class="floor-header">
+          <span style="font-size:18px">&#128187;</span>
+          Execution Floor
+          <span class="floor-badge" style="background:rgba(56,189,248,0.15);color:var(--accent-cyan)">BUILD</span>
+          <span class="floor-chevron">&#9654;</span>
+        </div>
+        <div class="floor-rooms">
+          <div class="room-card"><h5 style="color:var(--accent-cyan)">Code Lab</h5><p>Implementation. Full file read/write/shell. Scoped to assigned files only. <strong>Focus Desk</strong> = one agent, one file. <strong>Collab Table</strong> = multi-agent, multi-file.</p><p style="margin-top:6px"><span class="tag cyan">Dev</span> <span class="tag green">Focus/Collab</span></p></div>
+          <div class="room-card"><h5 style="color:var(--accent-cyan)">Integration Room</h5><p>Multi-agent collaboration on tasks with dependencies. Shared context, cross-references between code changes.</p><p style="margin-top:6px"><span class="tag cyan">Dev</span> <span class="tag purple">Boardroom</span></p></div>
+          <div class="room-card"><h5 style="color:var(--accent-cyan)">Testing Lab</h5><p><strong>Cannot modify source code.</strong> Can only run tests, report results. Framework-enforced: write_file simply doesn't exist here.</p><p style="margin-top:6px"><span class="tag green">QA</span> <span class="tag red">No write tools</span></p></div>
+        </div>
+      </div>
+
+      <div class="floor f-collab" onclick="toggleFloor(this)">
+        <div class="floor-header">
+          <span style="font-size:18px">&#128172;</span>
+          Collaboration Floor
+          <span class="floor-badge" style="background:rgba(168,85,247,0.15);color:var(--accent-purple)">PLAN</span>
+          <span class="floor-chevron">&#9654;</span>
+        </div>
+        <div class="floor-rooms">
+          <div class="room-card"><h5 style="color:var(--accent-purple)">Discovery Room</h5><p>Phase 1. Define business outcomes, constraints, unknowns. Produces requirements doc, gap analysis, risk assessment.</p><p style="margin-top:6px"><span class="tag purple">PM</span> <span class="tag cyan">SMEs</span> <span class="tag orange">Orchestrator</span></p></div>
+          <div class="room-card"><h5 style="color:var(--accent-purple)">Architecture Room</h5><p>Phase 2. Break requirements into milestones, tasks, dependency graph, tech decisions.</p><p style="margin-top:6px"><span class="tag cyan">Architect</span> <span class="tag purple">PM</span></p></div>
+          <div class="room-card"><h5 style="color:var(--accent-purple)">War Room</h5><p>Incident response. All-hands troubleshooting. Elevated access. Time-boxed.</p><p style="margin-top:6px"><span class="tag red">Principal</span> <span class="tag cyan">All elevated</span></p></div>
+        </div>
+      </div>
+
+      <div class="floor f-ops" onclick="toggleFloor(this)">
+        <div class="floor-header">
+          <span style="font-size:18px">&#9881;&#65039;</span>
+          Operations Floor
+          <span class="floor-badge" style="background:rgba(74,222,128,0.15);color:var(--accent-green)">DEPLOY</span>
+          <span class="floor-chevron">&#9654;</span>
+        </div>
+        <div class="floor-rooms">
+          <div class="room-card"><h5 style="color:var(--accent-green)">Deploy Room</h5><p>Git operations, CI/CD triggers, verification. Requires Release Lounge sign-off first.</p><p style="margin-top:6px"><span class="tag green">DevOps</span> <span class="tag yellow">Gate Required</span></p></div>
+          <div class="room-card"><h5 style="color:var(--accent-green)">Monitoring Room</h5><p>Health checks, log analysis, metrics. Read-only. Escalates to War Room on critical.</p><p style="margin-top:6px"><span class="tag green">DevOps</span> <span class="tag cyan">Auto</span></p></div>
+        </div>
+      </div>
+
+      <div class="floor f-integ" onclick="toggleFloor(this)">
+        <div class="floor-header">
+          <span style="font-size:18px">&#128268;</span>
+          Integration Floor
+          <span class="floor-badge" style="background:rgba(248,113,113,0.15);color:var(--accent-red)">I/O</span>
+          <span class="floor-chevron">&#9654;</span>
+        </div>
+        <div class="floor-rooms">
+          <div class="room-card"><h5 style="color:var(--accent-red)">Plugin Bay</h5><p>Where external plugins connect. Lua/JS scripts register here. Strict typed I/O contracts enforced at this boundary.</p><p style="margin-top:6px"><span class="tag red">Strict I/O</span> <span class="tag yellow">Sandboxed</span></p></div>
+          <div class="room-card"><h5 style="color:var(--accent-red)">Data Exchange</h5><p>External API integrations, webhooks, MCP servers. <strong>Single point of external communication</strong> &mdash; security boundary.</p><p style="margin-top:6px"><span class="tag red">External</span> <span class="tag cyan">Typed</span></p></div>
+          <div class="room-card"><h5 style="color:var(--accent-red)">Provider Hub</h5><p>AI model providers (Anthropic, MiniMax, OpenAI, local/open-source). Provider-agnostic adapter layer.</p><p style="margin-top:6px"><span class="tag purple">Multi-model</span> <span class="tag green">Swappable</span></p></div>
+        </div>
+      </div>
+
+      <div class="floor f-strat" onclick="toggleFloor(this)">
+        <div class="floor-header">
+          <span style="font-size:18px">&#129488;</span>
+          Strategy Floor
+          <span class="floor-badge" style="background:rgba(232,121,249,0.15);color:var(--accent-magenta)">PHASE 0</span>
+          <span class="floor-chevron">&#9654;</span>
+        </div>
+        <div class="floor-rooms">
+          <div class="room-card"><h5 style="color:var(--accent-magenta)">Strategist Office</h5><p>Phase Zero. Before anything else. "What are you trying to build? What does success look like?" Consultative setup of the entire building.</p><p style="margin-top:6px"><span class="tag purple">Strategist</span> <span class="tag orange">User</span></p></div>
+          <div class="room-card"><h5 style="color:var(--accent-magenta)">Building Architect</h5><p>Configures floors, rooms, agents, tools based on Strategist output. Quick Start or Advanced mode.</p><p style="margin-top:6px"><span class="tag purple">Architect</span> <span class="tag cyan">Auto-config</span></p></div>
+        </div>
+      </div>
+
+      <div class="floor f-lobby open" onclick="toggleFloor(this)">
+        <div class="floor-header">
+          <span style="font-size:18px">&#128682;</span>
+          Lobby
+          <span class="floor-badge" style="background:rgba(251,146,60,0.15);color:var(--accent-orange)">PERMANENT</span>
+          <span class="floor-chevron">&#9654;</span>
+        </div>
+        <div class="floor-rooms">
+          <div class="room-card"><h5 style="color:var(--accent-orange)">Main Chat</h5><p>User's primary interface. Messages routed to rooms by orchestrator. Slash commands and @-mentions.</p><p style="margin-top:6px"><span class="tag orange">User</span> <span class="tag purple">Orchestrator</span></p></div>
+          <div class="room-card"><h5 style="color:var(--accent-orange)">Dashboard</h5><p>Project overview: KPIs, active rooms, agent status, phase progress, pending approvals. The "PA system" for the building.</p><p style="margin-top:6px"><span class="tag orange">User</span> <span class="tag cyan">Read-only</span></p></div>
+          <div class="room-card"><h5 style="color:var(--accent-orange)">Project Gallery</h5><p>Multi-project view. Each project = a building. Summary cards: test pass rate, open issues, active agents, current phase.</p><p style="margin-top:6px"><span class="tag orange">Multi-project</span></p></div>
+          <div class="room-card"><h5 style="color:var(--accent-orange)">Security Desk</h5><p>Agent badging, room access management. User configures which agents can enter which rooms.</p><p style="margin-top:6px"><span class="tag red">Access Control</span></p></div>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="callout orange">
+      <strong>The Lobby is always the Lobby.</strong> Can be upgraded (add rooms like Security Desk, Project Gallery) but never changes floor type. It's the permanent ground floor &mdash; the foundation everything else is built on.
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════ PHASE ZERO ═══════════════════ -->
+<section class="section" id="phase-zero">
+  <div class="container">
+    <div class="section-label">New in Rev 2</div>
+    <h2>Phase Zero: The Strategist</h2>
+    <p class="subtitle">Before discovery. Before anything. A consultative setup that builds your building for you.</p>
+
+    <div class="card-grid cols-2">
+      <div class="card" style="border-top: 3px solid var(--accent-magenta);">
+        <h3>New User (Empty Building)</h3>
+        <p>You open Overlord for the first time. No projects, no agents, nothing.</p>
+        <p style="margin-top:12px">The <strong>Strategist</strong> agent activates:</p>
+        <ul style="list-style:none; margin-top:8px; font-size:14px; color:var(--text-1);">
+          <li style="margin-bottom:6px">1. "What are you trying to build/do?"</li>
+          <li style="margin-bottom:6px">2. "What does success look like?"</li>
+          <li style="margin-bottom:6px">3. "What inputs do you have? What outputs do you need?"</li>
+          <li style="margin-bottom:6px">4. "What constraints exist? (budget, timeline, tech)"</li>
+          <li style="margin-bottom:6px">5. Based on answers: suggests a building layout</li>
+          <li style="margin-bottom:6px">6. <strong>Quick Start</strong>: Accept suggested template</li>
+          <li style="margin-bottom:6px">7. <strong>Advanced</strong>: Drag-and-drop rooms into floors, create custom agents</li>
+        </ul>
+      </div>
+      <div class="card" style="border-top: 3px solid var(--accent-orange);">
+        <h3>Existing User (Full Building)</h3>
+        <p>You open Overlord and have 5 projects, 20 agents, 50 completed phases.</p>
+        <p style="margin-top:12px">The <strong>Lobby Dashboard</strong> shows:</p>
+        <ul style="list-style:none; margin-top:8px; font-size:14px; color:var(--text-1);">
+          <li style="margin-bottom:6px">+ Project cards with pass/fail rates, open items</li>
+          <li style="margin-bottom:6px">+ Active agents and their current rooms</li>
+          <li style="margin-bottom:6px">+ Phase progress per project</li>
+          <li style="margin-bottom:6px">+ Pending approvals / gate reviews</li>
+          <li style="margin-bottom:6px">+ Quick action: "Start new project" &rarr; Strategist</li>
+          <li style="margin-bottom:6px">+ Quick action: "Resume project X" &rarr; active room</li>
+          <li style="margin-bottom:6px">+ RAID log search across all projects</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="callout magenta">
+      <strong>Modes based on intent:</strong> "Brainstorming mode" = only Discovery floor. "Coding mode" = Execution + Testing floors. "Full project" = all floors. "Risk analysis" = feed docs, get Governance floor output. The Strategist figures out which floors to activate based on what you're trying to accomplish.
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════ PHASES & GATES ═══════════════════ -->
+<section class="section" id="phases">
+  <div class="container">
+    <div class="section-label">Project Lifecycle</div>
+    <h2>Phases & Gates</h2>
+    <p class="subtitle">Each phase has an entry protocol, a working period, and an exit protocol. You cannot skip a gate.</p>
+
+    <div class="diagram-container">
+      <div class="diagram"><span class="hl-purple">Phase 0</span>         <span class="hl-purple">Phase 1</span>           <span class="hl-cyan">Phase 2</span>          <span class="hl-green">Phase 3</span>         <span class="hl-yellow">Phase 4</span>          <span class="hl-green">Phase 5</span>
+<span class="hl-purple">STRATEGY</span>    <span class="hl-yellow">G</span>   <span class="hl-purple">DISCOVERY</span>     <span class="hl-yellow">G</span>    <span class="hl-cyan">ARCHITECTURE</span>  <span class="hl-yellow">G</span>   <span class="hl-green">EXECUTION</span>   <span class="hl-yellow">G</span>    <span class="hl-yellow">REVIEW</span>     <span class="hl-yellow">G</span>    <span class="hl-green">DEPLOY</span>
+                <span class="hl-yellow">|</span>                    <span class="hl-yellow">|</span>                   <span class="hl-yellow">|</span>                 <span class="hl-yellow">|</span>                  <span class="hl-yellow">|</span>
+           <span class="hl-yellow">Exit Doc</span>           <span class="hl-yellow">Exit Doc</span>           <span class="hl-yellow">Exit Doc</span>         <span class="hl-yellow">Exit Doc</span>          <span class="hl-yellow">Exit Doc</span>
+           <span class="hl-yellow">RAID Log</span>           <span class="hl-yellow">RAID Log</span>           <span class="hl-yellow">RAID Log</span>         <span class="hl-yellow">RAID Log</span>          <span class="hl-yellow">RAID Log</span>
+           <span class="hl-yellow">Sign-off</span>           <span class="hl-yellow">Sign-off</span>           <span class="hl-yellow">Sign-off</span>         <span class="hl-yellow">Sign-off</span>          <span class="hl-yellow">Sign-off</span>
+
+<span class="dim">G = Gate (go/no-go checkpoint)</span>
+<span class="dim">Each gate requires: structured exit document + RAID log entry + sign-off</span>
+<span class="dim">Next phase receives previous phase's output as input template</span></div>
+    </div>
+
+    <div class="card" style="border-left: 3px solid var(--accent-yellow);">
+      <h3>Gate Protocol</h3>
+      <p>At every gate, the following must be completed before advancing:</p>
+      <div class="code-block">
+<span class="comment">// Gate checklist (cannot be bypassed)</span>
+{
+  <span class="type">"phase"</span>: <span class="string">"discovery"</span>,
+  <span class="type">"exitDocument"</span>: {
+    <span class="type">"completedBy"</span>: <span class="string">"pm-agent"</span>,
+    <span class="type">"decisionsLog"</span>: [...],       <span class="comment">// What was decided + rationale + evidence</span>
+    <span class="type">"risksIdentified"</span>: [...],    <span class="comment">// Each with analysis, not just yes/no</span>
+    <span class="type">"openItems"</span>: [...],           <span class="comment">// What's unresolved + who owns it</span>
+    <span class="type">"outputArtifacts"</span>: [...]      <span class="comment">// Links to docs, schemas, etc.</span>
+  },
+  <span class="type">"raidLogEntries"</span>: [...],       <span class="comment">// New RAID entries from this phase</span>
+  <span class="type">"signoff"</span>: {
+    <span class="type">"reviewer"</span>: <span class="string">"architect-agent"</span>,
+    <span class="type">"verdict"</span>: <span class="string">"GO"</span>,
+    <span class="type">"conditions"</span>: [],
+    <span class="type">"timestamp"</span>: <span class="string">"..."</span>
+  },
+  <span class="type">"nextPhaseInput"</span>: { ... }    <span class="comment">// Structured input for the next phase</span>
+}
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════ EXIT DOCS ═══════════════════ -->
+<section class="section" id="exit-docs">
+  <div class="container">
+    <div class="section-label">New in Rev 2</div>
+    <h2>Exit Documents & RAID Log</h2>
+    <p class="subtitle">"You can't just say 'done.' You have to show you actually thought about it." &mdash; the M&A risk questionnaire principle.</p>
+
+    <div class="comparison">
+      <div class="comp-side old">
+        <h4><span>&#x2718;</span> v1: "It says it's done"</h4>
+        <ul>
+          <li>Agent says "Done!" with no structured proof</li>
+          <li>Tests pass because there are no tests for missing features</li>
+          <li>UI looks complete but buttons aren't wired up</li>
+          <li>No audit trail of decisions made during execution</li>
+          <li>No way to reference what was decided in earlier phases</li>
+          <li>Scope changes lose all context</li>
+        </ul>
+      </div>
+      <div class="comp-side new">
+        <h4><span>&#x2713;</span> v2: Prescriptive Exit Protocol</h4>
+        <ul>
+          <li>Agent must complete structured exit document to leave room</li>
+          <li>Exit doc requires: decisions, rationale, evidence, citations</li>
+          <li>RAID log entry: Risks, Assumptions, Issues, Decisions</li>
+          <li>Every phase's exit doc becomes next phase's input</li>
+          <li>Searchable RAID log database &mdash; agents reference past decisions</li>
+          <li>Scope changes trigger re-entry to relevant rooms with full history</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:24px;">
+      <h3>RAID Log Schema</h3>
+      <div class="code-block">
+<span class="comment">// Searchable database: every agent references this before starting work</span>
+{
+  <span class="type">"id"</span>: <span class="string">"raid_001"</span>,
+  <span class="type">"type"</span>: <span class="string">"decision"</span>,         <span class="comment">// risk | assumption | issue | decision</span>
+  <span class="type">"phase"</span>: <span class="string">"architecture"</span>,
+  <span class="type">"roomId"</span>: <span class="string">"arch-room-1"</span>,
+  <span class="type">"summary"</span>: <span class="string">"Use SQLite for MVP, migrate to Postgres later"</span>,
+  <span class="type">"rationale"</span>: <span class="string">"Simplicity for phase 1, single-file deploy..."</span>,
+  <span class="type">"decidedBy"</span>: <span class="string">"architect-agent"</span>,
+  <span class="type">"approvedBy"</span>: <span class="string">"user"</span>,
+  <span class="type">"affectedAreas"</span>: [<span class="string">"storage"</span>, <span class="string">"deployment"</span>],
+  <span class="type">"timestamp"</span>: <span class="string">"2026-03-10T..."</span>,
+  <span class="type">"status"</span>: <span class="string">"active"</span>           <span class="comment">// active | superseded | closed</span>
+}
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════ SCOPE CHANGE ═══════════════════ -->
+<section class="section" id="scope-change">
+  <div class="container">
+    <div class="section-label">New in Rev 2</div>
+    <h2>Mid-Stream Scope Changes</h2>
+    <p class="subtitle">"What happens if we're in test phase but want to add a new feature?" &mdash; the answer is structured re-entry.</p>
+
+    <div class="diagram-container">
+      <div class="diagram"><span class="hl-cyan">Scenario: Project is in TESTING phase. User wants to add a new feature.</span>
+
+  <span class="hl-orange">User</span>: "I want to add search filtering before we deploy"
+         |
+  <span class="hl-purple">Orchestrator</span> checks:
+    1. Current phase = <span class="hl-green">Testing</span>
+    2. Requested work = <span class="hl-cyan">New feature</span> (requires Discovery + Architecture + Execution)
+    3. <span class="hl-yellow">Scope change detected</span>
+         |
+  <span class="hl-yellow">Scope Change Protocol:</span>
+    a. Query RAID log for all <span class="hl-purple">decisions made so far</span>
+    b. Package relevant decisions as <span class="hl-purple">context brief</span>
+    c. <span class="hl-red">Re-enter Discovery Room</span> with context brief attached
+    d. Discovery room knows: "We are in test phase, adding scope"
+    e. Discovery output = mini-requirements (scoped to new feature only)
+         |
+    f. Fast-track through <span class="hl-cyan">Architecture</span> (existing architecture + delta)
+    g. Fast-track through <span class="hl-green">Execution</span> (scoped to new files only)
+    h. Return to <span class="hl-green">Testing</span> (re-run all tests including new feature)
+         |
+  <span class="hl-green">Result:</span> New feature integrated without losing any previous context.
+  All downstream dependencies updated via RAID log cascading.</div>
+    </div>
+
+    <div class="callout yellow">
+      <strong>Key principle:</strong> When scope changes, agents don't just "go build." They re-enter the relevant rooms <em>with the full RAID log context brief</em>. The brief is a condensed summary: "Here's what's been decided, what's been built, what's been tested. Now we're adding X." This prevents the AI from ignoring previous work.
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════ ARCHITECTURE ═══════════════════ -->
+<section class="section" id="architecture">
+  <div class="container">
+    <div class="section-label">Technical Architecture</div>
+    <h2>System Architecture: v1 vs v2</h2>
+
+    <div class="tabs" id="arch-tabs">
+      <button class="tab-btn active" data-tab="arch-current">Current (v1)</button>
+      <button class="tab-btn" data-tab="arch-new">New (v2)</button>
+    </div>
+
+    <div class="tab-content active" id="arch-current">
+      <div class="diagram-container">
+        <div class="diagram"><span class="dim">v1: Hub-Spoke — 48+ modules, all through one 800-line hub</span>
+
+                                <span class="hl-yellow">[ server.js ]</span>
+                                      |
+                         <span class="hl-cyan">[ hub.js (800+ lines) ]</span>
+                       /    |    |    |    |    \
+  <span class="hl-red">config</span>  <span class="hl-red">ai-client</span>  <span class="hl-purple">orchestration-core</span>  <span class="hl-green">tools-registry</span>  <span class="hl-cyan">agent-mgr</span>  <span class="hl-yellow">conv-store</span>
+                            |         |     \           |                 |
+                     <span class="hl-red">chat-stream</span>  <span class="hl-purple">orch-state</span>  <span class="hl-purple">tool-executor</span>  <span class="hl-green">shell-exec</span>      <span class="hl-cyan">agent-session</span>
+                                      |           |      <span class="hl-green">file-ops</span>
+                                 <span class="hl-purple">approval</span>   <span class="hl-purple">agent-sys</span>  <span class="hl-green">web-fetch</span>
+  <span class="dim">+ 30 more modules... circular deps everywhere, lazy require() hacks</span>
+  <span class="hl-red">Total: ~67 files, ~18,500 lines, one god-hub</span></div>
+      </div>
+    </div>
+
+    <div class="tab-content" id="arch-new">
+      <div class="diagram-container">
+        <div class="diagram"><span class="dim">v2: Layered Domains — ~20 modules, strict dependency direction</span>
+
+  <span class="hl-yellow">[ server.js ]</span> (~200 lines)
+        |
+  <span class="hl-cyan">[ core/bus.js ]</span> (~100 lines, event bus only)
+        |
+  <span class="hl-green">TRANSPORT</span>     socket-handler.js, api-handler.js
+        |
+  <span class="hl-purple">ROOMS</span>         room-manager.js
+        |         room-types/ (discovery, architecture, testing, execution, review, deploy)
+        |         table.js, phase-gate.js
+        |         <span class="hl-yellow">exit-document.js, raid-log.js</span>  <span class="dim">&larr; NEW in rev 2</span>
+        |
+  <span class="hl-cyan">AGENTS</span>        agent-registry.js, agent-session.js, agent-router.js
+        |         <span class="hl-yellow">strategist.js</span>  <span class="dim">&larr; NEW: Phase Zero agent</span>
+        |
+  <span class="hl-green">TOOLS</span>         tool-registry.js, tool-executor.js (room-scoped)
+        |         providers/ (shell, file, web, git, mcp)
+        |
+  <span class="hl-red">AI</span>            ai-provider.js (provider-agnostic adapter)
+        |         ai-stream.js, prompt-builder.js
+        |
+  <span class="hl-yellow">STORAGE</span>       db.js (swappable: SQLite, Postgres, Redis...)
+        |         models/ (Room, Agent, Message, Task, PhaseGate, RaidLog, ExitDoc)
+        |
+  <span class="hl-orange">PLUGINS</span>       plugin-loader.js, plugin-sandbox.js  <span class="dim">&larr; NEW: scripting layer</span>
+                  Lua/JS scripts register as room types, tools, floor configs
+
+  <span class="hl-green">Each layer only depends on layers below. No circular deps.</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════ PLUGINS ═══════════════════ -->
+<section class="section" id="plugins">
+  <div class="container">
+    <div class="section-label">New in Rev 2</div>
+    <h2>Plugin & Scripting Architecture</h2>
+    <p class="subtitle">Even built-in features are plugins. The core is just a bus + loader. Everything else plugs in.</p>
+
+    <div class="card-grid cols-2">
+      <div class="card" style="border-top: 3px solid var(--accent-red);">
+        <h3>Integration Floor = Plugin Boundary</h3>
+        <p>All external communication goes through <strong>one floor</strong>. This keeps the building secure &mdash; you're not sending data out from 20 different points.</p>
+        <ul style="list-style:none; margin-top:12px; font-size:14px; color:var(--text-1);">
+          <li style="margin-bottom:6px">+ Plugin Bay: Lua/JS scripts register here</li>
+          <li style="margin-bottom:6px">+ Data Exchange: webhooks, APIs, MCP</li>
+          <li style="margin-bottom:6px">+ Provider Hub: AI model adapters</li>
+          <li style="margin-bottom:6px">+ Strict typed I/O at the boundary</li>
+          <li style="margin-bottom:6px">+ Sandboxed execution (plugins can't access raw system)</li>
+        </ul>
+      </div>
+      <div class="card" style="border-top: 3px solid var(--accent-purple);">
+        <h3>What's Pluggable</h3>
+        <ul style="list-style:none; margin-top:4px; font-size:14px; color:var(--text-1);">
+          <li style="margin-bottom:8px"><span class="tag purple">Floor</span> Define a new floor type with rooms, rules, access</li>
+          <li style="margin-bottom:8px"><span class="tag cyan">Room</span> Define a new room type with tools, output template</li>
+          <li style="margin-bottom:8px"><span class="tag green">Tool</span> Register a new tool with I/O contract</li>
+          <li style="margin-bottom:8px"><span class="tag orange">Agent</span> Define a new agent type with capabilities</li>
+          <li style="margin-bottom:8px"><span class="tag red">Provider</span> Add a new AI provider adapter</li>
+          <li style="margin-bottom:8px"><span class="tag yellow">Storage</span> Swap storage backend (SQLite, Postgres, Redis)</li>
+          <li style="margin-bottom:8px"><span class="tag purple">Phase</span> Define custom project phases</li>
+        </ul>
+        <p style="margin-top:12px; font-style:italic; color:var(--text-2);">"When I want to add built-in stuff, I add a plugin just like an end user would. Then I'm building a core, not a monolith."</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════ I/O CONTRACTS ═══════════════════ -->
+<section class="section" id="io">
+  <div class="container">
+    <div class="section-label">Standardization</div>
+    <h2>I/O Contracts: "Every Module is an API"</h2>
+    <p class="subtitle">Standardized input/output for every module, room, tool, and agent. If it plugs in, it has a contract.</p>
+
+    <div class="card">
+      <h3>Universal I/O Contract</h3>
+      <div class="code-block">
+<span class="comment">// Every module, room, tool, agent, and plugin follows this pattern</span>
+{
+  <span class="type">"input"</span>: {
+    <span class="type">"schema"</span>: { <span class="comment">/* JSON Schema */</span> },
+    <span class="type">"required"</span>: [<span class="string">"field1"</span>, <span class="string">"field2"</span>],
+    <span class="type">"defaults"</span>: { <span class="string">"field3"</span>: <span class="string">"default_value"</span> }
+  },
+  <span class="type">"output"</span>: {
+    <span class="type">"schema"</span>: { <span class="comment">/* JSON Schema */</span> },
+    <span class="type">"required"</span>: [<span class="string">"result"</span>, <span class="string">"metadata"</span>],
+    <span class="type">"validate"</span>: <span class="comment">/* Custom validation fn */</span>
+  },
+  <span class="type">"error"</span>: {
+    <span class="type">"code"</span>: <span class="string">"string"</span>,
+    <span class="type">"message"</span>: <span class="string">"string"</span>,
+    <span class="type">"retryable"</span>: <span class="keyword">boolean</span>,
+    <span class="type">"context"</span>: { <span class="comment">/* debug info */</span> }
+  }
+}
+      </div>
+      <p style="margin-top:12px; color: var(--text-1);">Content can change. Hierarchy stays consistent. Like a socket that always fits &mdash; plug anything into anything.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════ AGENTS ═══════════════════ -->
+<section class="section" id="agents">
+  <div class="container">
+    <div class="section-label">Agent System</div>
+    <h2>Agents: Simple Identity, Room-Driven Behavior</h2>
+
+    <div class="card-grid cols-2">
+      <div class="card">
+        <h3><span class="tag red">v1</span> 200-line prompts per agent</h3>
+        <div class="code-block" style="font-size:12px;">
+{
+  <span class="type">name</span>: <span class="string">"testing-engineer"</span>,
+  <span class="type">instructions</span>: <span class="string">`
+    You are a testing engineer.
+    NEVER modify source code...
+    ... 200 lines of behavioral rules ...
+  `</span>,
+  <span class="type">tools</span>: [...],
+  <span class="type">blockedTools</span>: [...],
+}
+        </div>
+      </div>
+      <div class="card">
+        <h3><span class="tag green">v2</span> 10-line identity cards</h3>
+        <div class="code-block" style="font-size:12px;">
+{
+  <span class="type">name</span>: <span class="string">"testing-engineer"</span>,
+  <span class="type">role</span>: <span class="string">"QA Lead"</span>,
+  <span class="type">capabilities</span>: [<span class="string">"testing"</span>, <span class="string">"qa"</span>],
+  <span class="type">roomAccess</span>: [<span class="string">"testing-lab"</span>, <span class="string">"review"</span>],
+}
+<span class="comment">// Room injects: tools, rules, output template</span>
+<span class="comment">// Agent = who. Room = what they can do.</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="callout cyan" style="margin-top:24px">
+      <strong>One agent, one todo.</strong> Agents handle one discrete todo at a time. Todos are the atomic unit of work. "Task" means a milestone-level item that may have many todos. This terminology choice matters because AI models respond predictably to "todo" &mdash; they auto-create checklists and mark them off.
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════ COMMANDS ═══════════════════ -->
+<section class="section" id="commands">
+  <div class="container">
+    <div class="section-label">New in Rev 2</div>
+    <h2>Commands & Mentions</h2>
+    <p class="subtitle">Discord-style interaction: slash commands for actions, @-mentions for agents and rooms.</p>
+
+    <div class="card-grid cols-3">
+      <div class="card">
+        <h3>/ Slash Commands</h3>
+        <div class="code-block" style="font-size:12px;">
+<span class="fn">/kickoff</span>       <span class="comment">Start new project</span>
+<span class="fn">/phase</span>        <span class="comment">Show current phase</span>
+<span class="fn">/gate</span>         <span class="comment">Trigger phase gate</span>
+<span class="fn">/raid</span>         <span class="comment">Search RAID log</span>
+<span class="fn">/status</span>       <span class="comment">Building overview</span>
+<span class="fn">/scope-change</span> <span class="comment">Initiate scope change</span>
+<span class="fn">/deploy</span>       <span class="comment">Start deploy process</span>
+        </div>
+      </div>
+      <div class="card">
+        <h3>@ Agent Mentions</h3>
+        <div class="code-block" style="font-size:12px;">
+<span class="fn">@architect</span>    <span class="comment">Summon to current room</span>
+<span class="fn">@qa-lead</span>      <span class="comment">Summon to current room</span>
+<span class="fn">@orchestrator</span> <span class="comment">PA system: page agent</span>
+
+<span class="comment">Like Discord: @mention pages</span>
+<span class="comment">the agent to come to your room</span>
+        </div>
+      </div>
+      <div class="card">
+        <h3># Room References</h3>
+        <div class="code-block" style="font-size:12px;">
+<span class="fn">#testing-lab</span>  <span class="comment">Link to room</span>
+<span class="fn">#discovery:47</span> <span class="comment">Link to specific msg</span>
+<span class="fn">#raid:001</span>     <span class="comment">Link to RAID entry</span>
+
+<span class="comment">Cross-room citations without</span>
+<span class="comment">copying full context</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════ PROVIDERS ═══════════════════ -->
+<section class="section" id="providers">
+  <div class="container">
+    <div class="section-label">New in Rev 2</div>
+    <h2>Provider-Agnostic AI Layer</h2>
+    <p class="subtitle">Not locked to MiniMax or Claude. Swap providers per room, per task, per budget. Open source models welcome.</p>
+
+    <div class="card-grid cols-2">
+      <div class="card">
+        <h3><span class="tag red">v1</span> MiniMax-Specific Hacks</h3>
+        <p>Emoji-to-ASCII mapping, Unicode repair, synthetic tool IDs from text fallback parser, guardrail module &mdash; scattered across 6+ files because MiniMax behaves differently.</p>
+      </div>
+      <div class="card">
+        <h3><span class="tag green">v2</span> Provider Adapter Pattern</h3>
+        <p>One adapter file per provider. Internal format = Anthropic-native. Adapters translate at the boundary. Swap provider = swap one file.</p>
+      </div>
+    </div>
+
+    <table class="data-table" style="margin-top:24px;">
+      <thead><tr><th>Provider</th><th>Use Case</th><th>Integration</th></tr></thead>
+      <tbody>
+        <tr><td>Anthropic (Claude)</td><td>Complex reasoning, architecture, planning</td><td>Native format &mdash; zero translation</td></tr>
+        <tr><td>MiniMax</td><td>Fast coding, high throughput, cost-effective</td><td>Adapter: emoji fix, Unicode repair</td></tr>
+        <tr><td>OpenAI</td><td>Broad capabilities, function calling</td><td>Adapter: OpenAI &harr; Anthropic format</td></tr>
+        <tr><td>Local (Ollama, LM Studio)</td><td>Offline, privacy, experimentation</td><td>Adapter: OpenAI-compatible API</td></tr>
+        <tr><td>Open Source (Llama, Mistral)</td><td>Custom fine-tuning, cost control</td><td>Adapter: model-specific quirks</td></tr>
+      </tbody>
+    </table>
+
+    <div class="callout green" style="margin-top:24px;">
+      <strong>Different models for different rooms.</strong> Discovery room might use Claude (complex reasoning). Code Lab might use a fast local model. Testing Lab might use a cheap model for repetitive test runs. Provider selection is per-room configurable.
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════ MIGRATION ═══════════════════ -->
+<section class="section" id="migration">
+  <div class="container">
+    <div class="section-label">Migration</div>
+    <h2>What Carries Over, What's New</h2>
+
+    <div style="margin-bottom: 32px;">
+      <div class="progress-row"><span class="progress-label">Tool implementations</span><div class="progress-bar"><div class="progress-fill green" style="width:85%"></div></div><span class="progress-pct">85%</span></div>
+      <div class="progress-row"><span class="progress-label">UI components</span><div class="progress-bar"><div class="progress-fill green" style="width:70%"></div></div><span class="progress-pct">70%</span></div>
+      <div class="progress-row"><span class="progress-label">AI streaming</span><div class="progress-bar"><div class="progress-fill cyan" style="width:60%"></div></div><span class="progress-pct">60%</span></div>
+      <div class="progress-row"><span class="progress-label">Socket bridge</span><div class="progress-bar"><div class="progress-fill yellow" style="width:40%"></div></div><span class="progress-pct">40%</span></div>
+      <div class="progress-row"><span class="progress-label">Agent system</span><div class="progress-bar"><div class="progress-fill yellow" style="width:30%"></div></div><span class="progress-pct">30%</span></div>
+      <div class="progress-row"><span class="progress-label">Orchestration</span><div class="progress-bar"><div class="progress-fill red" style="width:15%"></div></div><span class="progress-pct">15%</span></div>
+      <div class="progress-row"><span class="progress-label">Room system</span><div class="progress-bar"><div class="progress-fill purple" style="width:0%"></div></div><span class="progress-pct">New</span></div>
+      <div class="progress-row"><span class="progress-label">Plugin system</span><div class="progress-bar"><div class="progress-fill purple" style="width:0%"></div></div><span class="progress-pct">New</span></div>
+      <div class="progress-row"><span class="progress-label">RAID log / Exit docs</span><div class="progress-bar"><div class="progress-fill purple" style="width:0%"></div></div><span class="progress-pct">New</span></div>
+      <div class="progress-row"><span class="progress-label">Phase Zero / Strategist</span><div class="progress-bar"><div class="progress-fill purple" style="width:0%"></div></div><span class="progress-pct">New</span></div>
+    </div>
+
+    <div class="card-grid cols-3">
+      <div class="card" style="border-top:3px solid var(--accent-green)">
+        <h3 style="color:var(--accent-green)">Keep (Reuse)</h3>
+        <ul style="list-style:none;font-size:14px;color:var(--text-1)">
+          <li>+ Shell executor</li><li>+ File operations</li><li>+ Web fetch / search</li><li>+ QA tools</li><li>+ GitHub tools</li><li>+ MCP protocol</li><li>+ UI Component base class</li><li>+ Store (state.js)</li><li>+ CSS design tokens</li><li>+ SQLite engine</li>
+        </ul>
+      </div>
+      <div class="card" style="border-top:3px solid var(--accent-yellow)">
+        <h3 style="color:var(--accent-yellow)">Rewrite</h3>
+        <ul style="list-style:none;font-size:14px;color:var(--text-1)">
+          <li>~ Hub &rarr; thin bus</li><li>~ AI client &rarr; provider adapters</li><li>~ Message format &rarr; native only</li><li>~ Agent manager &rarr; room-aware registry</li><li>~ Tool executor &rarr; room-scoped</li><li>~ Approval flow &rarr; room access</li><li>~ Socket bridge &rarr; typed protocol</li><li>~ Conv store &rarr; room-threaded</li><li>~ System prompt &rarr; room-aware</li>
+        </ul>
+      </div>
+      <div class="card" style="border-top:3px solid var(--accent-purple)">
+        <h3 style="color:var(--accent-purple)">Build New</h3>
+        <ul style="list-style:none;font-size:14px;color:var(--text-1)">
+          <li>* Room Manager + room types</li><li>* Table system (focus/collab/review)</li><li>* Phase Gates</li><li>* Exit Document engine</li><li>* RAID Log database</li><li>* Strategist agent (Phase 0)</li><li>* Plugin loader + sandbox</li><li>* Integration Floor</li><li>* Provider adapter layer</li><li>* Building overview UI</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════ TIMELINE ═══════════════════ -->
+<section class="section" id="timeline">
+  <div class="container">
+    <div class="section-label">Build Plan</div>
+    <h2>Implementation Timeline</h2>
+
+    <div class="timeline">
+      <div class="tl-item">
+        <div class="tl-dot cyan"></div>
+        <div class="tl-phase" style="color:var(--accent-cyan)">Phase 0 &mdash; Stabilize</div>
+        <h4>Merge Fixes & Tag v1 Baseline</h4>
+        <p>Merge current bug fixes (API error 2013, tier registry, agent-sourced messages). Tag as <code>v1.0-baseline</code>. Safety net.</p>
+      </div>
+      <div class="tl-item">
+        <div class="tl-dot purple"></div>
+        <div class="tl-phase" style="color:var(--accent-purple)">Phase 1 &mdash; Foundation</div>
+        <h4>Core Bus + Storage + Config</h4>
+        <p>Thin event bus. Database schema (rooms, agents, messages, phase gates, RAID log, exit documents). Config service with validation. Swappable storage backend (start with SQLite, design for Postgres/Redis). No AI yet.</p>
+      </div>
+      <div class="tl-item">
+        <div class="tl-dot green"></div>
+        <div class="tl-phase" style="color:var(--accent-green)">Phase 2 &mdash; Rooms</div>
+        <h4>Room Manager + Testing Lab + Exit Protocol</h4>
+        <p>Room base class. Testing Lab room (simplest rules: no write tools). Exit document engine. Verify room constraints actually prevent tool access.</p>
+      </div>
+      <div class="tl-item">
+        <div class="tl-dot yellow"></div>
+        <div class="tl-phase" style="color:var(--accent-yellow)">Phase 3 &mdash; Agents + AI</div>
+        <h4>Agent Registry + Provider Adapters + Tool Executor</h4>
+        <p>Provider-agnostic AI layer. Agent registry with room access. Room-scoped tool executor. First end-to-end: user &rarr; agent enters room &rarr; uses tools &rarr; exit doc &rarr; gate.</p>
+      </div>
+      <div class="tl-item">
+        <div class="tl-dot purple"></div>
+        <div class="tl-phase" style="color:var(--accent-purple)">Phase 4 &mdash; All Rooms + RAID</div>
+        <h4>Remaining Rooms + Phase Gates + RAID Log</h4>
+        <p>Discovery, Architecture, Code Lab, Review, Deploy rooms. Phase gates with sign-off. RAID log database. Scope change protocol. Full project lifecycle test.</p>
+      </div>
+      <div class="tl-item">
+        <div class="tl-dot magenta"></div>
+        <div class="tl-phase" style="color:var(--accent-magenta)">Phase 5 &mdash; Phase Zero</div>
+        <h4>Strategist + Building Architect + Quick Start</h4>
+        <p>Strategist agent for new users. Building Architect that configures floors/rooms based on consultative questions. Quick Start templates. Advanced drag-and-drop mode.</p>
+      </div>
+      <div class="tl-item">
+        <div class="tl-dot orange"></div>
+        <div class="tl-phase" style="color:var(--accent-orange)">Phase 6 &mdash; UI</div>
+        <h4>Building-Themed Frontend</h4>
+        <p>Floor/room/table visual layout (tycoon-style). Agent "chairs" at tables. Phase progress. RAID log viewer. Dashboard with project KPIs. Port component system from v1.</p>
+      </div>
+      <div class="tl-item">
+        <div class="tl-dot green"></div>
+        <div class="tl-phase" style="color:var(--accent-green)">Phase 7 &mdash; Plugins + Polish</div>
+        <h4>Plugin System + Integration Floor + Commands</h4>
+        <p>Lua/JS scripting layer. Plugin sandbox. Integration Floor (external APIs, webhooks). Slash commands, @-mentions, #room-references. Cross-room tagging. Docker-based dev stack.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════ LESSONS ═══════════════════ -->
+<section class="section" id="lessons">
+  <div class="container">
+    <div class="section-label">Lessons Learned</div>
+    <h2>What v1 Taught Us</h2>
+
+    <div class="accordion">
+      <div class="acc-item">
+        <div class="acc-header" onclick="toggleAcc(this)"><span class="acc-chevron">&#9654;</span><h4><span class="tag red">Bug</span> API Error 2013: Orphaned tool_results</h4></div>
+        <div class="acc-body"><p><strong>Cause:</strong> Tool denial paths injected bare assistant messages, breaking Anthropic's alternation. <strong>v2 fix:</strong> Append-only message history validated at insert. Impossible to create orphans by construction.</p></div>
+      </div>
+      <div class="acc-item">
+        <div class="acc-header" onclick="toggleAcc(this)"><span class="acc-chevron">&#9654;</span><h4><span class="tag red">Bug</span> Orchestrator prompted for read-only tools</h4></div>
+        <div class="acc-body"><p><strong>Cause:</strong> 25+ tools missing from tier registry, defaulting to "unknown." <strong>v2 fix:</strong> No tier registry. Room-scoped access = "is this tool in this room?" Binary, no confidence scores.</p></div>
+      </div>
+      <div class="acc-item">
+        <div class="acc-header" onclick="toggleAcc(this)"><span class="acc-chevron">&#9654;</span><h4><span class="tag yellow">Pattern</span> "It says done but nothing works"</h4></div>
+        <div class="acc-body"><p><strong>Cause:</strong> No structured proof of work. <strong>v2 fix:</strong> Exit documents require evidence (files modified, tests passed, citations). Risk questionnaire pattern &mdash; agents must show independent analysis, fill in the blanks, not just say "approved."</p></div>
+      </div>
+      <div class="acc-item">
+        <div class="acc-header" onclick="toggleAcc(this)"><span class="acc-chevron">&#9654;</span><h4><span class="tag yellow">Pattern</span> Testing agent changes tests to pass</h4></div>
+        <div class="acc-body"><p><strong>Cause:</strong> Agent prompt said "don't change tests" but the tool was available. <strong>v2 fix:</strong> Testing Lab room doesn't have <code>write_file</code> in its tool list. Structurally impossible, not just instructionally prohibited.</p></div>
+      </div>
+      <div class="acc-item">
+        <div class="acc-header" onclick="toggleAcc(this)"><span class="acc-chevron">&#9654;</span><h4><span class="tag yellow">Pattern</span> Circular dependencies everywhere</h4></div>
+        <div class="acc-body"><p><strong>Cause:</strong> Hub-spoke with no layering. <strong>v2 fix:</strong> Strict layer ordering: Transport &rarr; Rooms &rarr; Agents &rarr; Tools &rarr; AI &rarr; Storage. Each layer only depends on layers below.</p></div>
+      </div>
+      <div class="acc-item">
+        <div class="acc-header" onclick="toggleAcc(this)"><span class="acc-chevron">&#9654;</span><h4><span class="tag yellow">Pattern</span> MiniMax-specific hacks in 6+ files</h4></div>
+        <div class="acc-body"><p><strong>Cause:</strong> Provider-specific behavior scattered throughout. <strong>v2 fix:</strong> One adapter per provider. All quirks contained in the adapter. Rest of system speaks Anthropic-native only.</p></div>
+      </div>
+      <div class="acc-item">
+        <div class="acc-header" onclick="toggleAcc(this)"><span class="acc-chevron">&#9654;</span><h4><span class="tag green">Insight</span> Scope changes lose all context</h4></div>
+        <div class="acc-body"><p><strong>Cause:</strong> No structured record of decisions made. No RAID log. <strong>v2 fix:</strong> Every phase produces an exit document that goes into the RAID log. Scope changes trigger re-entry to relevant rooms with a context brief summarizing all previous decisions.</p></div>
+      </div>
+      <div class="acc-item">
+        <div class="acc-header" onclick="toggleAcc(this)"><span class="acc-chevron">&#9654;</span><h4><span class="tag green">Insight</span> No phase gates = premature execution</h4></div>
+        <div class="acc-body"><p><strong>Cause:</strong> AI just starts building immediately. No discovery phase. <strong>v2 fix:</strong> Phase Zero (Strategist) asks consultative questions first. Phase gates require structured sign-off. Can't enter Execution without Architecture sign-off.</p></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════ FOOTER ═══════════════════ -->
+<footer class="footer">
+  <div class="container">
+    <p>Overlord v2 Architecture Report &mdash; Rev 2</p>
+    <p style="margin-top:4px;color:var(--text-2)">Branch: feat/context-system-rework &bull; Updated: 2026-03-10</p>
+    <p style="margin-top:4px;color:var(--text-2)">New in Rev 2: Phase Zero, Exit Documents, RAID Log, Scope Change Protocol, Plugin Architecture, Integration Floor, Provider Agnostic AI, Terminology Guide, Commands & Mentions</p>
+  </div>
+</footer>
+
+<script>
+document.querySelectorAll('.tabs').forEach(tabs => {
+  tabs.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const tabId = btn.dataset.tab;
+      tabs.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      const section = tabs.closest('.section') || tabs.parentElement;
+      section.querySelectorAll('.tab-content').forEach(tc => { tc.classList.toggle('active', tc.id === tabId); });
+    });
+  });
+});
+function toggleAcc(header) { header.closest('.acc-item').classList.toggle('open'); }
+function toggleFloor(floor) { floor.classList.toggle('open'); }
+function filterModules(query) {
+  const rows = document.querySelectorAll('#module-table tbody tr');
+  const q = query.toLowerCase();
+  rows.forEach(row => { row.style.display = row.textContent.toLowerCase().includes(q) ? '' : 'none'; });
+}
+const sections = document.querySelectorAll('.section');
+const navLinks = document.querySelectorAll('.nav-link');
+const observer = new IntersectionObserver(entries => {
+  entries.forEach(entry => { if (entry.isIntersecting) { const id = entry.target.id; navLinks.forEach(link => { link.classList.toggle('active', link.getAttribute('href') === '#' + id); }); } });
+}, { rootMargin: '-100px 0px -60% 0px' });
+sections.forEach(s => observer.observe(s));
+</script>
+</body>
+</html>

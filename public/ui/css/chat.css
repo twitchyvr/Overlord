@@ -180,6 +180,20 @@
     font-weight: 700;
 }
 
+/* Agent-sourced "user" messages — delegation tasks from orchestrator/agents */
+.message.user.agent-sourced {
+    align-self: flex-start;
+    background: linear-gradient(135deg, #1a1a3a 0%, #2a2050 50%, #1a1a3a 100%);
+    border: 1px solid rgba(160,120,255,0.25);
+    border-bottom-right-radius: 16px;
+    border-bottom-left-radius: 4px;
+    box-shadow: 0 2px 16px rgba(160,120,255,0.08);
+}
+.message.user.agent-sourced .role {
+    color: rgba(160,120,255,0.9) !important;
+    font-weight: 700;
+}
+
 /* Message roles */
 .message .role { font-size: 10px; font-weight: 600; text-transform: uppercase; margin-bottom: 6px; opacity: 0.6; }
 .message.user .role { color: rgba(255,255,255,0.7); }
@@ -635,6 +649,11 @@
 .tb-structured { display: flex; flex-direction: column; gap: 2px; }
 .tb-structured .tc-lbl { margin-top: 6px; font-size: 9px; font-weight: 700; letter-spacing: 0.08em; color: rgba(168,85,247,0.7); text-transform: uppercase; }
 .tb-structured .tc-lbl:first-child { margin-top: 0; }
+
+/* Plain-text thought paragraphs (non-markdown, non-JSON fallback) */
+.tb-plain { white-space: normal; }
+.tb-para { margin: 0 0 4px; }
+.tb-para:last-child { margin-bottom: 0; }
 
 /* Markdown rendered inside thinking or delegate fields */
 .tb-markdown { white-space: normal; }

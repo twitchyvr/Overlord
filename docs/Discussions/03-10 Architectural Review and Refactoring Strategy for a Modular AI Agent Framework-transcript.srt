@@ -1,0 +1,928 @@
+1
+00:00:10,370 --> 00:00:21,770
+Matt Rogers: I had a thorough analysis of the code base, And then I plugged in our transcript from what we were talking about last night, and then a few of my thoughts and ideas.
+
+2
+00:00:22,430 --> 00:00:24,290
+Speaker 2: And this is what it came up with for you.
+
+3
+00:00:24,590 --> 00:00:47,320
+Matt Rogers: So I told it to specifically write it in an interactive HTML web page for me to be able to look at. So this is so yeah, So made an HTML page, so you can click on the nav menu, but yeah. Uh, it's a report. It's just an interactive report. I mean, it highlights those aren't necessarily clickable, but you know.
+
+4
+00:00:50,200 --> 00:01:07,360
+Speaker 2: Agent- centric: each agent carries its own rules, instructions, behavioral constraints in its system prompt changes required adding into framework- centric. So this is V 1 impact to find room constraints merge into their context yes. Mhm- hmm yep that's what we talked about.
+
+5
+00:01:10,940 --> 00:01:26,360
+Matt Rogers: And that was a part of my thing is I want to be able to add new agent types too. Like if there's something else that I may not think about or have programmed in, it's supposed to beum, I don't what I don't know what the right word is, But I want it to be something that people can use for other things that I may not even think of.
+
+6
+00:01:26,600 --> 00:01:27,620
+Speaker 2: Mhm. Yeah, iterable.
+
+7
+00:01:28,280 --> 00:01:36,080
+Matt Rogers: Yeah. Well, yeah, that means build on top of. But yeah So. This has a nav sub navigation by the way. Yeah, I see that.
+
+8
+00:01:39,350 --> 00:01:41,960
+Matt Rogers: When I was reading through it, it took me a second to realize all that.
+
+9
+00:02:10,490 --> 00:02:21,650
+Speaker 2: One of the things that it isn't talking about yet is the collaboration element, except at like a very. Low like, low level.
+
+10
+00:02:23,330 --> 00:02:34,790
+Matt Rogers: The collaboration of how they work together and plan together, or the collaboration as if like how they. Pass. Or task each other around.
+
+11
+00:02:35,810 --> 00:02:41,090
+Speaker 2: No, I mean like how do they share. Deliverables when they have to.
+
+12
+00:02:41,390 --> 00:03:35,280
+Matt Rogers: So, this is something interesting. I was watching a video today, and I was watching this guy talk about how he you might actually enjoy watching it, even but it's only like a fifteen minute video. But, he talks about the things that he has found to be best practices with the agents. And You can tell like these are people;. These are kids in college like Like. They kind of know what they're talking about, even though they don't know what they're talking about. But like, like this guy is obviously doing a lot of really good work. I've seen some of his other stuff. I am like, "Wow!" So, what he does is he says that he just one thing is one agent, one task. And that's kind of what I've been getting to, right? But I called them "to dos. " I think " todos " makes sense to agents ;. They're built into their agentic framework to task themselves with " todos ", and they mark off " todo " s. Task is like a different meaning to the AI. I think I explained that last night, but yeah.
+
+13
+00:03:35,280 --> 00:04:33,030
+Matt Rogers: So, I am trying to use that terminology without forgetting that other people do use the term " task ". When I am saying " to do." So, a task would be more like a milestone, but a task one task one agent and simple instructions. Context management is something that a lot of people talk about. Like like, and this is something that I've experienced ever since I was young in my career. Is I always have bosses, and they're like, I just wanna see everything all the time. And it's like okay, but like we don't have enough resource. Like like I remember when file servers were a thing. You know it's like they didn't, we had to get rid of stuff. We had to constantly keep a management and and we would back stuff up. But even then we can only back stuff up for so long before it came became this like too much to handle. It was too costly, too much to everything. And people were just like, I don't care. I just want all the time It's, okay here, but you need to make some decisions because you can't do it.
+
+14
+00:04:33,030 --> 00:05:30,340
+Matt Rogers: And then so then they would start like making decisions, but now it's the same kind of thing, right Like the context they want. They're like, I just want it to know all the things all the time, and then just do what I ask. And it's like okay, but the technology behind it isn't strong enough to deliver like that. So you have to work with it within its constraints. You can ask it for that and you'll do something, but it won't be what you are expecting. It's kind of like asking a car like yours to tow a big boat. It's like sure, it'll do it, but I won't do well and won't even do right. You'll probably scrape it on the ground and probably fucking, you know, whatever. But we don't even get you there. And that's kind of like the same analogy. You got to like have the beef to be able to tow it. So, if you want to yeah. So if you want to deliver like a house worth of material to build a house with a car like your size, you know, It's it's a really good analogy because like are there are parts that are so large.
+
+15
+00:05:30,340 --> 00:06:28,180
+Matt Rogers: That your car almost won't even be able to handle them, and that's like a good analogy for the AI. Like, People can do a lot of the work that the AI really just can't yet. So, we can. We can strap some of these tools or some of these materials to our back and haul them down the road as where the AI just doesn't have a strong enough engine yet. Um, you know we don't have the strength, But what we can do is we can use it to like hammer them together for us. You know we can use it to like Drill the holes through the wood where our pipes are gonna go, you know. We can help it measure, you know, have us measure for us. We can have it, you know, like like do things for us. Like yeah as an analogy anyway. But that's you know like how I see it for building these apps. And I really actually like that I think man, it would be really cool if I could talk to it in that way. I I have been thinking about like a new almost I, don't wanna say a um a programming language because we don't really need one.
+
+16
+00:06:28,750 --> 00:06:38,230
+Matt Rogers: Necessarily, but in a way, yes. To where it's it makes more sense to code with things than this is.
+
+17
+00:06:38,470 --> 00:06:42,970
+Speaker 2: This is more sophisticated than what we talked about. But I knew it would come up with things that we hadn't thought of.
+
+18
+00:06:43,150 --> 00:06:45,670
+Matt Rogers: Yeah, that's what I was really good. Yeah, that's what I was hoping for.
+
+19
+00:06:45,850 --> 00:06:46,930
+Speaker 2: Mhm yeah.
+
+20
+00:06:46,930 --> 00:06:50,350
+Matt Rogers: So review room, audit room release lounge floors,
+
+21
+00:06:50,470 --> 00:06:52,990
+Speaker 2: Which I like Ooh You didn't notice that?
+
+22
+00:06:53,170 --> 00:06:59,340
+Matt Rogers: I didn't even look at that no. I have only glanced at this. I was been. I was so i was at work. I think.
+
+23
+00:07:00,420 --> 00:07:01,800
+Speaker 2: Yeah, this looks great, right?
+
+24
+00:07:01,980 --> 00:07:02,879
+Matt Rogers: I forget when I asked it for this again.
+
+25
+00:07:02,940 --> 00:07:14,640
+Speaker 2: So it's like built. It's it's built some more sophistication around this idea that we have around like the rooms and their functions. Yeah, take a look at it because I think you'll like it.
+
+26
+00:07:15,900 --> 00:07:39,760
+Matt Rogers: Architecture room, okay, so collaboration floor planning and design execution floor building implement so code lab. Okay. Integration room testing lab governance floor sign off and review. Oh, I like this because okay, so so it's basically like a t here is a video game.
+
+27
+00:07:41,080 --> 00:07:41,980
+Speaker 2: Is it Doom?
+
+28
+00:07:42,400 --> 00:07:52,420
+Matt Rogers: No, so sorry. T here is a video game on Steam that when I was living in Kentucky, I found out like playing it. And it's it's it's a.
+
+29
+00:07:54,870 --> 00:08:26,200
+Matt Rogers: It's a not, not a knock off, But it's a play on some other ideas of other games that I've had in the past that I've played in the past. Um, where it's basically like. Like a skyscraper builder kind of game. Do, you know what I'm talking about? So there are games where it's like. I forget which one. Like think the most popular one was like um where you basically like build a hotel, so you build floor after floor after floor. So like there's different like you, like fit as much things on the floor as you can. To like maximize your in your oh,
+
+30
+00:08:26,380 --> 00:08:27,820
+Speaker 2: Like rollercoastertycoon or something.
+
+31
+00:08:27,940 --> 00:09:19,450
+Matt Rogers: Well, it is atycoon type game. But it's like just two D, right? So you just look and you scroll up and down, and then you see you place things on the floor, Just kind of like this right? Like see, you have a panel on here, and then you like have little things. So you basically pop like a room in there. And then you put like a bed, the things in the room. And then, You have like a stairwell where you put it. So like you can't put a room from the stairwell. So I had to put it next to it. Can't put another room in front of it. See I've put yeah so, so then they came they walk. So the people come in, they start, they walk across the room, they go in and then they use it. So it's almost like Sims mixed with a tycoon. But like, but anyway. So um The one game I I that I was playing is a newspaper game where So. So the idea is like you start building, you gain more and you build on top. Build build build. So you'd have like a laundry floor, and then like a You know like laundry and maid floor. And then you have like a Administrative floor, and then You know just And whatever.
+
+32
+00:09:19,450 --> 00:09:56,090
+Matt Rogers: Yeah, you can upgrade your lobby. You can upgrade all kinds of stuff, and so this kind of gives me that same sort of like idea. Yeah, into where so that newspaper game for example, like you have the lobby downstairs. You don't really do anything but except choose where your stairs go, and then second floor is empty. So then you choose yeah, you know where you start putting your desks, And then you have like your reporter guys that go out and they so people that like report on things. So you start with four floors basically, and then the printing room is wherever you put it. But I usually put it at the top. And then, Um, and then as you build on, and then as you build on, you know, you would add more floors.
+
+33
+00:09:56,270 --> 00:09:57,350
+Speaker 2: Yep, right. Exactly.
+
+34
+00:09:57,410 --> 00:10:08,330
+Matt Rogers: So, that's a very modular idea and framework that this fits very well because you can think about it. You can put a floor in between floors. You can put a floor on top, put a floor on bottom if you have to.
+
+35
+00:10:08,390 --> 00:10:11,570
+Speaker 2: That's what I kept saying about modularity yesterday. And, we were like, no, no,
+
+36
+00:10:11,810 --> 00:10:17,210
+Matt Rogers: No, no, This is great. So except the lobby has to be at the bottom That's. So this is where you're going to have like a grounding.
+
+37
+00:10:17,450 --> 00:10:18,410
+Speaker 2: Yep Right Mhm.
+
+38
+00:10:18,550 --> 00:10:25,690
+Matt Rogers: So we can like upgrade the lobby per s e, but we won't be able to change it. It won't become a different floor type. No,
+
+39
+00:10:25,990 --> 00:10:35,170
+Speaker 2: Right Exactly. You might put different rooms in the lobby, right? You might put something else in the lobby, like you know security badging or whatever is in the lobby.
+
+40
+00:10:35,470 --> 00:10:38,470
+Tommy: Right But ultimately the lobby is going to be the lobby.
+
+41
+00:10:38,590 --> 00:10:43,090
+Matt Rogers: Right Like you have like a bellhop room, But then you don't have bellhops when they become robots. And then like yeah.
+
+42
+00:10:43,150 --> 00:11:05,220
+Speaker 2: Exactly I really like this Yeah So. Like. As a next step, what I would say is like this model. I would say like, okay, so who are the groups that go into it? What are what is the function of each of them? It's done some of that, but it's a little bit mixed. Right. So like this one in red says principal, but this one says no write file. So it's got a little bit of mixedum.
+
+43
+00:11:05,760 --> 00:11:07,140
+Matt Rogers: What do you mean because of the color of them?
+
+44
+00:11:07,560 --> 00:11:17,560
+Speaker 2: Just all of it right. So this is this is a function of the room in the testing lab. It's not an actual like type of. Of agents.
+
+45
+00:11:17,800 --> 00:11:20,320
+Matt Rogers: Oh, no, I think these are the tables that are in the room.
+
+46
+00:11:20,800 --> 00:11:25,420
+Speaker 2: Oh, that makes sense. Yeah, that makes a lot more sense.
+
+47
+00:11:25,600 --> 00:11:37,420
+Matt Rogers: Yeah, because focus desk dev— that's the tables, right? So no write file so in testing lab there is no writing. Right? Yeah, so that's that makes a lot more sense in that context.
+
+48
+00:11:37,540 --> 00:11:39,580
+Speaker 2: Okay yeah That makes a lot of sense. Okay,
+
+49
+00:11:40,000 --> 00:11:41,500
+Matt Rogers: Yeah So discovery room,
+
+50
+00:11:41,800 --> 00:11:44,200
+Speaker 2: Yeah discovery room, project manager, SMEs.
+
+51
+00:11:44,480 --> 00:11:49,880
+Matt Rogers: Orum, or yeah. So that's actually exactly what you said. Right. Um.
+
+52
+00:11:52,460 --> 00:12:04,100
+Speaker 2: Yeah, I really like this a lot, And I feel really strongly that like this is the right type of architecture to build for the type of like versatility that you're looking for.
+
+53
+00:12:04,340 --> 00:12:06,560
+Matt Rogers: Yeah, yeah. So anyway,
+
+54
+00:12:06,740 --> 00:12:14,470
+Speaker 2: This is this is what I was envisioning when we were talking yesterday, but it did a good job of scaling it more. So this is good. Keep going down.
+
+55
+00:12:16,090 --> 00:12:19,390
+Matt Rogers: Is that all you did was just scrolling down? So far,
+
+56
+00:12:19,450 --> 00:12:21,490
+Speaker 2: That's all I've done. I haven't even gotten to anything.
+
+57
+00:12:22,270 --> 00:13:11,520
+Matt Rogers: Like the collapsibility of these. Yeah, it's nice. So current okay, so system architecture comparison. So you can see right here, this is what I was trying to explain to you. Yeah, So we have this main entry. And then there is like a huge file that is the hub. And that's where and this is even. After I have had a refactoring, okay, So the hub itself has gotten so unwieldy and it handles so many different things that the in and out that it needs. So, like downstream, like here, I don't have the information flowing through this little this channel right here that this needs, unless it's all programmed in through orchestration core through the chat stream through the message builder, and then the tool parser can use it.
+
+58
+00:13:11,920 --> 00:14:10,910
+Matt Rogers: That's where now here, we're going to have a little bit more of a layout, or different layout. So, these are like it's a different kind of a dependency tree. So because of the way it's laid out with the rooms, you can have you know the different types. The rules are laid out differently. It's like the code is so much cleaner. Because of this, and in fact, if you look, so we have it all right here. And then this I guess it's actually even better. Circular dependencies. Yes, that's been a problem. So that's also another thing like things that need to reference things they end up like. So like if I need GitHub tools to reference web fetch to take care of something.
+
+59
+00:14:10,910 --> 00:14:40,470
+Matt Rogers: If there has a if t here is a dependency circularization where it becomes it becomes a crash, So I need to basically break it out into a different thing, and then it needs to loop back in. And there just isn't the framework for it. There, yep. Um, okay, and this even explains t here is thirty more modules. That's what I was okay. So yes, so t here is a lot more modules. They're basically just just think about more and it's all hooked up to hub. It's just like I said, Basically t here is hub and then everything's like it's almost like a covid fucking virus look.
+
+60
+00:14:41,100 --> 00:15:01,800
+Matt Rogers: With the hub and spoke. As for this is layered domain. So, you have layers. And then whatever I add and take out layer Whatever I add and take out. So, the layers will be important But. In the end of it. There. I can still take out a layer and replace it with something else, or or update.
+
+61
+00:15:01,800 --> 00:15:06,780
+Speaker 2: It or change it or whatever. Yeah Absolutely I really like this.
+
+62
+00:15:07,020 --> 00:15:23,820
+Matt Rogers: So. This is around twenty modules. As to where the other one had thirty plus, what was it here? Probably twenty, so like fifty modules. I think there is like something like sixty- seven if I remember right. I like that. Oh, what did I do that for?
+
+63
+00:15:23,940 --> 00:15:32,640
+Speaker 2: I don't know. Just go back to data flow; that's where we were at. Okay, so this is the next step: how messages flow through the system. So user socket lobby—
+
+64
+00:15:32,880 --> 00:15:36,060
+Matt Rogers: Oh architecture— okay, yeah,
+
+65
+00:15:36,120 --> 00:15:38,460
+Speaker 2: Just making sure. So go to Vito one— yeah, Yeah.
+
+66
+00:15:39,030 --> 00:16:07,900
+Matt Rogers: So this is also another exactly what I was talking about. So, um, A flat pipeline where basically in order for messages to go from one to. So right. So the message is routed to the room itself, like I said, basically, so they're talking to the table. The room dictates that that would also be a part of kind of what you said helps with what I was asking for because. What's up, baby girl?
+
+67
+00:16:08,520 --> 00:16:11,520
+Speaker 2: She just talks. Yeah, let him know.
+
+68
+00:16:12,300 --> 00:16:34,380
+Matt Rogers: So this is kind of what I was asking for, Uh where instead of having the calls go directly through from and to it's just it's rally. Uh from and to could you link back in? Alright. So so anyway, this this shows you likeum going from the AI, parsing it tool calls.
+
+69
+00:16:35,100 --> 00:16:36,540
+Speaker 2: Mhm I see it I see it all.
+
+70
+00:16:36,780 --> 00:16:56,630
+Matt Rogers: Yeah, I'm just kind, I like looking through it myself too. Oh, okay. I just don't you feel like explain it to me now here. So this is what I was actually trying to get it to do. We have to understand how, like if you see this so Is it in discovery phase? Okay, so it's in check, so it's doing checks and balances before he does anything.
+
+71
+00:16:56,810 --> 00:16:57,710
+Speaker 2: So wait.
+
+72
+00:16:58,130 --> 00:17:19,069
+Matt Rogers: Here is just basically doing cool is It. Is it like so It's looking at my my response? And it's like or or It's looking at the AI response to my prompt and says, oh. I s this a tool call? Yes or no here? This is the orchestrator doing a little bit more. So it's going to check. It's more project based.
+
+73
+00:17:19,730 --> 00:17:58,600
+Speaker 2: Yeah. So i wondered about this. And i wondered like, if you asked your overlord to say, like, okay, but what happens if i want to build a feature before the project project is done. So like we're in test phase, but i've decided based on tests that i want to add a new feature. Or we go to execute. How does how does that work in the logic, right? Because if the project's already at test, does this fail? Because it's checking what the current phase is. That's I think you need to like think about it. In a like I think this, this makes logical sense if everything is completely structured and you have everything. Scoped as we know.
+
+74
+00:17:59,500 --> 00:18:00,880
+Matt Rogers: There is no note at the bottom.
+
+75
+00:18:18,590 --> 00:18:25,610
+Speaker 2: So That is one piece of feedback I would, I would ask Overlord to like consider and create a solution for.
+
+76
+00:18:27,770 --> 00:18:38,930
+Matt Rogers: Yeah, I was gonna say, I wonder if there's like more down here for about the the room routed, like if there was going to be like a testing. Well cause hang on.
+
+77
+00:18:39,190 --> 00:18:40,810
+Speaker 2: This is just an example, but yeah.
+
+78
+00:18:41,890 --> 00:18:56,110
+Matt Rogers: Yeah, but it was talking about. We have the audit room execution, so we have a testing lab. Cannot modify source code; can only run tests.
+
+79
+00:19:01,330 --> 00:19:08,110
+Tommy: Right. So okay.
+
+80
+00:19:14,520 --> 00:20:00,140
+Speaker 2: Enter execution. Oh, wait, hang on. Phase equal discovery? Yes, add it to discovery. No, this already passed. Enter execution room rules. Okay, But then what I think to me that this doesn't do is ensure that like it references past um So, like let's say, you are in a testing phase, and you have this like great idea, right? And you are like I want to build it before. Or we deploy. I am not moving us to deploy until this additional feature is built. You want something where, if it looks and it says we're past the discovery phase, that it references decisions that have already been made in the project before execute. And, that's where right?
+
+81
+00:20:00,260 --> 00:20:31,480
+Matt Rogers: And that's where I have a okay. And That's, where like a raid log in the database in the backend that it keeps track of things would probably be really helpful. Where, It knows that way because then you have, a searchable, Ease easily referenceable searchable database that has a log of stuff that has been planned and finished. The phases can also be in there as well. Like, it could be easy to keep track of a lot of this stuff. As long as the database is structured right.
+
+82
+00:20:31,900 --> 00:20:40,110
+Speaker 2: I completely agree. So, like one of the things that it hasn't talked about yet that I think is important. Is and maybe it will talk about it as we get further down.
+
+83
+00:20:40,290 --> 00:20:41,550
+Matt Rogers: Yeah, I don't know what you're about to say,
+
+84
+00:20:41,610 --> 00:21:29,860
+Speaker 2: But I think we need like to exit a room and get sign off right? Because sign off is a part of it. There needs to be a template that's completed by the agent that is essentially a change log or a raid log or a form of some kind. And once that form has been finalized and you sign off for go no go on each phase of of the project process, it goes, Into the project log, right? And then that is referenced. So instead of like the many in project management, you don't put in all the many decisions, right? You put in the critical decisions that must be met at each phase, and you document the reasoning, the background and the final decisions and what it affects.
+
+85
+00:21:30,860 --> 00:21:55,400
+Speaker 2: For whoever is in charge of that to sign off, and then that goes in the project log. So that if anyone were to go back at a later date and say," Why was this decision made? Who made it? And why did they you know what were the considerations?" It's all there. And that's what you want your bot to basically reference. You need to create like a uh essentially like an exit document for each of your rooms so that you have it,
+
+86
+00:21:55,520 --> 00:22:05,510
+Matt Rogers: And then it can start from the room or when they get up from the table because. Because if they if they leave the table, they could still be in the room waiting for a task. Let's say.
+
+87
+00:22:05,870 --> 00:22:09,590
+Speaker 2: Yeah, okay, fair enough. I guess, maybe whatever the exit is to there needs.
+
+88
+00:22:09,590 --> 00:22:11,030
+Matt Rogers: To be a protocol before they can do that. Yeah,
+
+89
+00:22:11,150 --> 00:22:56,860
+Speaker 2: Yeah, exactly. They can't just be like, okay, it's done sign off. You have to like give them a very and for people, too. You give them a very prescriptive process for documenting the work that's happened. The The position of this means the decisions that. That are recommended, the decisions that were made, and the final product in each of those phases. And I think that will help because then it doesn't just go into an execution room. And it's like, okay I'll build the features based on what was in discovery. It's like well we're already in test, We need to make sure that we consider all of the documents and what you do, what you would do in a human situation is say, like here is all the context, and it's.
+
+90
+00:22:56,920 --> 00:23:19,660
+Speaker 2: In a very brief format, so you don't need to know all the details, but you know what what has been decided up to this point. Yeah. Anyway, that's it. Or, in the case of some, if they're big changes that you want to make, that you decide everyone goes back into this discovery room. Right. You know what I mean? But they come back with what has already happened.
+
+91
+00:23:19,780 --> 00:23:23,080
+Matt Rogers: Right, And that's exactly what it would be there for is to do those exact things.
+
+92
+00:23:23,200 --> 00:23:24,940
+Speaker 2: Yep Exactly Exactly.
+
+93
+00:23:27,240 --> 00:23:33,480
+Speaker 2: Am I losing you? My my daddy just texted, so hang on one second. You're not losing me, I just.
+
+94
+00:23:49,140 --> 00:24:10,440
+Matt Rogers: So This is a little bit more familiar, but this is basically how. okay so it tells its name. They both know the name. That's an important thing. Um. So this is the role. So this is the role. So QA lead, do the same. So now description is where it starts to differ because so now this is the instruction set that it's given if you notice.
+
+95
+00:24:10,680 --> 00:24:11,700
+Tommy: Mhm, yep.
+
+96
+00:24:11,940 --> 00:24:29,830
+Matt Rogers: So here, it's so this is very much like instructions.: You are a testing engineer, blah blah blah blah blah and this is why it gets a little wonky. So now so this is where if you structure capabilities, you do this, It you don't really need to talk to these things in plain English. Yep. Room access this.
+
+97
+00:24:30,130 --> 00:24:43,510
+Speaker 2: Yep, right, security badging. This is exactly it. Yep, mhm, mhm, mhm. Room defines behavior type testing lab allowed tools here, it is block tools and then yeah. So it's basically all structured.
+
+98
+00:24:43,570 --> 00:24:56,830
+Matt Rogers: So that's when I say structured data. This is what I mean by that it's structured. That's where this is like, okay, all this and then tools and then just all the shit. Yes. So this this has. Yeah, very specific and easy.
+
+99
+00:24:57,610 --> 00:25:16,390
+Speaker 2: Yes, I really like this. Oh, look at this. Yep, room level constraints injected at runtime context room scoped and persistence survives restarts. That's what you need. Yep, this is it. This is it. Oh, I am so thrilled about this It really understands what we were like kind of driving about This is good.
+
+100
+00:25:16,810 --> 00:25:32,960
+Matt Rogers: Tables with rooms focus collab review modes Yeah Orchestrator routes to room Room assigns table. Yep, I wonder if the orchestrator should be like so. The orchestrator is in the lobby, so I wonder how this works because it keeps saying" orchestrator." So we just use the orchestrator.
+
+101
+00:25:34,160 --> 00:25:41,119
+Speaker 2: The orchestrator to me is the PA, right? It's like paging Doctor blah blah to Lab Four. Well,
+
+102
+00:25:41,300 --> 00:25:59,870
+Matt Rogers: Kind of. It's smarter than that. It's It's kind of like it's the boss;. It's the sign off before, if it can't sign off and it goes to us, right? Yeah, um, I don't know. I mean i guess that's i think that's a way to work like, I think that's what it is, right Because each of them, I don't know. We'll see. Like depending on the project, they may need to change. I don't want to.
+
+103
+00:25:59,990 --> 00:26:08,150
+Speaker 2: I think you should ask it, what it thinks is the top three things that will make the largest difference in your architecture because,
+
+104
+00:26:08,330 --> 00:26:49,450
+Matt Rogers: So remember, my idea was to go into the app, and we're not in a chat at all. And there's just things there based on like our projects, the stuff that we have done, the other chats that we have or the agents. Like KPIs, like a dashboard basically, and then you start like okay I want to do stuff, and then you start putting things together. And then okay, then you need to like. Then the orchestrator starts getting involved. Yeah. And there is a chat in there. There's a chat component, but it's not just like chat screen and then your previous chats. This is a lot more of a tool. Mhm And so having the rooms So There needs to be a flow.
+
+105
+00:26:49,450 --> 00:27:22,350
+Matt Rogers: For the user to start, especially if they've never used it before, if they've never worked on a project before. But, there also needs to be a flow for everything in between between that and somebody who has built out so much stuff that they have this app full of things, full of projects. And, the projects are full that have everything built out where they have all these rooms and all these agents and all this code and all these things that are working and flowing. So everything in between like somebody who has nothing, yeah, a blank frame. And somebody who has everything and probably needs to keep track of a lot of stuff. I think that's where Oh,
+
+106
+00:27:22,530 --> 00:27:45,850
+Speaker 2: Well, can I tell you what I think it is? Absolutely. Okay. So for the person who has a bunch of projects that need to be managed, right? You have essentially your lobby with all of your project dashboards. You can look at it in a summarized amount. You can look at it with the number of tests that have failed versus passed. You can look at it with the number of open, Items, right? That are assigned.
+
+107
+00:27:46,030 --> 00:27:48,010
+Matt Rogers: Yeah, like issues, pull requests, branches.
+
+108
+00:27:48,610 --> 00:28:19,090
+Speaker 2: So that one I think is really easy, actually, because the more data you have, the easier it is to pull it out iterate, right? But let's say you're a new user who have nothing at all. You have a essentially like a startup prompt that's like start a kickoff. Yeah, here's here's what you need for the tick, the kickoff. Here's the here are the inputs, and it's like a user prompt that says, like hey, project kickoff starts, you know today. Here are the six things, And you can do a quick start, or you can do like an advanced start, right? Oh,
+
+109
+00:28:19,270 --> 00:29:10,240
+Matt Rogers: You just gave me an idea. Okay, so what if yes I am sorry. No, that's okay. Go ahead. Uh, yes, So. The modularity of this lets us build in a scripting capability into the app. So basically, a lot of these rooms and tables may not actually be built into the app itself. It'll be like a Lua script. So somebody can go in there and just like, well, I want this. And then so then we have the like that's where the ins and outs, The modularity of plug in comes in where they can write whatever the fuck they want to do. Yep. And these these agents can do that. And, then they can plug things in together. However, these like these pipelines that they build out plug in or the data types, if it's especially if we make them strict data typing. Mhm.
+
+110
+00:29:10,300 --> 00:29:10,900
+Matt Rogers: In the back end,
+
+111
+00:29:11,020 --> 00:29:15,760
+Speaker 2: So you could have a three level building, you could have a twenty level building. Right,
+
+112
+00:29:15,820 --> 00:29:17,380
+Matt Rogers: And the user can program along.
+
+113
+00:29:17,560 --> 00:29:20,200
+Speaker 2: Mhm. Exactly right with the AI.
+
+114
+00:29:20,560 --> 00:29:40,830
+Matt Rogers: Yep, that's right. So I like that. So what you said to start. It's basically like okay t here is nothing there, So there are some built in things that you can like there'll be templated stuff. Mhm There will be built in features that are kind of like, Yeah, They have to be there. Yeah, but how they're there. And it's fully up to you.
+
+115
+00:29:41,130 --> 00:29:46,230
+Speaker 2: Yep, and you can decide. You can tell the AI what exactly you need, or you can have it suggest.
+
+116
+00:29:47,430 --> 00:29:48,330
+Matt Rogers: I think this is something.
+
+117
+00:29:48,750 --> 00:30:02,970
+Speaker 2: Yeah, I think so too. I've thought so since yesterday. I think this is this is it because then you spin things up, you spin things down. You are like okay, this project actually only needs two floors while this project needs two buildings Yeah,
+
+118
+00:30:03,450 --> 00:30:37,760
+Matt Rogers: And I like exactly and i like the idea of having, The ability for it to not only grow and shrink, but also more of like a like a like we can program into the program. But then now when I want to add built in stuff, I don't just build it into the app. I actually add a Lua scripted module just like an end user would. So then I'm not building this huge massive monolith I'm. Actually then i'm building truly a core that people can just plug into. And then it's secure also.
+
+119
+00:30:37,880 --> 00:30:47,960
+Matt Rogers: Built in, and you can even have security modules. Yep, auditing security that could all be built in.
+
+120
+00:30:49,100 --> 00:31:26,390
+Speaker 2: Yep, and you are like okay, So I built this, but actually I found that I am going to use a different platform with it than I expected. I want the entire building to exist in the exact same way that it is;. However, I am moving the data in a specific way. So I am going to build a second building. And the entire second building is an integration that interprets the data back and forth, and then helps me transform it, right? Like, there's you could build cities, right? Like same thing like with thistycoon idea, right? Spin it up, spin it down change change what each floor has. Change you know how the buildings talk to each other. I think there's there's well,
+
+121
+00:31:26,630 --> 00:31:58,250
+Matt Rogers: Okay. So there's something else. Okay. So modules and agents working is one thing. So there's like tools. On a table, right? So agents can build different stuff based on just like how this document says, like they can build things based on the room that they're in. So when they sit down at a table, there is certain tools at the table. Certain agents know how to use certain tools. But basically, it's kind of like in real life to where you are essentially dealing with a lead. A lead goes and deals with management or whatever.
+
+122
+00:31:58,300 --> 00:32:39,790
+Matt Rogers: So, you are not all dealing with them, right? And then the management goes and deals with other management, and then they're whatever like however that rolls up. And that would so this would kind of like follow that same structure. Now, the tools are a part of it, and we'll talk about tools at length to you understand that. But these so essentially what I am talking about each room. I don't know if I don't know if we're using the word module like on the on the code side or the back end side is the right thing. I am not sure but, What I am also thinking is like so: if these are so, if each floor is a plugin, And each room is like also a plugin that plugs into a plugin of a floor, yep. And then a table would be the same kind of thing.
+
+123
+00:32:39,970 --> 00:32:43,030
+Speaker 2: Mhm right It's all nested. Yeah mhm.
+
+124
+00:32:43,030 --> 00:33:13,950
+Matt Rogers: So those are so those are modules, but then what are plugins? Right Because you should have plugins into modules. So I know I am using the word" plugin" because they plug into each other, but what I mean is like now, In the app itself, those are modules. But what are plugins? Plugins should be things that you can use with modules. Maybe like you can specifically like wire something together a certain way, or like hook it up to the external world a certain way. But, you need plugins for people to build certain things that these tools aren't hundred percent.
+
+125
+00:33:14,190 --> 00:33:36,410
+Speaker 2: But I don't think every floor is a plugin. I think there's one floor that is for plugins. There's one floor that's for data, And there is one floor that's for integrations, in a sense, right? So like your discovery room does not need a plugin. Your discovery room does not need a plugin. Your discovery and project management floor does not need a plugin. Maybe I don't know.
+
+126
+00:33:36,530 --> 00:33:39,350
+Matt Rogers: So the plugins are basically becoming in and out of the building itself.
+
+127
+00:33:39,530 --> 00:33:48,690
+Speaker 2: Yes, exactly that's what I am talking about. Like the buildings, the building talks right for only one floor. Has the ability, right? Because that keeps it,
+
+128
+00:33:48,810 --> 00:33:49,650
+Matt Rogers: The brain would be on that floor,
+
+129
+00:33:49,830 --> 00:33:56,670
+Speaker 2: And it keeps it secure, right? So that you are not like sending it out from like twenty different points in a process.
+
+130
+00:33:57,210 --> 00:34:02,430
+Matt Rogers: It's called they call it strict. Strict type setting is one way to do that.
+
+131
+00:34:02,670 --> 00:34:13,409
+Speaker 2: Yeah, so like this would just be an additional floor instead of rooms, right? That would be like reporting ready or integration ready or whatever. Yeah.
+
+132
+00:34:15,159 --> 00:34:16,540
+Matt Rogers: Okay, we got up on a tangent here.
+
+133
+00:34:16,719 --> 00:34:19,840
+Speaker 2: No, that's okay. I think that that's but I think it's smart. I think it's smart, right?
+
+134
+00:34:20,260 --> 00:34:27,040
+Matt Rogers: Yeah. All right, so we're going to scroll down. So okay, context is really good. That's important. Where were you looking at? We were just kind of like scrolling here.
+
+135
+00:34:27,100 --> 00:34:28,120
+Speaker 2: Yeah, This is we already looked at all.
+
+136
+00:34:28,120 --> 00:35:11,340
+Matt Rogers: Thisum Okay tool, access and approval redesign. So yeah, yeah. So this has tiers, and this is room scoped. Now this now this we've already talked about like the difference. So every tool goes through this. Here, which looks up to see blah. This each room defines. So this where the this where the Lua scripting actually comes in. Yes. So somebody can actually design how that works and looks, And then also, if there is so we can actually have it to where, if like if there are certain things that somebody's trying to do and it hits like a security threshold, you can be like, well, This, are you sure you want to do this because right, you're hitting an insecure thing.
+
+137
+00:35:12,060 --> 00:35:44,390
+Speaker 2: Yeah, Like you can literally like I'm I'm thinking in like a quick start toolbar. It's like, what do you want your your agents to be able to do? And you click like a set of multiple boxes, right? And then it's like, okay, here's the suggested format. And you're like, no, I'm going to drag and drop this room into this floor. I'm going to drag and drop this room into this floor. I'm going to create a custom agent type. Right? I'm going to, but it'll create essentially for you based on what you tell it. You want to be able to do during the project or what the outputs of this project are and what the inputs are. It's like essentially doing a gap analysis for you, right?
+
+138
+00:35:44,870 --> 00:35:51,170
+Matt Rogers: So this here, yeah, the room is the access controls. What it says here, which makes sense. Like you need to have a key to enter a room if it's locked. Exactly.
+
+139
+00:35:52,730 --> 00:35:53,930
+Matt Rogers: And, so we can give certain.
+
+140
+00:35:54,050 --> 00:35:55,310
+Speaker 2: Security badging baby.
+
+141
+00:35:57,170 --> 00:36:01,250
+Matt Rogers: Yeah security badging would be a thing that the user does.
+
+142
+00:36:01,910 --> 00:36:07,300
+Speaker 2: Right exactly It's like here are the agents. Here are the rooms confirm. Only these agents.
+
+143
+00:36:07,480 --> 00:36:09,220
+Matt Rogers: Or the orchestrator could do that if you need to.
+
+144
+00:36:09,460 --> 00:36:18,160
+Speaker 2: Right, right, exactly. These agents can enter these rooms, but they can't print anything out. Or they can enter the room and they can't you know what I mean?
+
+145
+00:36:18,280 --> 00:36:21,640
+Matt Rogers: Or yeah, they can only print something is not uh confidential for example.
+
+146
+00:36:21,880 --> 00:36:27,100
+Speaker 2: Yeah exactly right. So you you build it all. It's like I said when we were talking about Chapman. It's like Chapman.
+
+147
+00:36:27,280 --> 00:36:49,570
+Matt Rogers: Right yeah or well yeah I know I know you're using that, but I just like I don't want that to be something that like I don't want. That word to be used in any of my stuff accidentally. I understand. I understand. Um, tool categories, I like this isn't really anything important to talk about.
+
+148
+00:36:50,290 --> 00:36:52,570
+Speaker 2: Room types and their contracts scroll.
+
+149
+00:36:52,870 --> 00:37:01,750
+Matt Rogers: Ooh, Contracts, ooh There, we go. Each room type is a first class object with rules, tools, templates and access controls, which we just talked about.
+
+150
+00:37:01,750 --> 00:37:13,060
+Speaker 2: Yep there we go So. Here's the discovery room. Yep, allowed agents orchestrator Smee's PM architect. Yep, allowed tools read web list file. Yep, yep,
+
+151
+00:37:13,180 --> 00:38:00,020
+Matt Rogers: Yep. So phasing phasing is okay. So room type. So okay, so this is the room system. This talk about room types, but then this talks about phases phases, oh oh, phase phase validation execute. So these are phases of a project. Mhm. So so that okay. Once again, coming back to the Lewis scripting, if somebody wants to build something for this, then they can build in which phase it belongs to. That would be a hard coded thing that you have to do. It's like okay, well this app works in this context which is phases. Is it a which phase is it? And then they can say whatever phase like it could be first, second, Third, fourth phase and then design phase, design two phase, and then they can build out whatever phase. But in this, it's just showing the the basic.
+
+152
+00:38:00,080 --> 00:38:03,020
+Matt Rogers: Yep. Exactly. Design phase, validation, execution gate.
+
+153
+00:38:03,200 --> 00:38:40,750
+Speaker 2: Right, and you could be like, hey, what mode do you want to be in? Brainstorming mode. Okay, well we're only going to build the discovery floor. Right. Oh okay, well, I actually I'm I want to I want to uh be in coding mode. Okay. So we definitely need a testing floor. Here's like a branch, right? Like there are things that you could ask it in the startup where it's like these. What what are you trying to get out? That's why I was saying. In the startup, You're really like trying to ask questions about what are you trying to get out of the tool, and what do you want to be able to do within the tool, and then it will suggest how to build your building essentially for you. Yeah.
+
+154
+00:38:42,970 --> 00:39:13,550
+Matt Rogers: So then so so this has taken me even back even more than before we built it. So before we have the building, We need to have like an architect help us build it out and structure it first like. Like you are saying, you start with an empty prompt. That would basically be not even the it wouldn't even be the art or the the orchestrator. It would be a building architect that they start working with to build the the building, which is the floors and and the rooms. And, then they get done with the architect and then they get start working with the orchestrator. They're like," Yeah,
+
+155
+00:39:13,610 --> 00:39:17,570
+Speaker 2: So you do a strategist." So that's who it would be. It would be a strategist. A what?
+
+156
+00:39:17,690 --> 00:39:20,390
+Matt Rogers: A strategist Yeah yeah yeah Strategist So so.
+
+157
+00:39:20,390 --> 00:40:13,860
+Speaker 2: You talk to the strategist, you are like hey, Right, or you could say like a senior consultant, something right where it's like, "Hey, what are you trying to get out of this? " Right, and it's like it asks you consultative questions to understand exactly what success looks like in using this app. And then based on a combination of you know, well timed branching logic and critical, like hierarchical questions that need to be answered in order to, you know, utilize the tool. It will suggest things, and then you can go into hard mode and say, "Actually, I am overriding that. It's not going to be these templates. " And, you'd give it like here are six templates that we would do based on the types of questions, whatever right? And then you could say, "Actually, I am going to custom design right for like super users for whatever reason." But I think that that's like a that's the way.
+
+158
+00:40:13,980 --> 00:40:28,380
+Speaker 2: Is that you get users to describe how they want to do their project, and then it scales up and down for them? Yep, yep. I like that. Yeah, I like it a lot. Yeah, And you'll like that too, because some projects, you don't need all these fucking steps for, right? Well,
+
+159
+00:40:28,500 --> 00:40:40,440
+Matt Rogers: Some projects that I need are documentation only. Some projects are building out for an app. Some projects are for you know likeum like scientific research first know.
+
+160
+00:40:40,870 --> 00:41:04,750
+Speaker 2: Some Projects are just risk management. You give it all the documents that already exist and you say, do a risk analysis. Yeah, right. So. And that's where like having this consult at the beginning in the form of like a quick start, prompt will be valuable. And then it becomes super iterative, right? Scale it up, scale it down, whatever. Yeah. Yeah I love you.
+
+161
+00:41:04,930 --> 00:41:36,140
+Matt Rogers: Yeah I love you too, So like this, the first okay, So design define where we're building why what done looks like, just exactly what you said. Yeah, PM SMEs architect. Okay, so then the allowed tools. So the phase itself. Okay, so table modes is an interesting thing. Table modes. So I wonder how that would change. So I wonder how a table would change modes in a room? Well, I don't know that's that's not something we need to talk about.
+
+162
+00:41:36,470 --> 00:41:40,670
+Matt Rogers: Rules. Yeah, so they so.
+
+163
+00:41:41,330 --> 00:41:46,010
+Speaker 2: I think the other thing I would say, yeah, actually that's fine. Go ahead. What were you going to say? Nope, that's fine.
+
+164
+00:41:46,790 --> 00:41:56,450
+Matt Rogers: But yeah, So allowed agents allowed tools, block tools is basically the same thing that but this is input. And then just saw the required output.
+
+165
+00:41:56,930 --> 00:42:35,760
+Speaker 2: So to me if I am going to be annoying Yeah Is like So, there is a phase zero here. Not a first phase. There is a phase zero where it's like, "Who are the SMEs?" Like, "Who do I need if I am like a project manager?" Right. The first question I am like is, "What kind of project is this? Who are my SMEs? Who do I what agent types do I need to create right? Like, what what uh. What are we starting from right? And not only that, but like what dependencies exist all those things. And so to me, there is like a phase zero here that goes ahead of this that this.
+
+166
+00:42:35,820 --> 00:42:47,700
+Speaker 2: Is helpful for, but it doesn't cover all of the pieces. So, up top, It's like how are you going to call all the subject matter experts until you have more information about the project? Right.
+
+167
+00:42:48,600 --> 00:43:18,070
+Matt Rogers: The first phase needs input because so here is the output. Right. So, so the required output is business outcomes, constraints, unknowns, Gap analysis, which is The gap analysis has sub components, which is current target gaps gaps things Yep. And then, and then risk assessment, and then risk risk analysis. And then those have subgroups: risk analysis and citation. Yep. Um, so yeah, so the inputs and an output. And then the next phase has inputs. Yes.
+
+168
+00:43:18,250 --> 00:44:01,400
+Speaker 2: And then outputs That's why I am saying like if you can create basically an exit essentially a go no go for each of these phases, and then you can teach the next phase to expect it, Like how to read the outputs from the previous phase, you'll start to get like a really cohesive setup. And eventually, like you are going to say, actually we need more things in the go no go decisions, right? But that's okay because you can build a template that's iterable. It's like, well, what are the what are the um business outcomes that we've identified? Okay, that's great. But actually, before we need the business outcomes, we need to understand.
+
+169
+00:44:01,420 --> 00:44:37,400
+Speaker 2: Right, like who is measuring them, right? And and who suggested these business outcomes? So okay, but that's it's still part of the template. So you can just write. So, it's the same type of thing where it's like iterable in sections where you're not prescribing too much. But you can teach the previous room, right or the the subsequent room to read those those outputs, even if they end up being slightly adjusted or you add a new section or whatever. Yeah. Right, because you are building essentially like almost like a mail merge of of information, right? Right. Yeah, yeah,
+
+170
+00:44:37,519 --> 00:44:56,240
+Matt Rogers: And it's yeah how it's transferred across. Like I think there'd be different methods or protocols that they could use for whatever reason that they might need to, but that would be beside the point. Yeah. As long as the income inputs and outputs are all there, and we're getting the desired outcomes that we're asking for.
+
+171
+00:44:56,420 --> 00:45:27,460
+Speaker 2: Exactly in the in the. Um, content can change, but the uh organization of it, the hierarchy of it stays fairly consistent. Right? That's the key. Yeah. So I agree. I think like phase zero is actually like user input, right? And it has to be with the same templated input, templated output so that it can go to the next phase. Right? Yep. Yep yep.
+
+172
+00:45:28,500 --> 00:45:30,780
+Speaker 2: I love you. I love talking to you about this stuff.
+
+173
+00:45:30,900 --> 00:45:46,080
+Matt Rogers: I do too. This is exciting me. Good, I am glad. Okay, so standardization, let's go down here. Yep, here we go. Every module is an API. That's basically yeah. So room output. Yeah.
+
+174
+00:45:46,140 --> 00:45:50,220
+Speaker 2: So the input outputs there you go there you go literally what we've been talking about output template,
+
+175
+00:45:50,460 --> 00:45:53,700
+Matt Rogers: Schema Yeah uh socket messages.
+
+176
+00:45:56,370 --> 00:46:21,830
+Matt Rogers: Yeah, see, these had like eighty three different shapes. I guess i's a good way to say it. Um, these are message types with a JSON schema, which basically reduces that. Yep. Um. Yeah, different sources of the truth is also problems having which is fine. Uh, anthropic native only conversational messages. Yeah, see.
+
+177
+00:46:22,220 --> 00:46:29,060
+Speaker 2: Yeah, this this is scalable. You've built something scalable from at least you know in concept. This is scalable.
+
+178
+00:46:29,360 --> 00:46:35,420
+Matt Rogers: Yeah, This wait till I start putting the the paper or the code to the yeah, the bits to the files.
+
+179
+00:46:36,020 --> 00:46:37,220
+Speaker 2: The bits to the bots.
+
+180
+00:46:37,520 --> 00:46:51,380
+Matt Rogers: Um universal I O contract. The word contract is very interesting. Soum so this actually is supposed to be a new break. I don't know why it's not doing it like it is should, but whatever. Um if I look at it.
+
+181
+00:46:55,650 --> 00:46:56,850
+Matt Rogers: Eh, whatever. It's fine.
+
+182
+00:47:00,930 --> 00:47:21,450
+Speaker 2: I'm going to let these dogs out really quickly before it starts raining again at nine. Hey babies, you wanna go outside? Come on, let's go outside. I know you're tired. I know you're tired. Let's go. Bandit, Kiwi, come! Come on! Bandit, come! There's no way around it because this is the moment. Yeah buddy.
+
+183
+00:49:01,400 --> 00:49:07,140
+Tommy: Alrighty. Yeah. Alright.
+
+184
+00:51:54,430 --> 00:51:57,550
+Speaker 2: You Think I'm great, and I love you because.
+
+185
+00:52:53,830 --> 00:52:54,790
+Speaker 2: Are we still looking at this?
+
+186
+00:52:56,470 --> 00:52:57,910
+Matt Rogers: I mean, we're almost done. No,
+
+187
+00:52:58,030 --> 00:53:01,330
+Speaker 2: No, I'm not complaining. I just wasn't sure if you had moved on to something else. Right?
+
+188
+00:53:01,570 --> 00:53:43,550
+Matt Rogers: No. Now, I was trying to get this to look right because it's supposed to look like this basically. So essentially, this is the contract. So it's a typed contract is basically like a strict typed codeum, And that's what it looks like. So basically, The input has a schema;. It has to be JSON required required fields and then defaults, and it has like default values for things if they're not filled in. So, this is the this is the contract that the code has for each of the in, out, and error.
+
+189
+00:53:43,790 --> 00:53:47,330
+Speaker 2: I like that a lot. I like that a lot, a lot, a lot. Okay.
+
+190
+00:53:47,690 --> 00:53:53,390
+Matt Rogers: So that standardizes the way things can be plugged into each other. Cause then they have a socket that fits, you know.
+
+191
+00:53:56,510 --> 00:54:14,690
+Speaker 2: And then but what I do want is a way for it to where if there needs to be something else that's custom, I just don't know what it's called or what it looks like. That's where I was thinking about plugins or something like something else. If there needs to be a different thing that this doesn't offer, I don't know why that would be or what, But I want to make sure that we have some mechanism there. So I don't have to rebuild the whole app again. Yeah.
+
+192
+00:54:15,880 --> 00:54:39,520
+Matt Rogers: Um, let me see. What is this modules and equivalents? So yes, okay. So this is just code stuff. So, um the change and a lot of these are going to be consolidated, moved, organized new stuff. Yeah. So a lot of these are going to be like simplified code restructure, simplified consolidated, which is simplified in a way.
+
+193
+00:54:39,880 --> 00:54:44,200
+Speaker 2: Yep. I like this Okay Yeah Rebuild path.
+
+194
+00:54:45,720 --> 00:54:59,400
+Matt Rogers: Tool implementations, yeah. UI components, yeah. So the UI, I think I really want a full UI redo. Like I actually kind of like this. Me too. The way that this report looks is kind of nice.
+
+195
+00:54:59,640 --> 00:55:00,960
+Speaker 2: Yeah, I agree it's very intuitive.
+
+196
+00:55:01,679 --> 00:55:28,520
+Matt Rogers: Well, Just I like the whole panels, because the whole like that, that building with the rooms and the floors and the tables, everything like went inside it perfectly made sense. And I can see like maybe we can have like chairs at each table. Or like you see, Like a slot that like gets filled in when there is an agent sitting there because there can only be so many agents at a table. Let's say maybe I don't know, like if you need more agents than what a table fits, then maybe there is a reason for it. You need to go into maybe we need a conference room.
+
+197
+00:55:28,640 --> 00:55:33,680
+Speaker 2: You need a boardroom boardroom Yeah, Boardroom, yeah, something like that. Yeah, okay, I like that.
+
+198
+00:55:34,340 --> 00:55:50,870
+Matt Rogers: And because then the room has a different, um would you say the room is like they're basically allowed to do different things in the room, you can't do something. In the room, that if you want to have like a staff meeting, you can't do that in a room this size. Right. You have to go into a large room.
+
+199
+00:55:51,050 --> 00:55:52,550
+Speaker 2: Right. You need to go into a conference hall.
+
+200
+00:55:52,970 --> 00:56:24,790
+Matt Rogers: So, um okay, Keep rewrite build new Okay. So yeah, so the hub is good, but definitely need to rewrite it That provider agnostic. Yes. So, that's another thing. I want to make sure that I'm not only like having to use this with mini max or Claude or whatever. I do want it to be like open to any of them, especially the open source ones. Because I actually see a future of having different models or different likeum providers,
+
+201
+00:56:25,330 --> 00:56:33,790
+Speaker 2: Yeah do different things, do different things. I completely agree. I think that's very smart. Okay, this is just re to me this is rehashing.
+
+202
+00:56:35,430 --> 00:56:36,690
+Speaker 2: No, no, just that's it.
+
+203
+00:56:36,810 --> 00:56:37,530
+Matt Rogers: Oh, this yeah.
+
+204
+00:56:37,590 --> 00:56:40,230
+Speaker 2: This is a rehash of like further up that we just looked at.
+
+205
+00:56:40,350 --> 00:56:44,370
+Matt Rogers: Well, yeah, yeah. We're at the end so and going to take phase zero.
+
+206
+00:56:45,210 --> 00:56:49,350
+Speaker 2: Yeah, okay. So there you go. This is how it would start it.
+
+207
+00:56:49,710 --> 00:56:53,130
+Matt Rogers: But this is the phase by phase for building. Yeah,
+
+208
+00:56:53,190 --> 00:56:54,810
+Speaker 2: Then building discovery,
+
+209
+00:56:55,350 --> 00:57:33,700
+Matt Rogers: Architecture, execution review. Yeah. So the first thing we do. Stabilize so merge all the bugs. Okay, I wish it was that easy. Oh, I'm not sure. Just need it for an hour. Uh, merge all bug fixes so. Oh yeah, I just need to get rid of this, which is fine. And then we'll tag it as our baseline right, right So. We're just going to start where we're at now and just kind of like lock that in place and start moving on to a new, a new app. But I just won't be building further on where we're at now on this one.
+
+210
+00:57:34,230 --> 00:58:31,470
+Matt Rogers: And then build the thin event bus, SQLite schema. So this, I actually I want to use like Redis, Redis or why so I have a development stack that I want to use. I want to start building in like Docker and using these. So SQLite is fine but I want to use like a full real database. I don't know if SQLite will be the full scalable solution. But I want to be able to like, like if I don't want SQLite, I want to be able to use a different one. And I don't know what that looks like yet, but um I'll have to chat with it. But but this is still the schema will still the same. The schema will basically stay the same, unless I use like, a no schema or it's No SQL. Basically is what it's called. But I don't know if we need that or not. Um, config service with validation. No AI yet, just a skeleton. So then room manager first room type.
+
+211
+00:58:31,840 --> 00:58:35,860
+Matt Rogers: Build the room manager. I love this, so now it's yeah, you build this out the right way.
+
+212
+00:58:36,100 --> 00:58:57,160
+Speaker 2: Yep, then you have this and then you can always peel it back, right? Like okay, Well, I want to change this, and you have all these separate interconnected layers, but they're they are dependent on each other, but they are not hardcoded into each other, right? So, if you ever looked at it and actually were like, actually I want to build this completely differently.
+
+213
+00:58:58,090 --> 00:59:55,130
+Matt Rogers: Right, right. Like me saying the whole modules being Lua scriptable within the app itself, yeah, Or outside of the app, and you can add it in as like an external plugin when you run it. I want to have all these different things, yeah. And that would be exactly why and yeah. Um port AI streaming layer, build the agent registry build room scope, execution build discovery. Okay, so phase four, phase five phase six polish I like that. Discord style cross room tagging. It's fine. That's what I said. Yeah, cross room tagging, but you can tag people or agents or rooms or, um, you can hashtag topics. Um. Or I think a room would be a hashtag. I don't know. A slash. So we need also build in like commands. So because like in Claude code or you know in Claude, in general, you can use commands. So like.
+
+214
+00:59:56,470 --> 01:00:52,160
+Matt Rogers: If I go into Claude. I am not sure if you are fully aware of this, but if you are, I am sorry. No, it's okay. But when you are in the chat, You can do stuff like you can type a slash, and then it pops up menu. So you can. So it's like a command. Kind of thing, so it's different in the chat than in code. In code. Like I have, yeah. Like this thing, um. But it's it's still basically the same. Um. So if I do. At I can do things. Let's see what does it do in code. Yeah okay well so it likes this so. So there are slash commands and then there are connectors and plugins. So like a lot of times if you do at it'll like yeah files, there you go. So file names pop up for in code, but in chat I. Guess there is no equivalent for the at.
+
+215
+01:00:52,600 --> 01:00:56,020
+Matt Rogers: But for me, this would be like an agent or something, right? If I add an agent.
+
+216
+01:00:56,320 --> 01:01:02,920
+Speaker 2: Right in the room, You would think would add an agent right to tell them to come to the room. And then it would execute it.
+
+217
+01:01:03,040 --> 01:01:04,120
+Matt Rogers: Yeah yeah yeah yeah.
+
+218
+01:01:04,240 --> 01:01:23,640
+Speaker 2: That's why I'm saying like to me, the orchestrator is almost like a PA system. Like hey, You know, engineering tester to the testing lab room whatever. And then when you get there, you get further instruction, right? Okay babe, I love you so much, but I need to take a brain break on this. Okay. Is there anything?
+
+219
+01:01:23,940 --> 01:01:31,440
+Matt Rogers: We're at the bottom, so it's just it's just lessons learned now. And so these are basically like issues that I've had to work through.
+
+220
+01:01:31,620 --> 01:01:32,400
+Speaker 2: Yeah, that we talked about.
+
+221
+01:01:32,820 --> 01:01:40,920
+Matt Rogers: It says done, but nothing works. Agent prompts are fragile. Basically, the problems of why I want to rewrite it are just all listed up here.
+
+222
+01:01:40,980 --> 01:02:21,390
+Speaker 2: I like this So I think the big question that I have is like what happens if midstream you have to change scope or change the project or priorities change? Or, like all this stuff, right? Because that really does happen. So, Like you have to build that logic in there somewhere to make sure that, that all the downstream dependencies also change, right? And, all the updated inputs that have already been decided upon are either reconsidered or are translated to whomever the agent is that's going to start executing on the net new. I think that's the big thing that I am.
+
+223
+01:02:21,390 --> 01:02:27,090
+Speaker 2: I'm looking at that I don't see in there. Everything else looks pretty dang good to me, and then phase zero, which we talked about. Yeah.
+
+224
+01:02:29,550 --> 01:02:30,870
+Speaker 2: This looks great, babe.
+
+225
+01:02:31,290 --> 01:03:01,310
+Matt Rogers: Yeah. I love you too. Good to go. Yeah, I like the way you talk about things because it's more articulate than how like like I understand what I wanted to do. But sometimes I'm really clunky in how I say it. And you're a lot more like. Kind of like flowy with it, you know. Like we both have our strengths, But I kind of have like a certain way of saying things that like tends to confuse.
+
+226
+01:03:02,750 --> 01:03:16,430
+Speaker 2: You are so detail oriented that sometimes it's hard to understand because you are deep in the sauce and And. Um, that's important because, like, how else are you going to execute something that actually works? Yeah,
+
+227
+01:03:16,610 --> 01:03:18,530
+Matt Rogers: Yeah. It's just a whole forest and trees thing.
+
+228
+01:03:18,770 --> 01:03:28,910
+Speaker 2: Yeah, but I think together we, Cover a lot of ground, not everything, but we cover a lot of ground. Yeah, I love you. I really enjoy talking with you about stuff. Just so you know.
+
+229
+01:03:48,820 --> 01:04:02,680
+Matt Rogers: I have a feeling that I'm gonna probably end up paying for the bumped up version of Claude. So I can build this. Like like really well, yeah. Oh god, I love it. Alright.
+
+230
+01:04:02,800 --> 01:04:08,500
+Speaker 2: I love you. Go disappear because then I'll put you back into it. But just know when you're ready, I expect.
+
+231
+01:04:23,390 --> 01:04:31,430
+Matt Rogers: Who banned it. I guess it's only him. I did not see him.
+
+232
+01:04:38,030 --> 01:04:40,070
+Tommy: Oh, yeah, I didn't think but.
+
